@@ -1,0 +1,449 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Author `.kiro/steering/product.md` (always included)": [
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793087681137
+      },
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793088356413
+      }
+    ],
+    "1.2 Author `.kiro/steering/tech.md` (always included)": [
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793087683148
+      },
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793088357337
+      }
+    ],
+    "1.3 Author `.kiro/steering/structure.md` (always included)": [
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793087683495
+      },
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793088358731
+      }
+    ],
+    "1.4 Author `.kiro/steering/quality.md` (always included)": [
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793087684933
+      },
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793088360227
+      }
+    ],
+    "1.5 Author `.kiro/steering/working-agreements.md` (always included)": [
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793087685851
+      },
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793088360925
+      }
+    ],
+    "1. Author the always-included steering files with valid front matter, transcribing project rules verbatim": [
+      {
+        "executionId": "a6aaccd0-8175-4eb2-90b5-df6a48c469ef",
+        "chatSessionId": "sess_ea03bf79-223a-4099-b1f5-ec092d4310bb",
+        "timestamp": 1793088360973
+      }
+    ],
+    "2.1 Author `.kiro/steering/domain-rules.md` (fileMatch: domain and application code, content)": [
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088399954
+      },
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088584561
+      }
+    ],
+    "2.2 Author `.kiro/steering/content.md` (fileMatch: content, translation files)": [
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088401397
+      },
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088585948
+      }
+    ],
+    "2.3 Author `.kiro/steering/labs.md` (fileMatch: lab images, sandbox, lab and terminal code)": [
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088402798
+      },
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088587370
+      }
+    ],
+    "2.4 Author `.kiro/steering/deployment.md` (fileMatch: deploy, Dockerfiles, CI)": [
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088404182
+      },
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088588810
+      }
+    ],
+    "2.5 Author `.kiro/steering/auth-privacy.md` (fileMatch: auth, accounts, privacy, users)": [
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088405589
+      },
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088589770
+      }
+    ],
+    "2.6 Author `.kiro/steering/ai-content.md` (fileMatch: prompts, evals, generation, LLM, review and advisor code)": [
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088406593
+      },
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088682082
+      }
+    ],
+    "2. Author the conditional (fileMatch) steering files with valid front matter and fileMatch patterns, transcribing project rules verbatim": [
+      {
+        "executionId": "6bbc6178-ac26-414e-b038-9ac47c8f6ea2",
+        "chatSessionId": "sess_f62f64ff-8627-45e8-92da-eeac9618bb13",
+        "timestamp": 1793088682134
+      }
+    ],
+    "3. Checkpoint — steering files parse and front matter is valid": [
+      {
+        "executionId": "67b81bac-a787-4d6f-b163-61a135ed37d8",
+        "chatSessionId": "sess_a84e18fd-ccfa-4819-a65a-f33a267305d2",
+        "timestamp": 1793088722752
+      },
+      {
+        "executionId": "67b81bac-a787-4d6f-b163-61a135ed37d8",
+        "chatSessionId": "sess_a84e18fd-ccfa-4819-a65a-f33a267305d2",
+        "timestamp": 1793088816367
+      }
+    ],
+    "4.1 Build the traceability table mapping every Rule_Line to exactly one steering file": [
+      {
+        "executionId": "b4e4900c-4fc3-41f0-a5d4-e353a0d69623",
+        "chatSessionId": "sess_7cbbacd4-91a8-4bc0-92ac-ca81528258dc",
+        "timestamp": 1793088851643
+      },
+      {
+        "executionId": "b4e4900c-4fc3-41f0-a5d4-e353a0d69623",
+        "chatSessionId": "sess_7cbbacd4-91a8-4bc0-92ac-ca81528258dc",
+        "timestamp": 1793089056618
+      }
+    ],
+    "4.2 Flag unmapped and multiply-mapped rule lines": [
+      {
+        "executionId": "b4e4900c-4fc3-41f0-a5d4-e353a0d69623",
+        "chatSessionId": "sess_7cbbacd4-91a8-4bc0-92ac-ca81528258dc",
+        "timestamp": 1793089059968
+      },
+      {
+        "executionId": "b4e4900c-4fc3-41f0-a5d4-e353a0d69623",
+        "chatSessionId": "sess_7cbbacd4-91a8-4bc0-92ac-ca81528258dc",
+        "timestamp": 1793089151469
+      }
+    ],
+    "4. Build and validate the rule-to-steering traceability mapping": [
+      {
+        "executionId": "b4e4900c-4fc3-41f0-a5d4-e353a0d69623",
+        "chatSessionId": "sess_7cbbacd4-91a8-4bc0-92ac-ca81528258dc",
+        "timestamp": 1793089151553
+      }
+    ],
+    "5. Checkpoint — traceability is total and faithful": [
+      {
+        "executionId": "7aea9cfb-686d-464e-8bc6-5623ba8c5e1a",
+        "chatSessionId": "sess_b19b382b-df21-4985-a222-369569830e4b",
+        "timestamp": 1793089190453
+      },
+      {
+        "executionId": "7aea9cfb-686d-464e-8bc6-5623ba8c5e1a",
+        "chatSessionId": "sess_b19b382b-df21-4985-a222-369569830e4b",
+        "timestamp": 1793089262048
+      }
+    ],
+    "6.1 Author `docs/ARCHITECTURE.md` (D1)": [
+      {
+        "executionId": "b791cac0-08ae-4f39-beca-8dc238be2cdd",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793089293299
+      },
+      {
+        "executionId": "b791cac0-08ae-4f39-beca-8dc238be2cdd",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793089518574
+      }
+    ],
+    "6.2 Author `docs/API-CONVENTIONS.md` (D2)": [
+      {
+        "executionId": "b791cac0-08ae-4f39-beca-8dc238be2cdd",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793089294289
+      },
+      {
+        "executionId": "b791cac0-08ae-4f39-beca-8dc238be2cdd",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793089519358
+      }
+    ],
+    "7.1 Author `docs/DATA-MODEL.md` (D3)": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793089598510
+      },
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090058419
+      }
+    ],
+    "8.1 Author `docs/LABS-DESIGN.md` (D4)": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793089599973
+      },
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090061909
+      }
+    ],
+    "9.1 Author `docs/DEPLOYMENT-DESIGN.md` (D5)": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793089601363
+      },
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090059820
+      }
+    ],
+    "10.1 Author `docs/AI-CONTENT-DESIGN.md` (D6)": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793089602317
+      },
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090057038
+      }
+    ],
+    "11.1 Author `docs/RULES-REVIEW.md` (D7)": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793089603426
+      },
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090060769
+      }
+    ],
+    "10. Author the AI-content design document with failure scenarios": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090057093
+      }
+    ],
+    "7. Author the data-model design document": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090058495
+      }
+    ],
+    "9. Author the deployment design document": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090059868
+      }
+    ],
+    "8. Author the labs design document with failure scenarios": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090061959
+      }
+    ],
+    "12.1 Author ADRs A1–A4 under `docs/adr/`": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090066379
+      },
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090296673
+      }
+    ],
+    "11.2 Author `docs/RISKS.md` (D8)": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090067811
+      },
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090295288
+      }
+    ],
+    "12.2 Author ADRs A5–A8 under `docs/adr/`": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090068653
+      },
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090297364
+      }
+    ],
+    "11. Author the rules-review and risks design documents": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090295338
+      }
+    ],
+    "12. Author the architecture decision records": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090297436
+      }
+    ],
+    "6.3 Produce `.kiro/steering/api-conventions.md` (S12) after the design doc": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090301636
+      },
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090406789
+      }
+    ],
+    "6. Author the architecture and conventions design documents": [
+      {
+        "executionId": "9daaa53d-aaf7-4329-bb48-da8cad558946",
+        "chatSessionId": "sess_3952f061-3896-4cee-acb2-8c4ce8a42c1e",
+        "timestamp": 1793090406867
+      }
+    ],
+    "13.1 Verify every Mermaid diagram renders and every steering reference resolves": [
+      {
+        "executionId": "e0374061-f204-494a-8022-26d8bc26230b",
+        "chatSessionId": "sess_87ceff8c-a623-46fa-9b47-d833f7c1b629",
+        "timestamp": 1793090452082
+      },
+      {
+        "executionId": "e0374061-f204-494a-8022-26d8bc26230b",
+        "chatSessionId": "sess_87ceff8c-a623-46fa-9b47-d833f7c1b629",
+        "timestamp": 1793090641313
+      }
+    ],
+    "13. Validate diagrams and steering references across all design docs and ADRs": [
+      {
+        "executionId": "e0374061-f204-494a-8022-26d8bc26230b",
+        "chatSessionId": "sess_87ceff8c-a623-46fa-9b47-d833f7c1b629",
+        "timestamp": 1793090641395
+      }
+    ],
+    "14. Checkpoint — design docs and ADRs complete": [
+      {
+        "executionId": "bb2d245a-fc16-409f-9027-f52cc187b7b3",
+        "chatSessionId": "sess_a8ebbee3-ed6f-40a1-8e24-2131c10aadbf",
+        "timestamp": 1793090667411
+      },
+      {
+        "executionId": "bb2d245a-fc16-409f-9027-f52cc187b7b3",
+        "chatSessionId": "sess_a8ebbee3-ed6f-40a1-8e24-2131c10aadbf",
+        "timestamp": 1793090905420
+      }
+    ],
+    "15.1 Author `docs/reports/phase-0.md` (R1)": [
+      {
+        "executionId": "ce00f31c-9623-440c-a772-2c821d413476",
+        "chatSessionId": "sess_a6be8a0e-9470-480b-ba8d-323542a07ddc",
+        "timestamp": 1793090935353
+      },
+      {
+        "executionId": "ce00f31c-9623-440c-a772-2c821d413476",
+        "chatSessionId": "sess_a6be8a0e-9470-480b-ba8d-323542a07ddc",
+        "timestamp": 1793091236918
+      }
+    ],
+    "15. Write the phase-0 report": [
+      {
+        "executionId": "ce00f31c-9623-440c-a772-2c821d413476",
+        "chatSessionId": "sess_a6be8a0e-9470-480b-ba8d-323542a07ddc",
+        "timestamp": 1793091237017
+      }
+    ],
+    "16. Final checkpoint — await user approval of the design": [
+      {
+        "executionId": "7d1e7a1c-0b2a-4c0a-abc6-7e69810379d0",
+        "chatSessionId": "sess_4ef17506-98c5-47aa-ae45-7d61f307e18f",
+        "timestamp": 1793091267378
+      },
+      {
+        "executionId": "7d1e7a1c-0b2a-4c0a-abc6-7e69810379d0",
+        "chatSessionId": "sess_4ef17506-98c5-47aa-ae45-7d61f307e18f",
+        "timestamp": 1793091373238
+      }
+    ]
+  }
+}
