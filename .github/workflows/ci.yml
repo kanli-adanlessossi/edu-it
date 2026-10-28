@@ -77,6 +77,15 @@ jobs:
         run: npm ci
         working-directory: apps/web
 
+      # -- Generate the typed OpenAPI client (task 22, Req 16.2) ------------
+      # src/generated/ is a build artifact (gitignored), so it is absent in a
+      # fresh checkout. The client is generated here BEFORE lint/typecheck/test
+      # run, because apps/web imports it (src/api-client.ts); skipping this makes
+      # tsc/eslint/vitest fail with "Cannot find module './generated/api-client.js'".
+      - name: Generate OpenAPI client
+        run: npm run generate:client
+        working-directory: apps/web
+
       # -- Step 1: lint (Req 21.1) ------------------------------------------
       # Fans out to the TypeScript, Python, and domain import-boundary linters
       # via the task runner; a violation exits non-zero and fails this step.
