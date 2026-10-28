@@ -1,0 +1,23 @@
+# packages/domain — framework-free shared domain layer.
+#
+# This package holds ports, business config, and entities. It imports NO web or
+# API framework (Req 1.8, structure.md): there are deliberately no FastAPI,
+# Pydantic, Starlette, or other framework runtime dependencies here. The
+# import-boundary lint check that enforces this is added by a separate task.
+#
+# Versions are pinned exactly per docs/adr/0001-versions.md.
+
+[project]
+name = "edu-it-domain"
+version = "0.0.0"
+description = "EDU-IT framework-free domain layer (ports, config, entities)."
+requires-python = ">=3.12"
+# Intentionally empty: the domain depends on no framework.
+dependencies = []
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["edu_it_domain"]

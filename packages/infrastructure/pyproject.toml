@@ -1,0 +1,39 @@
+# packages/infrastructure — infrastructure layer (port adapters).
+#
+# Implements the domain ports against real external systems. May depend on
+# frameworks (Pydantic v2 for settings/validation); this is allowed here, not in
+# the domain. Versions are pinned exactly per docs/adr/0001-versions.md.
+
+[project]
+name = "edu-it-infrastructure"
+version = "0.0.0"
+description = "EDU-IT infrastructure layer (adapters implementing domain ports)."
+requires-python = ">=3.12"
+dependencies = [
+    "edu-it-domain",
+    "pydantic==2.14.1",
+    "sqlalchemy==2.1.6",
+    "alembic==1.20.1",
+    "psycopg==3.3.6",
+    "redis==8.1.0",
+]
+
+[project.scripts]
+# The Migration_Runner CLI (Req 4): apply/rollback the full data-model schema.
+edu-it-migrate = "edu_it_infrastructure.persistence.runner:main"
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["edu_it_infrastructure"]
+# Ship the Alembic script template and config alongside the package so the
+# Migration_Runner can locate them when installed as a wheel.
+artifacts = [
+    "edu_it_infrastructure/persistence/migrations/script.py.mako",
+    "edu_it_infrastructure/persistence/migrations/alembic.ini",
+]
+
+[tool.uv.sources]
+edu-it-domain = { workspace = true }

@@ -1,6 +1,6 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: '**/{auth,accounts,privacy,users}/**|**/*{auth,account,privacy,user,session,oauth,login,identity}*'
+fileMatchPattern: '**/{auth,accounts,privacy,users}/**|**/*{auth,account,privacy,user,session,oauth,login,identity,signin,signup,sign-in,sign-up,sign_in,sign_up,password,reset,verify,verification,credential,csrf}*'
 ---
 
 # Authentication and Privacy
