@@ -1,0 +1,39 @@
+# apps/worker — task-queue consumer.
+#
+# Thin boundary over the shared Python package; consumes the Redis-backed queue.
+# Depends inward on application and infrastructure. Versions are pinned exactly
+# per docs/adr/0001-versions.md.
+
+[project]
+name = "edu-it-worker"
+version = "0.0.0"
+description = "EDU-IT task-queue consumer (worker)."
+requires-python = ">=3.12"
+dependencies = [
+    "edu-it-domain",
+    "edu-it-application",
+    "edu-it-infrastructure",
+    # Minimal ASGI surface for the worker's Health_Endpoint / Readiness_Endpoint
+    # (Req 18). Starlette is the same ASGI toolkit that backs the API's FastAPI,
+    # so the worker adds no second web stack. Pinned exactly per
+    # docs/adr/0001-versions.md.
+    "starlette==1.10.0",
+]
+
+[project.scripts]
+# The privileged-user CLI (Req 13.2): create/update a user and grant a
+# privileged reviewer/author/admin role. The only path that provisions
+# privileged roles; self-service never does (Req 13.3).
+edu-it-grant-role = "edu_it_worker.privileged_user_cli:main"
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["edu_it_worker"]
+
+[tool.uv.sources]
+edu-it-domain = { workspace = true }
+edu-it-application = { workspace = true }
+edu-it-infrastructure = { workspace = true }

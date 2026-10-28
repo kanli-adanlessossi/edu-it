@@ -1,0 +1,23 @@
+# packages/application — application layer (use cases).
+#
+# Depends inward on the domain only (api → application → domain ← infrastructure).
+# Versions are pinned exactly per docs/adr/0001-versions.md.
+
+[project]
+name = "edu-it-application"
+version = "0.0.0"
+description = "EDU-IT application layer (use cases orchestrating domain ports)."
+requires-python = ">=3.12"
+dependencies = [
+    "edu-it-domain",
+]
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["edu_it_application"]
+
+[tool.uv.sources]
+edu-it-domain = { workspace = true }

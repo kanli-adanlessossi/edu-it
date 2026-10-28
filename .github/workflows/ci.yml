@@ -1,0 +1,115 @@
+# EDU-IT Continuous Integration pipeline (Req 21.1-21.5, 20.4).
+#
+# Runs on every push to ANY branch (Req 21.1). The pipeline runs five steps —
+# lint, typecheck, test, dependency-audit, and secret-scan — each as a
+# separately named step so that if any step reports an error the job fails with
+# a non-zero status and the failing step is reported by name in the run summary
+# (Req 21.2); when every step completes without error the job succeeds with a
+# zero status (Req 21.3).
+#
+# The test step runs the full pytest suite, which includes the end-to-end
+# authentication tests (sign-up, email verification, sign-in, sign-out, password
+# reset) in apps/api/tests/test_e2e_authentication.py (Req 21.4). Those tests run
+# the GitHub-OAuth flow against an in-process mock OAuth provider and forbid any
+# outbound socket, so no external OAuth provider is contacted (Req 21.5).
+#
+# This workflow produces no Kubernetes artifact — it is a GitHub Actions CI
+# definition only, with no Helm chart, manifest, network policy, or node-pool
+# configuration (Req 20.4).
+#
+# Every step invokes the repository's single, pinned toolchain through the
+# top-level task runner (the Makefile `lint`/`typecheck`/`test` entry points)
+# and the pinned package managers (`uv` for Python, `npm` for apps/web), so CI
+# never introduces a second, independently versioned toolchain (ADR 0001).
+
+name: CI
+
+# Req 21.1: run on every push to any branch.
+on:
+  push:
+    branches:
+      - '**'
+
+# Keep the token read-only; CI only needs to read the repository contents.
+permissions:
+  contents: read
+
+# Avoid piling up redundant runs for the same ref while still letting each push
+# complete its own run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: lint / typecheck / test / audit / secret-scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for secret scanning)
+        uses: actions/checkout@v4
+        with:
+          # gitleaks scans the commit history, so fetch all of it.
+          fetch-depth: 0
+
+      # -- Toolchain setup ---------------------------------------------------
+      # Node for the apps/web TypeScript tooling; the version is cache-keyed on
+      # the committed package-lock.json so installs are reproducible.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      # uv provides the pinned Python toolchain (ruff/mypy/pytest/hypothesis)
+      # resolved from the committed uv.lock, plus pip-audit for the dependency
+      # audit step below.
+      - name: Set up uv (pinned Python toolchain)
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install Python workspace (frozen to uv.lock)
+        run: uv sync --frozen --all-packages
+
+      - name: Install apps/web dependencies (frozen to package-lock.json)
+        run: npm ci
+        working-directory: apps/web
+
+      # -- Step 1: lint (Req 21.1) ------------------------------------------
+      # Fans out to the TypeScript, Python, and domain import-boundary linters
+      # via the task runner; a violation exits non-zero and fails this step.
+      - name: Lint
+        run: make lint
+
+      # -- Step 2: typecheck (Req 21.1) -------------------------------------
+      - name: Typecheck
+        run: make typecheck
+
+      # -- Step 3: test (Req 21.1, 21.4, 21.5) ------------------------------
+      # Runs the full TypeScript + Python test suites. The Python suite includes
+      # the end-to-end authentication tests (Req 21.4) whose GitHub-OAuth cases
+      # run against an in-process mock provider with outbound sockets forbidden
+      # (Req 21.5).
+      - name: Test
+        run: make test
+
+      # -- Step 4: dependency-audit (Req 21.1) ------------------------------
+      # Audits both dependency trees for known vulnerabilities. pip-audit covers
+      # the resolved Python workspace; `npm audit` covers apps/web. Either tool
+      # reporting a vulnerability exits non-zero and fails this step.
+      - name: Dependency audit (Python)
+        run: uv run --with pip-audit pip-audit
+
+      - name: Dependency audit (apps/web)
+        run: npm audit --audit-level=low
+        working-directory: apps/web
+
+      # -- Step 5: secret-scan (Req 21.1) -----------------------------------
+      # Scans the working tree and full commit history for committed secrets.
+      # A detected secret exits non-zero and fails this step.
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

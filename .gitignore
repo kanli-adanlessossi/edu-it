@@ -1,0 +1,19 @@
+# Python toolchain artifacts (apps/api, apps/worker, packages/*).
+# uv.lock is intentionally committed: it pins the exact resolved versions
+# behind docs/adr/0001-versions.md so builds are reproducible.
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.hypothesis/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Local environment files. `.env.example` is the committed template (Req 2.5);
+# the real `.env` holds secrets and must never be committed (Req 2.6).
+.env
+.env.*
+!.env.example

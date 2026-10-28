@@ -1,0 +1,39 @@
+{
+  "name": "@edu-it/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "EDU-IT Next.js App Router UI (/fr and /en route trees).",
+  "scripts": {
+    "generate:client": "node scripts/build-client.mjs",
+    "build": "node scripts/build-client.mjs && next build --webpack",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "next-intl": "4.14.9",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/jsdom": "30.0.0",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "axe-core": "4.14.0",
+    "eslint": "10.13.0",
+    "fast-check": "4.10.2",
+    "globals": "17.13.0",
+    "jsdom": "29.1.1",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.0.5"
+  }
+}

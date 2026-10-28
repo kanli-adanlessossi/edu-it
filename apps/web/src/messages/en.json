@@ -1,0 +1,67 @@
+{
+  "LanguageSwitcher": {
+    "label": "Language",
+    "switchToEnglish": "English",
+    "switchToFrench": "Français"
+  },
+  "Shell": {
+    "appName": "EDU-IT",
+    "skipToContent": "Skip to main content",
+    "nav": {
+      "home": "Home",
+      "signIn": "Sign in",
+      "signUp": "Sign up",
+      "dashboard": "Dashboard"
+    }
+  },
+  "Landing": {
+    "title": "Learn IT, the structured way",
+    "intro": "EDU-IT is a bilingual platform for structured IT learning. Create an account to get started.",
+    "getStarted": "Get started",
+    "alreadyHaveAccount": "Already have an account? Sign in."
+  },
+  "Auth": {
+    "common": {
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "newPasswordLabel": "New password",
+      "submit": "Continue",
+      "genericError": "Something went wrong. Please check your details and try again."
+    },
+    "signUp": {
+      "title": "Create your account",
+      "submit": "Sign up",
+      "haveAccount": "Already have an account? Sign in."
+    },
+    "signIn": {
+      "title": "Sign in",
+      "submit": "Sign in",
+      "needAccount": "Need an account? Sign up.",
+      "forgotPassword": "Forgot your password?"
+    },
+    "verifyEmail": {
+      "title": "Verify your email",
+      "instructions": "We sent you a verification link. Open it to activate your account.",
+      "resend": "Resend verification email"
+    },
+    "resetPassword": {
+      "title": "Reset your password",
+      "requestInstructions": "Enter your email address and we will send you a reset link.",
+      "submit": "Send reset link",
+      "setNewInstructions": "Choose a new password for your account."
+    }
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "empty": "Your dashboard is empty for now. Learning features arrive soon."
+  },
+  "Meta": {
+    "siteName": "EDU-IT",
+    "landing": "EDU-IT — Learn IT, the structured way",
+    "signUp": "Create your account — EDU-IT",
+    "signIn": "Sign in — EDU-IT",
+    "verifyEmail": "Verify your email — EDU-IT",
+    "resetPassword": "Reset your password — EDU-IT",
+    "dashboard": "Dashboard — EDU-IT"
+  }
+}

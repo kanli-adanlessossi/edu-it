@@ -1,0 +1,216 @@
+# EDU-IT — root Python tooling configuration.
+#
+# This file is the single source of truth for the Python developer toolchain
+# (lint, format, typecheck, test) shared by every Python component:
+#   apps/api, apps/worker, packages/domain, packages/application,
+#   packages/infrastructure.
+#
+# The top-level task runner (Makefile / tasks.sh / tasks.ps1) invokes the tools
+# configured here from the repository root so that a single, uniform set of
+# rules applies across all five components.
+#
+# Tool and framework versions are pinned EXACTLY (no open ranges) per
+# docs/adr/0001-versions.md (ADR 0001 — pin current stable versions of all
+# frameworks and test tools). Each component's own pyproject.toml re-states the
+# framework/runtime pins it depends on.
+#
+# Convention (Req 1.4–1.7): each command exits non-zero and reports the
+# offending location on a lint violation, type error, or test failure, and
+# exits zero when clean.
+
+# -- Workspace root -----------------------------------------------------------
+# The repo root is a uv workspace whose members are the five Python components.
+# `uv sync` installs every member (editable) plus the dev toolchain below into a
+# single root virtualenv, so the task runner can lint/typecheck/test them all at
+# once with one tool install.
+[project]
+name = "edu-it"
+version = "0.0.0"
+description = "EDU-IT monorepo — Python workspace root and shared tooling."
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+    "packages/domain",
+    "packages/application",
+    "packages/infrastructure",
+    "apps/api",
+    "apps/worker",
+]
+
+[tool.uv.sources]
+edu-it-domain = { workspace = true }
+edu-it-application = { workspace = true }
+edu-it-infrastructure = { workspace = true }
+edu-it-api = { workspace = true }
+edu-it-worker = { workspace = true }
+
+# -- Developer toolchain pins (exact) -----------------------------------------
+# Installed via `uv sync` / `pip install` from these exact pins. These are the
+# tools the task runner invokes; the per-component frameworks are pinned in the
+# matching component pyproject.toml files.
+[dependency-groups]
+dev = [
+    "ruff==0.17.3",
+    "mypy==1.20.2",
+    "pytest==9.1.1",
+    "hypothesis==6.170.12",
+    "pre-commit==4.6.2",
+    # Redis test double for the Redis-backed TaskQueue adapter (task 7.2): lets
+    # the adapter's unit tests run without a live Redis server.
+    "fakeredis==2.40.0",
+]
+
+# -- Ruff (lint + format) -----------------------------------------------------
+# Ruff is the linter (`ruff check`) and the formatter (`ruff format`). On a
+# violation `ruff check` exits non-zero and prints the file path, line/column,
+# and the violated rule code; `ruff format --check` exits non-zero and names the
+# files that are not formatted. Both exit zero when clean.
+[tool.ruff]
+# Target the oldest runtime any component supports so lint rules match runtime.
+target-version = "py312"
+line-length = 100
+# Scope Ruff to the Python components; never touch apps/web (TypeScript).
+include = [
+    "apps/api/**/*.py",
+    "apps/worker/**/*.py",
+    "packages/domain/**/*.py",
+    "packages/application/**/*.py",
+    "packages/infrastructure/**/*.py",
+]
+extend-exclude = [
+    "apps/web",
+    "**/.venv",
+    "**/node_modules",
+]
+
+[tool.ruff.lint]
+# A pragmatic, strict-leaning rule set. E/F = pycodestyle+pyflakes, I = isort,
+# B = bugbear, UP = pyupgrade, SIM = simplify, TID = tidy-imports (used by the
+# later domain import-boundary task), RUF = Ruff-specific.
+select = ["E", "F", "I", "B", "UP", "SIM", "TID", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Property-based tests must carry their correctness property's tag verbatim on a
+# single line (`Feature: foundations, Property {n}: {text}`). Property 34's text
+# is longer than the 100-char line limit, so E501 is ignored for that test file
+# only; the tag cannot be reflowed without breaking the single-line convention.
+"packages/infrastructure/tests/test_persistence_stable_id_properties.py" = ["E501"]
+# Property 28's tag is longer than the 100-char line limit; it cannot be
+# reflowed without breaking the single-line tag convention, so E501 is ignored
+# for that test file only.
+"apps/api/tests/test_errors_problem_document_properties.py" = ["E501"]
+# Property 30's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"apps/api/tests/test_errors_locale_fallback_property.py" = ["E501"]
+# Property 29's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"apps/api/tests/test_errors_validation_problem_properties.py" = ["E501"]
+# Property 26's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/application/tests/test_health_readiness_properties.py" = ["E501"]
+# Property 35's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/application/tests/test_compose_readiness_properties.py" = ["E501"]
+# Property 5's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/infrastructure/tests/test_sign_up_duplicate_non_disclosure_properties.py" = ["E501"]
+
+# Property 4's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/infrastructure/tests/test_sign_up_valid_properties.py" = ["E501"]
+
+# Property 6's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/infrastructure/tests/test_sign_in_session_establishment_properties.py" = ["E501"]
+
+# Property 1's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/infrastructure/tests/test_link_ttl_boundary_properties.py" = ["E501"]
+
+# Property 12's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/infrastructure/tests/test_mail_delivery_failure_properties.py" = ["E501"]
+
+# Property 13's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/infrastructure/tests/test_oauth_in_window_confirmation_properties.py" = ["E501"]
+
+# Property 15's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/application/tests/test_oauth_rejection_properties.py" = ["E501"]
+
+# Property 17's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"packages/infrastructure/tests/test_rate_limit_blocking_properties.py" = ["E501"]
+
+# Property 18's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"apps/worker/tests/test_privileged_user_cli_property.py" = ["E501"]
+
+# Property 37's tag text is longer than the 100-char line limit and must stay on
+# a single line (the `Feature: foundations, Property {n}: {text}` convention),
+# so E501 is ignored for this property test file only.
+"tools/tests/test_steering_filematch_coverage_properties.py" = ["E501"]
+
+[tool.ruff.format]
+# Ruff's formatter is the single formatter for all Python components.
+quote-style = "double"
+
+# -- mypy (typecheck) ---------------------------------------------------------
+# On a type error mypy exits non-zero and prints `file:line: error: ...` for
+# each error; it exits zero when clean.
+[tool.mypy]
+python_version = "3.12"
+strict = true
+pretty = true
+show_error_codes = true
+show_column_numbers = true
+# Components are importable as top-level packages; namespace layout per package.
+explicit_package_bases = true
+mypy_path = [
+    "packages/domain",
+    "packages/application",
+    "packages/infrastructure",
+    "apps/api",
+    "apps/worker",
+]
+files = [
+    "packages/domain",
+    "packages/application",
+    "packages/infrastructure",
+    "apps/api",
+    "apps/worker",
+]
+exclude = "(^|/)(\\.venv|node_modules)/"
+
+# -- pytest (test) ------------------------------------------------------------
+# On a test failure pytest exits non-zero and identifies the failing tests; it
+# exits zero when every collected test passes. `--import-mode=importlib` keeps
+# same-named test modules across components from colliding.
+[tool.pytest.ini_options]
+addopts = "-ra --import-mode=importlib"
+testpaths = [
+    "packages/domain",
+    "packages/application",
+    "packages/infrastructure",
+    "apps/api",
+    "apps/worker",
+    # Repo-level tooling tests (import-boundary check + exit-status behavior).
+    "tools/tests",
+]
+python_files = ["test_*.py", "*_test.py"]

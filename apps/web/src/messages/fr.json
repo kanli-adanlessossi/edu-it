@@ -1,0 +1,67 @@
+{
+  "LanguageSwitcher": {
+    "label": "Langue",
+    "switchToEnglish": "English",
+    "switchToFrench": "Français"
+  },
+  "Shell": {
+    "appName": "EDU-IT",
+    "skipToContent": "Aller au contenu principal",
+    "nav": {
+      "home": "Accueil",
+      "signIn": "Se connecter",
+      "signUp": "Créer un compte",
+      "dashboard": "Tableau de bord"
+    }
+  },
+  "Landing": {
+    "title": "Apprenez l'informatique, de façon structurée",
+    "intro": "EDU-IT est une plateforme bilingue d'apprentissage structuré de l'informatique. Créez un compte pour commencer.",
+    "getStarted": "Commencer",
+    "alreadyHaveAccount": "Vous avez déjà un compte ? Connectez-vous."
+  },
+  "Auth": {
+    "common": {
+      "emailLabel": "Adresse e-mail",
+      "passwordLabel": "Mot de passe",
+      "newPasswordLabel": "Nouveau mot de passe",
+      "submit": "Continuer",
+      "genericError": "Une erreur est survenue. Vérifiez vos informations et réessayez."
+    },
+    "signUp": {
+      "title": "Créez votre compte",
+      "submit": "Créer un compte",
+      "haveAccount": "Vous avez déjà un compte ? Connectez-vous."
+    },
+    "signIn": {
+      "title": "Connexion",
+      "submit": "Se connecter",
+      "needAccount": "Besoin d'un compte ? Créez-en un.",
+      "forgotPassword": "Mot de passe oublié ?"
+    },
+    "verifyEmail": {
+      "title": "Vérifiez votre e-mail",
+      "instructions": "Nous vous avons envoyé un lien de vérification. Ouvrez-le pour activer votre compte.",
+      "resend": "Renvoyer l'e-mail de vérification"
+    },
+    "resetPassword": {
+      "title": "Réinitialisez votre mot de passe",
+      "requestInstructions": "Saisissez votre adresse e-mail et nous vous enverrons un lien de réinitialisation.",
+      "submit": "Envoyer le lien",
+      "setNewInstructions": "Choisissez un nouveau mot de passe pour votre compte."
+    }
+  },
+  "Dashboard": {
+    "title": "Tableau de bord",
+    "empty": "Votre tableau de bord est vide pour le moment. Les fonctionnalités d'apprentissage arrivent bientôt."
+  },
+  "Meta": {
+    "siteName": "EDU-IT",
+    "landing": "EDU-IT — Apprenez l'informatique, de façon structurée",
+    "signUp": "Créez votre compte — EDU-IT",
+    "signIn": "Connexion — EDU-IT",
+    "verifyEmail": "Vérifiez votre e-mail — EDU-IT",
+    "resetPassword": "Réinitialisez votre mot de passe — EDU-IT",
+    "dashboard": "Tableau de bord — EDU-IT"
+  }
+}

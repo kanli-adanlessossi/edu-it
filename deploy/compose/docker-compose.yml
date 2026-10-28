@@ -1,0 +1,113 @@
+# EDU-IT local-development Docker Compose stack (task 10, Req 3).
+#
+# This file defines the one-command local stack and nothing else. It declares
+# EXACTLY FIVE services — web, api, worker, postgres, redis (Req 3.1) — and no
+# Kubernetes artifact is produced in this phase (Req 20.4); the Kubernetes
+# topology in .kiro/steering/deployment.md is referenced for connectivity intent
+# only.
+#
+# A single `docker compose up` brings all five services to the running state; if
+# any one fails to start, Compose reports which service did not start and leaves
+# the others' state unchanged (Req 3.2, 3.3). The aggregate "all three ready
+# within 120 s" check (Req 3.4-3.6) is NOT a per-container healthcheck — it is
+# the dedicated wait script deploy/compose/wait_for_ready.py, invoked by CI and
+# the phase-1 report after the stack is up, so the all-or-nothing semantics are
+# explicit and observable.
+#
+# api and worker each connect to BOTH postgres and redis (Req 3.7), consistent
+# with the connectivity intent in .kiro/steering/deployment.md (the api reaches
+# PostgreSQL and Redis; the worker reaches PostgreSQL and Redis).
+#
+# Values mirror the non-sensitive placeholders in .env.example; copy that file
+# to .env to override locally. No real secret or production value lives here.
+
+name: edu-it
+
+services:
+  # --- 1. Web_App (Next.js App Router UI) ------------------------------------
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      WEB_PORT: "3000"
+      NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
+      NEXT_PUBLIC_DEFAULT_LOCALE: "en"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  # --- 2. API_Service (FastAPI boundary) -------------------------------------
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    environment:
+      EDU_IT_ENV: "development"
+      LOG_LEVEL: "info"
+      # api connects to BOTH datastores (Req 3.7).
+      DATABASE_URL: "postgresql://edu_it:change-me@postgres:5432/edu_it"
+      REDIS_URL: "redis://redis:6379/0"
+      MAILER_BACKEND: "console"
+      MAIL_FROM_ADDRESS: "no-reply@example.test"
+      LLM_PROVIDER_BACKEND: "fake"
+      OBJECT_STORAGE_BACKEND: "memory"
+      API_HOST: "0.0.0.0"
+      API_PORT: "8000"
+      API_BASE_URL: "http://localhost:8000"
+      WEB_BASE_URL: "http://localhost:3000"
+      API_SECRET_KEY: "change-me-dev-secret"
+      DEFAULT_LOCALE: "en"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+  # --- 3. Worker_Service (task-queue consumer) -------------------------------
+  worker:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      EDU_IT_ENV: "development"
+      LOG_LEVEL: "info"
+      # worker connects to BOTH datastores (Req 3.7).
+      DATABASE_URL: "postgresql://edu_it:change-me@postgres:5432/edu_it"
+      REDIS_URL: "redis://redis:6379/0"
+      MAILER_BACKEND: "console"
+      MAIL_FROM_ADDRESS: "no-reply@example.test"
+      LLM_PROVIDER_BACKEND: "fake"
+      OBJECT_STORAGE_BACKEND: "memory"
+      WORKER_HEALTH_HOST: "0.0.0.0"
+      WORKER_HEALTH_PORT: "8001"
+    ports:
+      - "8001:8001"
+    depends_on:
+      - postgres
+      - redis
+
+  # --- 4. PostgreSQL (system of record) --------------------------------------
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: "edu_it"
+      POSTGRES_PASSWORD: "change-me"
+      POSTGRES_DB: "edu_it"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  # --- 5. Redis (task queue + session/ephemeral store) -----------------------
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  postgres-data:
+  redis-data:

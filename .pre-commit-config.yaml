@@ -1,0 +1,91 @@
+# EDU-IT pre-commit hook configuration (Req 2.1-2.4).
+#
+# Runs lint, format, and typecheck against ONLY the files staged for the
+# pending commit (Req 2.1). `pre-commit` runs these before the commit is
+# recorded (Req 2.2); a non-zero hook blocks the commit, leaves the staged
+# changes uncommitted, and the runner names the failing hook by its `name`
+# (Req 2.3); when every hook exits zero the commit proceeds (Req 2.4).
+#
+# Every hook is a `local` hook that reuses the repository's single, pinned
+# toolchain rather than a second independently versioned copy:
+#   - Python lint/format/typecheck -> the pinned ruff / mypy from the root
+#     pyproject.toml `dev` group, run through `uv run`.
+#   - TypeScript lint/format/typecheck -> the pinned eslint / prettier / tsc
+#     from apps/web/package.json, run through `npm --prefix apps/web`.
+# Versions are pinned exactly per docs/adr/0001-versions.md (ADR 0001); the
+# `pre-commit` runner itself is pinned there too.
+#
+# `pre-commit` passes the staged filenames to each hook by default, so the
+# lint/format hooks act on exactly the staged files. Project-wide typecheck
+# steps (`mypy` over the workspace, `tsc --noEmit` over apps/web) cannot be
+# evaluated file-by-file in isolation without spurious cross-module errors, so
+# they run once when a relevant file is staged (`pass_filenames: false`) and
+# still gate the commit on the staged change.
+#
+# Install into the local clone with:  uv run pre-commit install
+
+minimum_pre_commit_version: "4.6.2"
+fail_fast: false
+
+repos:
+  - repo: local
+    hooks:
+      # -- Python (apps/api, apps/worker, packages/*) ----------------------
+      - id: ruff-lint
+        name: lint (python / ruff check)
+        description: Lint the staged Python files with the pinned ruff.
+        entry: uv run ruff check --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: ruff-format
+        name: format (python / ruff format --check)
+        description: Check formatting of the staged Python files with the pinned ruff.
+        entry: uv run ruff format --force-exclude --check
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: mypy-typecheck
+        name: typecheck (python / mypy)
+        description: Type-check the staged Python files with the pinned mypy.
+        entry: uv run mypy
+        language: system
+        types_or: [python, pyi]
+        # Exclude apps/web (TypeScript) from this Python hook's file set.
+        exclude: ^apps/web/
+        require_serial: true
+
+      # -- TypeScript (apps/web) -------------------------------------------
+      # The web tools run with apps/web as their working directory, so
+      # tools/precommit_web.mjs translates the staged repo-relative paths into
+      # apps/web-relative paths and runs the pinned eslint / prettier on
+      # exactly the staged files (Req 2.1).
+      - id: eslint-web
+        name: lint (web / eslint)
+        description: Lint the staged apps/web files with the pinned eslint.
+        entry: node tools/precommit_web.mjs eslint
+        language: system
+        files: ^apps/web/.*\.(ts|tsx|js|jsx|mjs|cjs)$
+        require_serial: true
+
+      - id: prettier-web
+        name: format (web / prettier --check)
+        description: Check formatting of the staged apps/web files with the pinned prettier.
+        entry: node tools/precommit_web.mjs prettier
+        language: system
+        files: ^apps/web/.*\.(ts|tsx|js|jsx|mjs|cjs|json|css|md)$
+        require_serial: true
+
+      - id: tsc-web
+        name: typecheck (web / tsc --noEmit)
+        description: >-
+          Type-check apps/web with the pinned TypeScript compiler. tsc is a
+          whole-project check, so it runs once when any apps/web TypeScript
+          file is staged rather than per file.
+        entry: npm --prefix apps/web run typecheck
+        language: system
+        files: ^apps/web/.*\.(ts|tsx)$
+        pass_filenames: false
+        require_serial: true
