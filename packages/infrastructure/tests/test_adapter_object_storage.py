@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from edu_it_domain.ports import ObjectStorage
 from edu_it_infrastructure.adapters import FileSystem_ObjectStorage
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 
@@ -98,6 +98,12 @@ def test_a_new_store_reads_objects_persisted_by_a_previous_store(tmp_path: Path)
     assert reopened.get("k").content_type == "text/plain"
 
 
+# Each example does real disk I/O (mkdir + two fsync'd atomic writes). On Windows
+# a single example takes ~23ms median but spikes past 100ms, and under full-suite
+# load (AV scanning, disk contention) can exceed Hypothesis' 200ms default
+# deadline, failing a correct property with DeadlineExceeded. The deadline guards
+# against slow pure code, not filesystem latency, so it is disabled here only.
+@settings(deadline=None)
 @given(
     key=st.text(min_size=1, max_size=64),
     data=st.binary(max_size=256),

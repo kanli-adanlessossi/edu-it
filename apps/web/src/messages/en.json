@@ -1,4 +1,51 @@
 {
+  "Practice": {
+    "meta": {
+      "quiz": "Quiz — EDU-IT",
+      "review": "Review session — EDU-IT",
+      "project": "Project submission — EDU-IT"
+    },
+    "quiz": {
+      "questionLabel": "Question {number}: {prompt}",
+      "showHint": "Show hint {level}",
+      "hintsLabel": "Hints",
+      "submit": "Submit answers",
+      "resultTitle": "Your result",
+      "score": "Score: {score}",
+      "bestScore": "Best score: {score}",
+      "replayed": "This attempt was already recorded.",
+      "counted": "This answer counts toward your mastery.",
+      "notCounted": "This answer does not count toward mastery again within 24 hours.",
+      "unavailable": "This quiz is not available.",
+      "genericError": "Something went wrong. Please try again."
+    },
+    "review": {
+      "title": "Review session",
+      "questionLabel": "Question {number}: {prompt}",
+      "submit": "Submit review",
+      "passed": "Review passed",
+      "failed": "Review not passed",
+      "score": "Score: {score}",
+      "nextDue": "Next review: {date}",
+      "nothingDue": "Nothing is due for review right now.",
+      "genericError": "Something went wrong. Please try again."
+    },
+    "project": {
+      "rubricLegend": "Rubric self-assessment",
+      "criterionLabel": "{title} (0 to {max} points)",
+      "criterionMissing": "Enter your points for this criterion.",
+      "criterionOutOfRange": "Enter a whole number from 0 to {max}.",
+      "evidenceLegend": "Evidence",
+      "evidenceLabel": "Evidence item {number}",
+      "evidenceRequired": "Provide at least one piece of evidence.",
+      "addEvidence": "Add another evidence item",
+      "submit": "Submit project",
+      "pending": "Submitted. Your project is awaiting review.",
+      "reviewed": "Your project has been reviewed.",
+      "unavailable": "This project is not available.",
+      "genericError": "Something went wrong. Please try again."
+    }
+  },
   "LanguageSwitcher": {
     "label": "Language",
     "switchToEnglish": "English",
@@ -55,7 +102,48 @@
     "title": "Dashboard",
     "empty": "Your dashboard is empty for now. Learning features arrive soon."
   },
+  "Lesson": {
+    "unsupportedContent": "This lesson contains content that cannot be displayed.",
+    "fallbackNotice": "This lesson is not yet available in your language. Showing the English version."
+  },
+  "LabPlaceholder": {
+    "title": "Labs",
+    "comingSoon": "Coming soon"
+  },
+  "Learning": {
+    "loadError": "We could not load your learning data. Please try again later.",
+    "lock": { "locked": "Locked", "unlocked": "Unlocked" },
+    "dashboard": {
+      "progress": "Your progress",
+      "noEnrollments": "You are not enrolled in any track yet.",
+      "due": "Concepts due for review",
+      "noneDue": "No concepts are due.",
+      "overdue": "Overdue concepts",
+      "noneOverdue": "No concepts are overdue."
+    },
+    "enroll": {
+      "heading": "Enroll in a track",
+      "trackLabel": "Track identifier",
+      "submit": "Enroll",
+      "invalid": "Enter a valid track identifier.",
+      "failed": "We could not enroll you in that track."
+    },
+    "track": {
+      "title": "Track",
+      "summary": "{percent}% of modules unlocked, {lessons} lessons completed.",
+      "modules": "Modules"
+    },
+    "module": {
+      "title": "Module",
+      "lockedHint": "Reach Practiced on the prerequisite concepts to unlock this module.",
+      "completedLessons": "Completed lessons",
+      "noCompletions": "No lessons completed yet.",
+      "backToTrack": "Back to the track"
+    }
+  },
   "Meta": {
+    "track": "Track — EDU-IT",
+    "module": "Module — EDU-IT",
     "siteName": "EDU-IT",
     "landing": "EDU-IT — Learn IT, the structured way",
     "signUp": "Create your account — EDU-IT",

@@ -1,0 +1,12 @@
+[
+  {
+    "stable_id": "prerequisite.processes-requires-reading-permissions",
+    "concept_stable_id": "concept.processes",
+    "requires_concept_stable_id": "concept.reading-permissions"
+  },
+  {
+    "stable_id": "prerequisite.processes-requires-changing-permissions",
+    "concept_stable_id": "concept.processes",
+    "requires_concept_stable_id": "concept.changing-permissions"
+  }
+]

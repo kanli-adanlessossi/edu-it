@@ -60,7 +60,9 @@ function Invoke-PyTask([string]$Name) {
         'lint'      { 'ruff check .' }
         'format'    { 'ruff format .' }
         'typecheck' { 'mypy' }
-        'test'      { 'pytest' }
+        # Domain statement-coverage gate (Req 11.3, 30.1): fails below the
+        # fail_under threshold (90) in pyproject.toml [tool.coverage.report].
+        'test'      { 'pytest --cov=edu_it_domain' }
     }
     $full = "$UvPrefix $cmd"
     Invoke-Expression $full

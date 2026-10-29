@@ -1,0 +1,23 @@
+[
+  {
+    "provenance": {
+      "stable_id": "project.harden-shared-directory",
+      "content_version": "sha256:445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.project",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "title": {
+      "en": "Harden a shared project directory",
+      "fr": "Sécuriser un répertoire de projet partagé"
+    },
+    "description": {
+      "en": "A team shares a directory where everyone in the `project` group must be able to read and create files, while users outside the group have no access. Write an idempotent setup script that creates the group and directory, assigns ownership and group, sets permissions following least privilege, and turns on the setgid bit so new files keep the shared group. Running the script twice must leave the system in the same state as running it once. Submit the script together with a short write-up explaining each permission choice and why your script is safe to re-run.",
+      "fr": "Une équipe partage un répertoire où toute personne du groupe `project` doit pouvoir lire et créer des fichiers, tandis que les utilisateurs hors du groupe n'ont aucun accès. Écrivez un script d'installation idempotent qui crée le groupe et le répertoire, attribue le propriétaire et le groupe, règle les permissions selon le moindre privilège et active le bit setgid pour que les nouveaux fichiers conservent le groupe partagé. Exécuter le script deux fois doit laisser le système dans le même état qu'une seule exécution. Remettez le script accompagné d'une courte note expliquant chaque choix de permission et pourquoi votre script peut être relancé sans danger."
+    }
+  }
+]

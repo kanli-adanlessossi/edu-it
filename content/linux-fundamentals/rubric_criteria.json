@@ -1,0 +1,38 @@
+[
+  {
+    "stable_id": "rubric_criterion.correctness",
+    "rubric_stable_id": "rubric.harden-shared-directory",
+    "max_points": 40,
+    "title": {
+      "en": "Correctness",
+      "fr": "Exactitude"
+    }
+  },
+  {
+    "stable_id": "rubric_criterion.least-privilege",
+    "rubric_stable_id": "rubric.harden-shared-directory",
+    "max_points": 25,
+    "title": {
+      "en": "Least privilege",
+      "fr": "Moindre privilège"
+    }
+  },
+  {
+    "stable_id": "rubric_criterion.idempotency",
+    "rubric_stable_id": "rubric.harden-shared-directory",
+    "max_points": 20,
+    "title": {
+      "en": "Idempotency",
+      "fr": "Idempotence"
+    }
+  },
+  {
+    "stable_id": "rubric_criterion.explanation",
+    "rubric_stable_id": "rubric.harden-shared-directory",
+    "max_points": 15,
+    "title": {
+      "en": "Explanation",
+      "fr": "Explication"
+    }
+  }
+]

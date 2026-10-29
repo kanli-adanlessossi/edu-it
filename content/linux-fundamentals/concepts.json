@@ -1,0 +1,53 @@
+[
+  {
+    "provenance": {
+      "stable_id": "concept.reading-permissions",
+      "content_version": "sha256:f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff001122334455",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.concept",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "title": {
+      "en": "Reading file permissions",
+      "fr": "Lire les permissions des fichiers"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "concept.changing-permissions",
+      "content_version": "sha256:0718293a4b5c6d7e8f90112233445566778899aabbccddeeff00112233445566",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.concept",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "title": {
+      "en": "Changing permissions and ownership",
+      "fr": "Modifier les permissions et la propriété"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "concept.processes",
+      "content_version": "sha256:18293a4b5c6d7e8f90112233445566778899aabbccddeeff0011223344556677",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.concept",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "title": {
+      "en": "Understanding processes",
+      "fr": "Comprendre les processus"
+    }
+  }
+]

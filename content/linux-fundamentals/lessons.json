@@ -1,0 +1,59 @@
+[
+  {
+    "provenance": {
+      "stable_id": "lesson.reading-permissions",
+      "content_version": "sha256:c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff001122",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.lesson",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "module_stable_id": "module.files-permissions",
+    "ordinal": 0,
+    "title": {
+      "en": "Reading permissions",
+      "fr": "Lire les permissions"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "lesson.changing-permissions",
+      "content_version": "sha256:d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00112233",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.lesson",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "module_stable_id": "module.files-permissions",
+    "ordinal": 1,
+    "title": {
+      "en": "Changing permissions and ownership",
+      "fr": "Modifier les permissions et la propriété"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "lesson.processes-intro",
+      "content_version": "sha256:e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff0011223344",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.lesson",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "module_stable_id": "module.processes",
+    "ordinal": 0,
+    "title": {
+      "en": "A first look at processes",
+      "fr": "Premier aperçu des processus"
+    }
+  }
+]

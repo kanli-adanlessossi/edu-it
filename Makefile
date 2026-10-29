@@ -64,6 +64,11 @@ test-web:
 
 UV ?= uv run
 
+# Domain statement-coverage gate (Req 11.3, 30.1): pytest measures coverage of
+# the domain package across the whole suite and exits non-zero when it falls
+# below the threshold (`fail_under = 90` in pyproject.toml [tool.coverage.report]).
+COV_DOMAIN ?= --cov=edu_it_domain
+
 .PHONY: lint-py format-py format-check-py typecheck-py test-py
 lint-py:
 	$(UV) ruff check .
@@ -74,7 +79,7 @@ format-check-py:
 typecheck-py:
 	$(UV) mypy
 test-py:
-	$(UV) pytest
+	$(UV) pytest $(COV_DOMAIN)
 
 # -- Domain import-boundary check (Req 1.8) -----------------------------------
 # Self-contained, dedicated check: asserts packages/domain (the framework-free

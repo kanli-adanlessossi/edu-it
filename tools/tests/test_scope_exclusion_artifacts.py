@@ -5,8 +5,9 @@ Data_Model (every table), but it must NOT ship any *source or service artifact*
 that implements out-of-scope behavior:
 
 * 20.1 — learning features (tracks, modules, lessons, quizzes, mastery, review,
-  decay, placement, final assessment): no source/service artifact beyond the
-  migrated Data_Model tables.
+  decay, placement, final assessment): the foundations-phase guard against
+  these source artifacts has been retired now that the learning-core phase
+  legitimately ships them; the remaining scans (20.2-20.4) still apply.
 * 20.2 — hands-on labs, the sandbox, and the terminal WebSocket runtime: no
   source/service artifact.
 * 20.3 — AI content generation and the content-review pipeline: no
@@ -138,28 +139,6 @@ def _artifact_stems(artifacts: list[Path]) -> list[tuple[Path, str]]:
     return pairs
 
 
-# -- 20.1: learning features --------------------------------------------------
-# Feature names drawn verbatim from Req 20.1. A hand-written source module or
-# package whose name is one of these indicates a learning-feature artifact.
-_LEARNING_FEATURE_NAMES = {
-    "track",
-    "tracks",
-    "module",
-    "modules",
-    "lesson",
-    "lessons",
-    "quiz",
-    "quizzes",
-    "mastery",
-    "review",
-    "reviews",
-    "decay",
-    "placement",
-    "assessment",
-    "assessments",
-    "final_assessment",
-}
-
 # -- 20.2: labs / sandbox / terminal ------------------------------------------
 _LAB_FEATURE_NAMES = {
     "lab",
@@ -195,19 +174,6 @@ def test_source_roots_exist() -> None:
     """The shipped source trees exist so the scans below are meaningful."""
     for root in SOURCE_ROOTS:
         assert root.is_dir(), f"missing source root {root}"
-
-
-def test_no_learning_feature_source_artifact() -> None:
-    """No hand-written source module/package implements a learning feature (Req 20.1)."""
-    offenders = [
-        path
-        for path, stem in _artifact_stems(_iter_source_artifacts())
-        if stem in _LEARNING_FEATURE_NAMES
-    ]
-    assert not offenders, (
-        "learning-feature source artifacts are out of scope (Req 20.1); "
-        f"found: {sorted(str(p) for p in offenders)}"
-    )
 
 
 def test_no_lab_sandbox_or_terminal_source_artifact() -> None:

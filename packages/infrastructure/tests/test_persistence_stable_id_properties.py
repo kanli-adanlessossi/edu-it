@@ -31,6 +31,7 @@ Uses Hypothesis, the pinned Python property-based testing library
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -95,7 +96,7 @@ def _required_value(column: Any, salt: int) -> Any:
     if isinstance(type_, Float):
         return float(salt)
     if isinstance(type_, DateTime):
-        return None  # Required columns here are never DateTime; kept for safety.
+        return datetime(2024, 1, 1, tzinfo=UTC)  # e.g. enrollment.enrolled_at
     if isinstance(type_, String):
         return f"{column.name}-{salt}"
     # Any other type: a string is broadly acceptable for the probe.

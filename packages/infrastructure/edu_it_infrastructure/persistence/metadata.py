@@ -37,10 +37,13 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     MetaData,
     String,
     Table,
+    Text,
+    UniqueConstraint,
 )
 
 __all__ = [
@@ -171,6 +174,10 @@ module = Table(
     Column("track_id", Integer, ForeignKey("track.id"), nullable=False),
     Column("provenance_id", Integer, ForeignKey("content_provenance.id"), nullable=False),
     Column("ordinal", Integer, nullable=False),
+    # JSON array of the stable_ids of the concepts whose mastery gates the
+    # module (Req 2.1). D3 has no module->concept join entity, so the gating
+    # set is carried on the module row and written by ``content sync``.
+    Column("prerequisite_concept_ids", Text),
 )
 
 lesson = Table(
@@ -252,6 +259,9 @@ question = Table(
     Column("quiz_id", Integer, ForeignKey("quiz.id"), nullable=False),
     Column("provenance_id", Integer, ForeignKey("content_provenance.id"), nullable=False),
     Column("prompt_text", String, nullable=False),
+    # JSON array of the stable_ids of the concepts the question covers
+    # (D3 ``question }o--o{ concept``), written by ``content sync``.
+    Column("concept_stable_ids", Text),
 )
 
 question_option = Table(
@@ -292,9 +302,15 @@ enrollment = Table(
     "enrollment",
     metadata,
     _internal_pk(),
+    _stable_id(),
     Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
     Column("track_id", Integer, ForeignKey("track.id"), nullable=False),
     Column("enrolled_at", DateTime(timezone=True), nullable=False),
+    # One enrollment per learner x track, enforced by the database so a
+    # concurrent duplicate enroll fails rather than slipping through.
+    UniqueConstraint("user_id", "track_id", name="uq_enrollment_user_id_track_id"),
+    # Keyset-pagination order for a learner's enrollments (Req 17.5).
+    Index("ix_enrollment_user_enrolled", "user_id", "enrolled_at", "stable_id"),
 )
 
 module_progress = Table(
@@ -305,6 +321,9 @@ module_progress = Table(
     Column("module_id", Integer, ForeignKey("module.id"), nullable=False),
     Column("tested_out", Boolean, nullable=False),
     Column("state", String(32), nullable=False),
+    UniqueConstraint(
+        "enrollment_id", "module_id", name="uq_module_progress_enrollment_id_module_id"
+    ),
 )
 
 lesson_completion = Table(
@@ -314,6 +333,9 @@ lesson_completion = Table(
     Column("module_progress_id", Integer, ForeignKey("module_progress.id"), nullable=False),
     Column("lesson_id", Integer, ForeignKey("lesson.id"), nullable=False),
     Column("completed_at", DateTime(timezone=True)),
+    UniqueConstraint(
+        "module_progress_id", "lesson_id", name="uq_lesson_completion_module_progress_id_lesson_id"
+    ),
 )
 
 lab_session = Table(
@@ -357,6 +379,18 @@ quiz_attempt = Table(
     Column("idempotency_key", String(128), nullable=False, unique=True),
     Column("score", Integer),
     Column("is_best", Boolean, nullable=False),
+    # The attempt instant (cooldown / best-attempt tie-break) and the quiz
+    # content_version it was evaluated under (Req 25.1, 25.2).
+    Column("attempted_at", DateTime(timezone=True)),
+    Column("content_version", String(128)),
+    # Keyset-pagination order for a learner's attempts at a quiz (Req 17.5).
+    Index(
+        "ix_quiz_attempt_user_quiz_attempted",
+        "user_id",
+        "quiz_id",
+        "attempted_at",
+        "stable_id",
+    ),
 )
 
 answer = Table(
@@ -392,6 +426,7 @@ mastery = Table(
     Column("concept_id", Integer, ForeignKey("concept.id"), nullable=False),
     Column("score", Integer, nullable=False),
     Column("state", String(32), nullable=False),
+    UniqueConstraint("user_id", "concept_id", name="uq_mastery_user_id_concept_id"),
 )
 
 mastery_event = Table(
@@ -412,6 +447,10 @@ review_schedule = Table(
     Column("concept_id", Integer, ForeignKey("concept.id"), nullable=False),
     Column("due_at", DateTime(timezone=True)),
     Column("days_overdue", Integer, nullable=False),
+    # Current review spacing in whole seconds (Req 9.4, 9.5).
+    Column("interval_seconds", Integer),
+    # Exactly one schedule entry per learner x concept (Req 9.1, 9.2).
+    UniqueConstraint("user_id", "concept_id", name="uq_review_schedule_user_id_concept_id"),
 )
 
 review_attempt = Table(

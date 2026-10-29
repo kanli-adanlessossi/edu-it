@@ -35,6 +35,7 @@ members = [
     "packages/domain",
     "packages/application",
     "packages/infrastructure",
+    "packages/content",
     "apps/api",
     "apps/worker",
 ]
@@ -43,6 +44,7 @@ members = [
 edu-it-domain = { workspace = true }
 edu-it-application = { workspace = true }
 edu-it-infrastructure = { workspace = true }
+edu-it-content = { workspace = true }
 edu-it-api = { workspace = true }
 edu-it-worker = { workspace = true }
 
@@ -60,6 +62,7 @@ dev = [
     # Redis test double for the Redis-backed TaskQueue adapter (task 7.2): lets
     # the adapter's unit tests run without a live Redis server.
     "fakeredis==2.40.0",
+    "pytest-cov==7.1.0",
 ]
 
 # -- Ruff (lint + format) -----------------------------------------------------
@@ -78,6 +81,7 @@ include = [
     "packages/domain/**/*.py",
     "packages/application/**/*.py",
     "packages/infrastructure/**/*.py",
+    "packages/content/**/*.py",
 ]
 extend-exclude = [
     "apps/web",
@@ -167,6 +171,17 @@ select = ["E", "F", "I", "B", "UP", "SIM", "TID", "RUF"]
 # so E501 is ignored for this property test file only.
 "tools/tests/test_steering_filematch_coverage_properties.py" = ["E501"]
 
+# Property 20's tag text, carried verbatim as the test docstring's opening line
+# (the `Feature: learning-core, Property {n}: {text}` convention), is longer
+# than the 100-char line limit and must stay on a single line, so E501 is
+# ignored for this property test file only.
+"packages/content/tests/test_validate_properties.py" = ["E501"]
+
+# Property 18's (learning-core) tag text is longer than the 100-char line limit
+# and must stay on a single line (the `Feature: learning-core, Property {n}:
+# {text}` convention), so E501 is ignored for this property test file only.
+"packages/infrastructure/tests/test_rubric_properties.py" = ["E501"]
+
 [tool.ruff.format]
 # Ruff's formatter is the single formatter for all Python components.
 quote-style = "double"
@@ -186,6 +201,7 @@ mypy_path = [
     "packages/domain",
     "packages/application",
     "packages/infrastructure",
+    "packages/content",
     "apps/api",
     "apps/worker",
 ]
@@ -193,6 +209,7 @@ files = [
     "packages/domain",
     "packages/application",
     "packages/infrastructure",
+    "packages/content",
     "apps/api",
     "apps/worker",
 ]
@@ -208,9 +225,24 @@ testpaths = [
     "packages/domain",
     "packages/application",
     "packages/infrastructure",
+    "packages/content",
     "apps/api",
     "apps/worker",
     # Repo-level tooling tests (import-boundary check + exit-status behavior).
     "tools/tests",
 ]
 python_files = ["test_*.py", "*_test.py"]
+
+# -- coverage (domain statement-coverage gate, Req 11.3 / 30.1) ---------------
+# The runners (Makefile / tasks.sh / tasks.ps1) run pytest with
+# `--cov=edu_it_domain`, measuring statement coverage of the domain package
+# across the whole suite. pytest-cov reads `fail_under` from here, so the build
+# exits non-zero when domain coverage drops below 90%. This is the single place
+# the threshold lives.
+[tool.coverage.run]
+source = ["edu_it_domain"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
