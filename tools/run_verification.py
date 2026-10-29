@@ -242,7 +242,8 @@ def main(argv: list[str] | None = None) -> int:
     for check in checks:
         run_check(check)
         print(
-            f"[{check.status.upper():7}] {check.check_id} (Req {check.requirement}) {check.description}"
+            f"[{check.status.upper():7}] {check.check_id} (Req {check.requirement}) "
+            f"{check.description}"
         )
         print(f"          command: {check.command_text()}")
         print(f"          result : {check.detail}")

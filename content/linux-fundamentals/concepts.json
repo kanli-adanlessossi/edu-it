@@ -8,8 +8,8 @@
       "prompt_id": "seed.linux-fundamentals.concept",
       "prompt_version": "1",
       "generation_date": "2024-01-02T00:00:00Z",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "reviewed_by": "kanli-adanlessossi",
+      "reviewed_at": "2026-10-29T09:50:06Z"
     },
     "title": {
       "en": "Reading file permissions",
@@ -25,8 +25,8 @@
       "prompt_id": "seed.linux-fundamentals.concept",
       "prompt_version": "1",
       "generation_date": "2024-01-02T00:00:00Z",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "reviewed_by": "kanli-adanlessossi",
+      "reviewed_at": "2026-10-29T09:50:06Z"
     },
     "title": {
       "en": "Changing permissions and ownership",
@@ -42,8 +42,8 @@
       "prompt_id": "seed.linux-fundamentals.concept",
       "prompt_version": "1",
       "generation_date": "2024-01-02T00:00:00Z",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "reviewed_by": "kanli-adanlessossi",
+      "reviewed_at": "2026-10-29T09:50:06Z"
     },
     "title": {
       "en": "Understanding processes",
