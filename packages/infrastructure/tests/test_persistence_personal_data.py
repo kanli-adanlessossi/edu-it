@@ -137,7 +137,9 @@ def _seed_full_chain(engine: Engine, user_id: int) -> None:
         # the user, not by catalog validity).
         enrollment_id = _pk(
             connection.execute(
-                insert(enrollment_table).values(user_id=user_id, track_id=1, enrolled_at=instant)
+                insert(enrollment_table).values(
+                    stable_id=f"en-{user_id}", user_id=user_id, track_id=1, enrolled_at=instant
+                )
             )
         )
         # Indirect: module_progress -> enrollment, lesson_completion -> module_progress.

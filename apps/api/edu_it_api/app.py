@@ -19,7 +19,7 @@ from collections.abc import Sequence
 
 from edu_it_domain.ports.health import DependencyProbe
 from edu_it_infrastructure.reachability import required_dependency_probes
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
 from edu_it_api import __version__
 from edu_it_api.csrf import CsrfProtectionMiddleware
@@ -32,7 +32,10 @@ from edu_it_api.versioning import mount_version_apps
 __all__ = ["create_app"]
 
 
-def create_app(probes_provider: ProbesProvider | None = None) -> FastAPI:
+def create_app(
+    probes_provider: ProbesProvider | None = None,
+    learning_router: APIRouter | None = None,
+) -> FastAPI:
     """Build and return the configured FastAPI application.
 
     ``probes_provider`` supplies the readiness probes for the API's required
@@ -58,7 +61,7 @@ def create_app(probes_provider: ProbesProvider | None = None) -> FastAPI:
     # publishes exactly one OpenAPI_Document per major version at
     # /v{major}/openapi.json (Req 16.1). Feature routers are registered on their
     # version's sub-app by their own tasks.
-    mount_version_apps(app)
+    mount_version_apps(app, {1: [learning_router]} if learning_router is not None else None)
     return app
 
 

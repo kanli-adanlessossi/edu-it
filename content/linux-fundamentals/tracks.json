@@ -1,0 +1,20 @@
+[
+  {
+    "provenance": {
+      "stable_id": "track.linux-fundamentals",
+      "content_version": "sha256:3f1c0a2b7d4e6f8091a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f701",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.track",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "title": {
+      "en": "Linux Fundamentals",
+      "fr": "Les fondamentaux de Linux"
+    },
+    "status": "draft"
+  }
+]

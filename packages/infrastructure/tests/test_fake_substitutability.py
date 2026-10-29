@@ -39,10 +39,26 @@ from edu_it_domain.ports import (
     OutboundMail,
     TaskQueue,
 )
+from edu_it_domain.ports.attempts import AttemptRepository
+from edu_it_domain.ports.catalog import CatalogRepository
+from edu_it_domain.ports.enrollment import EnrollmentRepository
+from edu_it_domain.ports.lab_check import LabCheck
+from edu_it_domain.ports.mastery import MasteryRepository
+from edu_it_domain.ports.progress import ProgressRepository
+from edu_it_domain.ports.project_reviewer import ProjectReviewer
+from edu_it_domain.ports.review import ReviewRepository
 from edu_it_infrastructure.fakes import (
     Console_Mailer,
+    Fake_LabCheck,
     Fake_LLMProvider,
+    Fake_ProjectReviewer,
+    In_Memory_AttemptRepository,
+    In_Memory_CatalogRepository,
+    In_Memory_EnrollmentRepository,
+    In_Memory_MasteryRepository,
     In_Memory_ObjectStorage,
+    In_Memory_ProgressRepository,
+    In_Memory_ReviewRepository,
     In_Memory_TaskQueue,
     Test_Clock,
 )
@@ -54,6 +70,15 @@ PORT_FAKE_PAIRS: tuple[tuple[type, object], ...] = (
     (ObjectStorage, In_Memory_ObjectStorage()),
     (TaskQueue, In_Memory_TaskQueue()),
     (LLMProvider, Fake_LLMProvider()),
+    # Learning extension points and repositories (task 1.4).
+    (ProjectReviewer, Fake_ProjectReviewer()),
+    (LabCheck, Fake_LabCheck()),
+    (CatalogRepository, In_Memory_CatalogRepository()),
+    (EnrollmentRepository, In_Memory_EnrollmentRepository()),
+    (ProgressRepository, In_Memory_ProgressRepository()),
+    (MasteryRepository, In_Memory_MasteryRepository()),
+    (ReviewRepository, In_Memory_ReviewRepository()),
+    (AttemptRepository, In_Memory_AttemptRepository()),
 )
 
 

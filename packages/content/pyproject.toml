@@ -1,0 +1,33 @@
+# packages/content — content schema layer (Pydantic v2 authoring contract).
+#
+# A framework-light package: it depends on Pydantic v2 only (not a web
+# framework), consistent with the existing Pydantic use in apps/api and the
+# learning-core design ("Content schemas"). It is the single definition of
+# every content format — the schemas the `edu-it content validate`/`sync` CLI
+# and later AI output validation consume (Req 12.1-12.4).
+#
+# Versions are pinned exactly per docs/adr/0001-versions.md.
+
+[project]
+name = "edu-it-content"
+version = "0.0.0"
+description = "EDU-IT content schema layer (Pydantic v2 content/provenance models)."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic==2.14.1",
+]
+
+[project.scripts]
+# The Content_Validator CLI (Req 13): `edu-it content validate` runs the ordered
+# content checks and exits non-zero on any failure. Exposed as `edu-it-content`
+# so the full command reads `edu-it-content validate` (the `content` subcommand
+# group mirrors the design's `edu-it content validate`); `sync` (task 11) adds a
+# sibling subcommand to the same group.
+edu-it-content = "edu_it_content.cli:main"
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["edu_it_content"]

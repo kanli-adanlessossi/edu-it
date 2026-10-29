@@ -1,0 +1,293 @@
+[
+  {
+    "stable_id": "option.rp.1.d",
+    "question_stable_id": "question.rp.1-ls-l-fields",
+    "is_correct": true,
+    "text": { "en": "`d`", "fr": "`d`" }
+  },
+  {
+    "stable_id": "option.rp.1.dash",
+    "question_stable_id": "question.rp.1-ls-l-fields",
+    "is_correct": false,
+    "text": { "en": "`-` (a dash)", "fr": "`-` (un tiret)" }
+  },
+  {
+    "stable_id": "option.rp.1.l",
+    "question_stable_id": "question.rp.1-ls-l-fields",
+    "is_correct": false,
+    "text": { "en": "`l`", "fr": "`l`" }
+  },
+  {
+    "stable_id": "option.rp.1.x",
+    "question_stable_id": "question.rp.1-ls-l-fields",
+    "is_correct": false,
+    "text": { "en": "`x`", "fr": "`x`" }
+  },
+
+  {
+    "stable_id": "option.rp.2.run",
+    "question_stable_id": "question.rp.2-rwx-meaning",
+    "is_correct": true,
+    "text": {
+      "en": "The right to run the file as a program.",
+      "fr": "Le droit d'exécuter le fichier en tant que programme."
+    }
+  },
+  {
+    "stable_id": "option.rp.2.read",
+    "question_stable_id": "question.rp.2-rwx-meaning",
+    "is_correct": false,
+    "text": {
+      "en": "The right to read the file's contents.",
+      "fr": "Le droit de lire le contenu du fichier."
+    }
+  },
+  {
+    "stable_id": "option.rp.2.write",
+    "question_stable_id": "question.rp.2-rwx-meaning",
+    "is_correct": false,
+    "text": {
+      "en": "The right to modify the file's contents.",
+      "fr": "Le droit de modifier le contenu du fichier."
+    }
+  },
+  {
+    "stable_id": "option.rp.2.delete",
+    "question_stable_id": "question.rp.2-rwx-meaning",
+    "is_correct": false,
+    "text": {
+      "en": "The right to delete the file regardless of the directory's permissions.",
+      "fr": "Le droit de supprimer le fichier quelles que soient les permissions du répertoire."
+    }
+  },
+
+  {
+    "stable_id": "option.rp.3.644",
+    "question_stable_id": "question.rp.3-octal-from-symbolic",
+    "is_correct": true,
+    "text": { "en": "`644`", "fr": "`644`" }
+  },
+  {
+    "stable_id": "option.rp.3.664",
+    "question_stable_id": "question.rp.3-octal-from-symbolic",
+    "is_correct": false,
+    "text": { "en": "`664`", "fr": "`664`" }
+  },
+  {
+    "stable_id": "option.rp.3.755",
+    "question_stable_id": "question.rp.3-octal-from-symbolic",
+    "is_correct": false,
+    "text": { "en": "`755`", "fr": "`755`" }
+  },
+  {
+    "stable_id": "option.rp.3.600",
+    "question_stable_id": "question.rp.3-octal-from-symbolic",
+    "is_correct": false,
+    "text": { "en": "`600`", "fr": "`600`" }
+  },
+
+  {
+    "stable_id": "option.rp.4.false",
+    "question_stable_id": "question.rp.4-group-read-true-false",
+    "is_correct": true,
+    "text": {
+      "en": "False — the group bits are `r-x`, so the group can read and execute but not write.",
+      "fr": "Faux — les bits du groupe sont `r-x`, donc le groupe peut lire et exécuter mais pas écrire."
+    }
+  },
+  {
+    "stable_id": "option.rp.4.true",
+    "question_stable_id": "question.rp.4-group-read-true-false",
+    "is_correct": false,
+    "text": {
+      "en": "True — the group can write to the file.",
+      "fr": "Vrai — le groupe peut écrire dans le fichier."
+    }
+  },
+
+  {
+    "stable_id": "option.rp.5.correct",
+    "question_stable_id": "question.rp.5-command-output",
+    "is_correct": true,
+    "text": {
+      "en": "`-rw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`",
+      "fr": "`-rw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`"
+    }
+  },
+  {
+    "stable_id": "option.rp.5.others-read",
+    "question_stable_id": "question.rp.5-command-output",
+    "is_correct": false,
+    "text": {
+      "en": "`-rw-r--r-- 1 amina staff  128 Jan  2 10:00 report.txt`",
+      "fr": "`-rw-r--r-- 1 amina staff  128 Jan  2 10:00 report.txt`"
+    }
+  },
+  {
+    "stable_id": "option.rp.5.group-write",
+    "question_stable_id": "question.rp.5-command-output",
+    "is_correct": false,
+    "text": {
+      "en": "`-rw-rw---- 1 amina staff  128 Jan  2 10:00 report.txt`",
+      "fr": "`-rw-rw---- 1 amina staff  128 Jan  2 10:00 report.txt`"
+    }
+  },
+  {
+    "stable_id": "option.rp.5.directory",
+    "question_stable_id": "question.rp.5-command-output",
+    "is_correct": false,
+    "text": {
+      "en": "`drw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`",
+      "fr": "`drw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`"
+    }
+  },
+
+  {
+    "stable_id": "option.cp.1.u-plus-x",
+    "question_stable_id": "question.cp.1-chmod-symbolic",
+    "is_correct": true,
+    "text": { "en": "`chmod u+x script.sh`", "fr": "`chmod u+x script.sh`" }
+  },
+  {
+    "stable_id": "option.cp.1.plus-x",
+    "question_stable_id": "question.cp.1-chmod-symbolic",
+    "is_correct": false,
+    "text": { "en": "`chmod +x script.sh`", "fr": "`chmod +x script.sh`" }
+  },
+  {
+    "stable_id": "option.cp.1.a-plus-x",
+    "question_stable_id": "question.cp.1-chmod-symbolic",
+    "is_correct": false,
+    "text": { "en": "`chmod a+x script.sh`", "fr": "`chmod a+x script.sh`" }
+  },
+  {
+    "stable_id": "option.cp.1.u-equals-x",
+    "question_stable_id": "question.cp.1-chmod-symbolic",
+    "is_correct": false,
+    "text": { "en": "`chmod u=x script.sh`", "fr": "`chmod u=x script.sh`" }
+  },
+
+  {
+    "stable_id": "option.cp.2.755",
+    "question_stable_id": "question.cp.2-chmod-octal",
+    "is_correct": true,
+    "text": { "en": "`chmod 755 program`", "fr": "`chmod 755 program`" }
+  },
+  {
+    "stable_id": "option.cp.2.775",
+    "question_stable_id": "question.cp.2-chmod-octal",
+    "is_correct": false,
+    "text": { "en": "`chmod 775 program`", "fr": "`chmod 775 program`" }
+  },
+  {
+    "stable_id": "option.cp.2.711",
+    "question_stable_id": "question.cp.2-chmod-octal",
+    "is_correct": false,
+    "text": { "en": "`chmod 711 program`", "fr": "`chmod 711 program`" }
+  },
+  {
+    "stable_id": "option.cp.2.644",
+    "question_stable_id": "question.cp.2-chmod-octal",
+    "is_correct": false,
+    "text": { "en": "`chmod 644 program`", "fr": "`chmod 644 program`" }
+  },
+
+  {
+    "stable_id": "option.cp.3.chown-colon",
+    "question_stable_id": "question.cp.3-chown-chgrp",
+    "is_correct": true,
+    "text": { "en": "`chown deploy:www app.conf`", "fr": "`chown deploy:www app.conf`" }
+  },
+  {
+    "stable_id": "option.cp.3.chgrp-only",
+    "question_stable_id": "question.cp.3-chown-chgrp",
+    "is_correct": false,
+    "text": { "en": "`chgrp deploy www app.conf`", "fr": "`chgrp deploy www app.conf`" }
+  },
+  {
+    "stable_id": "option.cp.3.chown-space",
+    "question_stable_id": "question.cp.3-chown-chgrp",
+    "is_correct": false,
+    "text": { "en": "`chown deploy www app.conf`", "fr": "`chown deploy www app.conf`" }
+  },
+  {
+    "stable_id": "option.cp.3.chmod",
+    "question_stable_id": "question.cp.3-chown-chgrp",
+    "is_correct": false,
+    "text": { "en": "`chmod deploy:www app.conf`", "fr": "`chmod deploy:www app.conf`" }
+  },
+
+  {
+    "stable_id": "option.cp.4.inherit-group",
+    "question_stable_id": "question.cp.4-setgid-umask",
+    "is_correct": true,
+    "text": {
+      "en": "New files and subdirectories created inside it inherit the directory's group, so teammates keep shared access.",
+      "fr": "Les nouveaux fichiers et sous-répertoires créés à l'intérieur héritent du groupe du répertoire, afin que les coéquipiers conservent un accès partagé."
+    }
+  },
+  {
+    "stable_id": "option.cp.4.root-run",
+    "question_stable_id": "question.cp.4-setgid-umask",
+    "is_correct": false,
+    "text": {
+      "en": "It makes every program in the directory run as root.",
+      "fr": "Il fait exécuter en tant que root tous les programmes du répertoire."
+    }
+  },
+  {
+    "stable_id": "option.cp.4.prevent-delete",
+    "question_stable_id": "question.cp.4-setgid-umask",
+    "is_correct": false,
+    "text": {
+      "en": "It prevents anyone except the owner from deleting files, like the sticky bit does.",
+      "fr": "Il empêche quiconque sauf le propriétaire de supprimer des fichiers, comme le fait le sticky bit."
+    }
+  },
+  {
+    "stable_id": "option.cp.4.encrypt",
+    "question_stable_id": "question.cp.4-setgid-umask",
+    "is_correct": false,
+    "text": {
+      "en": "It encrypts the contents of the directory at rest.",
+      "fr": "Il chiffre le contenu du répertoire au repos."
+    }
+  },
+
+  {
+    "stable_id": "option.cp.5.644",
+    "question_stable_id": "question.cp.5-command-output",
+    "is_correct": true,
+    "text": {
+      "en": "`-rw-r--r-- 1 user user 0 Jan  2 10:00 newfile`",
+      "fr": "`-rw-r--r-- 1 user user 0 Jan  2 10:00 newfile`"
+    }
+  },
+  {
+    "stable_id": "option.cp.5.755",
+    "question_stable_id": "question.cp.5-command-output",
+    "is_correct": false,
+    "text": {
+      "en": "`-rwxr-xr-x 1 user user 0 Jan  2 10:00 newfile`",
+      "fr": "`-rwxr-xr-x 1 user user 0 Jan  2 10:00 newfile`"
+    }
+  },
+  {
+    "stable_id": "option.cp.5.666",
+    "question_stable_id": "question.cp.5-command-output",
+    "is_correct": false,
+    "text": {
+      "en": "`-rw-rw-rw- 1 user user 0 Jan  2 10:00 newfile`",
+      "fr": "`-rw-rw-rw- 1 user user 0 Jan  2 10:00 newfile`"
+    }
+  },
+  {
+    "stable_id": "option.cp.5.600",
+    "question_stable_id": "question.cp.5-command-output",
+    "is_correct": false,
+    "text": {
+      "en": "`-rw------- 1 user user 0 Jan  2 10:00 newfile`",
+      "fr": "`-rw------- 1 user user 0 Jan  2 10:00 newfile`"
+    }
+  }
+]

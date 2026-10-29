@@ -8,3 +8,5 @@ coverage/
 # from it. Both are regenerated on every build before application code compiles.
 openapi/
 src/generated/
+test-results/
+playwright-report/

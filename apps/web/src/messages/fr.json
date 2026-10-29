@@ -1,4 +1,51 @@
 {
+  "Practice": {
+    "meta": {
+      "quiz": "Quiz — EDU-IT",
+      "review": "Session de révision — EDU-IT",
+      "project": "Remise de projet — EDU-IT"
+    },
+    "quiz": {
+      "questionLabel": "Question {number} : {prompt}",
+      "showHint": "Afficher l'indice {level}",
+      "hintsLabel": "Indices",
+      "submit": "Envoyer les réponses",
+      "resultTitle": "Votre résultat",
+      "score": "Score : {score}",
+      "bestScore": "Meilleur score : {score}",
+      "replayed": "Cette tentative a déjà été enregistrée.",
+      "counted": "Cette réponse compte pour votre maîtrise.",
+      "notCounted": "Cette réponse ne compte pas de nouveau pour la maîtrise dans les 24 heures.",
+      "unavailable": "Ce quiz n'est pas disponible.",
+      "genericError": "Une erreur est survenue. Veuillez réessayer."
+    },
+    "review": {
+      "title": "Session de révision",
+      "questionLabel": "Question {number} : {prompt}",
+      "submit": "Envoyer la révision",
+      "passed": "Révision réussie",
+      "failed": "Révision non réussie",
+      "score": "Score : {score}",
+      "nextDue": "Prochaine révision : {date}",
+      "nothingDue": "Aucune révision n'est due pour le moment.",
+      "genericError": "Une erreur est survenue. Veuillez réessayer."
+    },
+    "project": {
+      "rubricLegend": "Auto-évaluation selon la grille",
+      "criterionLabel": "{title} (0 à {max} points)",
+      "criterionMissing": "Saisissez vos points pour ce critère.",
+      "criterionOutOfRange": "Saisissez un nombre entier de 0 à {max}.",
+      "evidenceLegend": "Preuves",
+      "evidenceLabel": "Élément de preuve {number}",
+      "evidenceRequired": "Fournissez au moins une preuve.",
+      "addEvidence": "Ajouter un autre élément de preuve",
+      "submit": "Envoyer le projet",
+      "pending": "Envoyé. Votre projet est en attente d'évaluation.",
+      "reviewed": "Votre projet a été évalué.",
+      "unavailable": "Ce projet n'est pas disponible.",
+      "genericError": "Une erreur est survenue. Veuillez réessayer."
+    }
+  },
   "LanguageSwitcher": {
     "label": "Langue",
     "switchToEnglish": "English",
@@ -55,7 +102,48 @@
     "title": "Tableau de bord",
     "empty": "Votre tableau de bord est vide pour le moment. Les fonctionnalités d'apprentissage arrivent bientôt."
   },
+  "Lesson": {
+    "unsupportedContent": "Cette leçon contient un contenu qui ne peut pas être affiché.",
+    "fallbackNotice": "Cette leçon n'est pas encore disponible dans votre langue. Affichage de la version anglaise."
+  },
+  "LabPlaceholder": {
+    "title": "Labos",
+    "comingSoon": "Bientôt disponible"
+  },
+  "Learning": {
+    "loadError": "Impossible de charger vos données d'apprentissage. Réessayez plus tard.",
+    "lock": { "locked": "Verrouillé", "unlocked": "Déverrouillé" },
+    "dashboard": {
+      "progress": "Votre progression",
+      "noEnrollments": "Vous n'êtes inscrit à aucun parcours pour le moment.",
+      "due": "Concepts à réviser",
+      "noneDue": "Aucun concept à réviser.",
+      "overdue": "Concepts en retard",
+      "noneOverdue": "Aucun concept en retard."
+    },
+    "enroll": {
+      "heading": "S'inscrire à un parcours",
+      "trackLabel": "Identifiant du parcours",
+      "submit": "S'inscrire",
+      "invalid": "Saisissez un identifiant de parcours valide.",
+      "failed": "Impossible de vous inscrire à ce parcours."
+    },
+    "track": {
+      "title": "Parcours",
+      "summary": "{percent} % des modules déverrouillés, {lessons} leçons terminées.",
+      "modules": "Modules"
+    },
+    "module": {
+      "title": "Module",
+      "lockedHint": "Atteignez le niveau Pratiqué sur les concepts prérequis pour déverrouiller ce module.",
+      "completedLessons": "Leçons terminées",
+      "noCompletions": "Aucune leçon terminée pour le moment.",
+      "backToTrack": "Retour au parcours"
+    }
+  },
   "Meta": {
+    "track": "Parcours — EDU-IT",
+    "module": "Module — EDU-IT",
     "siteName": "EDU-IT",
     "landing": "EDU-IT — Apprenez l'informatique, de façon structurée",
     "signUp": "Créez votre compte — EDU-IT",

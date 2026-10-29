@@ -22,6 +22,9 @@ pure rendering logic without a running server:
   ``fields`` extension member.
 - :mod:`edu_it_api.errors.handlers` installs the FastAPI exception handlers that
   turn framework errors into problem documents without leaking diagnostics.
+- :mod:`edu_it_api.errors.learning` maps the learning domain/application errors
+  (foreign option, cooldown, insufficient review pool, ...) to problem types
+  with translated, actionable ``detail`` (Req 18.6).
 """
 
 from __future__ import annotations

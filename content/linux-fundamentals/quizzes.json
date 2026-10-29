@@ -1,0 +1,38 @@
+[
+  {
+    "provenance": {
+      "stable_id": "quiz.reading-permissions",
+      "content_version": "sha256:293a4b5c6d7e8f90112233445566778899aabbccddeeff001122334455667788",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.quiz",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "lesson_stable_id": "lesson.reading-permissions",
+    "title": {
+      "en": "Reading permissions quiz",
+      "fr": "Quiz : lire les permissions"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "quiz.changing-permissions",
+      "content_version": "sha256:3a4b5c6d7e8f90112233445566778899aabbccddeeff00112233445566778899",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.quiz",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "lesson_stable_id": "lesson.changing-permissions",
+    "title": {
+      "en": "Changing permissions and ownership quiz",
+      "fr": "Quiz : modifier les permissions et la propriété"
+    }
+  }
+]

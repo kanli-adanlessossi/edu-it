@@ -21,6 +21,7 @@ could echo internal or sensitive data back.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -132,8 +133,14 @@ def build_problem(
     locale: str,
     problem_type: ProblemType | None = None,
     instance: str | None = None,
+    detail_params: Mapping[str, str] | None = None,
 ) -> ProblemDetails:
     """Build a problem document for ``status`` in ``locale`` (Req 19.1-19.4).
+
+    ``detail_params`` fills ``{name}`` placeholders in the localized ``detail``
+    template (for example the instant a cooldown ends) so the text can be
+    actionable for this occurrence; the values must be safe, learner-facing
+    strings, never diagnostics (Req 18.6, 19.6).
 
     ``problem_type`` supplies the stable ``type``/``title`` and the FR/EN
     ``detail`` template; when omitted a generic type is chosen for ``status``.
@@ -147,7 +154,7 @@ def build_problem(
         type=chosen.type_uri,
         title=chosen.title_for(locale),
         status=status,
-        detail=_sanitize_detail(chosen.detail_for(locale)),
+        detail=_sanitize_detail(chosen.detail_for(locale).format_map(dict(detail_params or {}))),
         instance=instance,
     )
 

@@ -114,11 +114,11 @@ export type AuthSubmitResult =
  * (so the form still renders them) but with an empty value.
  */
 export function preserveNonPasswordFields(fields: AuthFormFields): AuthFormFields {
-  const preserved: Record<string, string> = {};
-  for (const [name, value] of Object.entries(fields)) {
-    preserved[name] = isPasswordField(name) ? '' : value;
-  }
-  return preserved;
+  // Object.fromEntries defines own properties, so a field named "__proto__"
+  // is preserved rather than being treated as a prototype assignment.
+  return Object.fromEntries(
+    Object.entries(fields).map(([name, value]) => [name, isPasswordField(name) ? '' : value]),
+  );
 }
 
 /**

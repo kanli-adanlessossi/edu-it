@@ -53,7 +53,9 @@ run_py() {
         lint)      $UV ruff check . ;;
         format)    $UV ruff format . ;;
         typecheck) $UV mypy ;;
-        test)      $UV pytest ;;
+        # Domain statement-coverage gate (Req 11.3, 30.1): fails below the
+        # fail_under threshold (90) in pyproject.toml [tool.coverage.report].
+        test)      $UV pytest --cov=edu_it_domain ;;
     esac
 }
 

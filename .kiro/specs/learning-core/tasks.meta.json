@@ -1,0 +1,1316 @@
+{
+  "pbtResults": {
+    "6.5 Write rules-based + property tests for rubric BEFORE implementation": {
+      "status": "passed",
+      "lastRunTimestamp": 1793215493008
+    },
+    "11.2 Write property test for sync idempotence and completion preservation": {
+      "status": "passed",
+      "lastRunTimestamp": 1793216159132
+    },
+    "11.4 Write property test for deferred archiving during active use": {
+      "status": "passed",
+      "lastRunTimestamp": 1793216284771
+    },
+    "17.3 Write property tests for version pinning": {
+      "status": "passed",
+      "lastRunTimestamp": 1793220500341
+    },
+    "18.8 Write property test for cooldown rejection": {
+      "status": "passed",
+      "lastRunTimestamp": 1793254259171
+    },
+    "18.6 Write property test for idempotency-key behavior": {
+      "status": "passed",
+      "lastRunTimestamp": 1793254270592
+    },
+    "19.2 Write property test for locale fallback": {
+      "status": "passed",
+      "lastRunTimestamp": 1793254489570
+    },
+    "19.6 Write property test for GDPR coverage": {
+      "status": "passed",
+      "lastRunTimestamp": 1793254508197
+    }
+  },
+  "executionHistory": {
+    "1.1 Extend `domain/config.py` with all learning business numbers": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793203160369
+      },
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793203449614
+      }
+    ],
+    "1.2 Define framework-free domain types in `learning/models.py`": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793203161317
+      },
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793203450842
+      }
+    ],
+    "9.1 Define Pydantic v2 content schemas and shared types": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793203465067
+      },
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793204024400
+      }
+    ],
+    "1.3 Add new domain ports `ProjectReviewer` and `LabCheck` plus learning repository ports": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793204028415
+      },
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793204667076
+      }
+    ],
+    "9.2 Write schema tests (valid item parses; missing locale or provenance fails)": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793204784455
+      },
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793205319623
+      }
+    ],
+    "10.1 Implement the `edu-it` CLI skeleton and `content validate` ordered checks": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793204785863
+      },
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793205320579
+      }
+    ],
+    "14.1 Author the track, modules, lessons, quizzes, project, rubric, and prerequisites": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793204786908
+      },
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793205318231
+      }
+    ],
+    "9. Content schemas with provenance (Milestone B)": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793205319683
+      }
+    ],
+    "1.4 Implement infrastructure fakes for the new ports": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793205325071
+      },
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793206245470
+      }
+    ],
+    "1. Extend domain config and add learning ports + fakes (Milestone A foundation)": [
+      {
+        "executionId": "dd710aa2-0019-48a7-80d5-5e1e44dbb2e8",
+        "chatSessionId": "sess_c281b8b0-b879-4930-91bd-e60c140b5f33",
+        "timestamp": 1793206245532
+      }
+    ],
+    "2.1 Write rules-based + property tests for unlocking/completion BEFORE implementation": [
+      {
+        "executionId": "676a742f-d573-4241-ac70-ec16e7744d08",
+        "chatSessionId": "sess_82b7b4d3-f784-4324-a7a6-6f8a864758a4",
+        "timestamp": 1793206293476
+      },
+      {
+        "executionId": "676a742f-d573-4241-ac70-ec16e7744d08",
+        "chatSessionId": "sess_82b7b4d3-f784-4324-a7a6-6f8a864758a4",
+        "timestamp": 1793206604291
+      }
+    ],
+    "2.2 Implement `learning/unlocking.py`": [
+      {
+        "executionId": "676a742f-d573-4241-ac70-ec16e7744d08",
+        "chatSessionId": "sess_82b7b4d3-f784-4324-a7a6-6f8a864758a4",
+        "timestamp": 1793206612113
+      },
+      {
+        "executionId": "676a742f-d573-4241-ac70-ec16e7744d08",
+        "chatSessionId": "sess_82b7b4d3-f784-4324-a7a6-6f8a864758a4",
+        "timestamp": 1793206965698
+      }
+    ],
+    "2.3 Write rules-based + property tests for mastery BEFORE implementation": [
+      {
+        "executionId": "676a742f-d573-4241-ac70-ec16e7744d08",
+        "chatSessionId": "sess_82b7b4d3-f784-4324-a7a6-6f8a864758a4",
+        "timestamp": 1793206969407
+      },
+      {
+        "executionId": "676a742f-d573-4241-ac70-ec16e7744d08",
+        "chatSessionId": "sess_82b7b4d3-f784-4324-a7a6-6f8a864758a4",
+        "timestamp": 1793207971432
+      }
+    ],
+    "2.4 Implement `learning/mastery.py`": [
+      {
+        "executionId": "676a742f-d573-4241-ac70-ec16e7744d08",
+        "chatSessionId": "sess_82b7b4d3-f784-4324-a7a6-6f8a864758a4",
+        "timestamp": 1793207974999
+      },
+      {
+        "executionId": "676a742f-d573-4241-ac70-ec16e7744d08",
+        "chatSessionId": "sess_82b7b4d3-f784-4324-a7a6-6f8a864758a4",
+        "timestamp": 1793208340720
+      }
+    ],
+    "2. Unlocking, completion, and mastery services (rules-first)": [
+      {
+        "executionId": "676a742f-d573-4241-ac70-ec16e7744d08",
+        "chatSessionId": "sess_82b7b4d3-f784-4324-a7a6-6f8a864758a4",
+        "timestamp": 1793208340795
+      }
+    ],
+    "3. Checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "bf8e1d16-0199-4af7-934b-3d67cea1067b",
+        "chatSessionId": "sess_7249a973-3746-4f3b-a8f7-1f08834b643d",
+        "timestamp": 1793208399438
+      },
+      {
+        "executionId": "bf8e1d16-0199-4af7-934b-3d67cea1067b",
+        "chatSessionId": "sess_7249a973-3746-4f3b-a8f7-1f08834b643d",
+        "timestamp": 1793208951651
+      }
+    ],
+    "4.1 Write rules-based + property tests for scoring/shuffle/matching BEFORE implementation": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051451
+      },
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209108255
+      },
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793210102311
+      }
+    ],
+    "4.2 Implement `learning/scoring.py`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051519
+      },
+      {
+        "executionId": "857a8d94-a3b2-4d52-a379-f13d8df5adc3",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214895515
+      },
+      {
+        "executionId": "857a8d94-a3b2-4d52-a379-f13d8df5adc3",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793215146693
+      }
+    ],
+    "4.3 Write rules-based + property tests for cooldown BEFORE implementation": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051596
+      },
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209109644
+      },
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793210103189
+      }
+    ],
+    "4.4 Implement `learning/cooldown.py`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051637
+      },
+      {
+        "executionId": "857a8d94-a3b2-4d52-a379-f13d8df5adc3",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214896298
+      },
+      {
+        "executionId": "857a8d94-a3b2-4d52-a379-f13d8df5adc3",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793215147205
+      }
+    ],
+    "4.5 Write rules-based + property tests for the 24-hour anti-farming rule BEFORE implementation": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051687
+      },
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209111039
+      },
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793210104601
+      }
+    ],
+    "4.6 Implement `learning/antifarming.py`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051737
+      },
+      {
+        "executionId": "857a8d94-a3b2-4d52-a379-f13d8df5adc3",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214897110
+      },
+      {
+        "executionId": "857a8d94-a3b2-4d52-a379-f13d8df5adc3",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793215147985
+      }
+    ],
+    "4.7 Write rules-based + property tests for hints BEFORE implementation; add hint-reveal example test": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051786
+      },
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209111890
+      },
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793210105916
+      }
+    ],
+    "4.8 Implement `learning/hints.py`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051836
+      },
+      {
+        "executionId": "857a8d94-a3b2-4d52-a379-f13d8df5adc3",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214897666
+      },
+      {
+        "executionId": "857a8d94-a3b2-4d52-a379-f13d8df5adc3",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793215148561
+      }
+    ],
+    "5. Checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051923
+      },
+      {
+        "executionId": "c4659a59-7ae2-4092-a175-43e82f71e84c",
+        "chatSessionId": "sess_2dd6235f-1953-41b8-9638-cf12804b13e0",
+        "timestamp": 1793215211088
+      },
+      {
+        "executionId": "c4659a59-7ae2-4092-a175-43e82f71e84c",
+        "chatSessionId": "sess_2dd6235f-1953-41b8-9638-cf12804b13e0",
+        "timestamp": 1793215409345
+      }
+    ],
+    "6.1 Write rules-based + property tests for decay BEFORE implementation": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209051968
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793210207868
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214627768
+      }
+    ],
+    "6.2 Implement `learning/decay.py`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052018
+      },
+      {
+        "executionId": "e526dc22-3c7e-43a7-9a1a-3000028c7fbe",
+        "chatSessionId": "sess_70bde627-6dd5-4204-b719-654c9808c5d4",
+        "timestamp": 1793215434875
+      },
+      {
+        "executionId": "e526dc22-3c7e-43a7-9a1a-3000028c7fbe",
+        "chatSessionId": "sess_70bde627-6dd5-4204-b719-654c9808c5d4",
+        "timestamp": 1793215558120
+      }
+    ],
+    "6.3 Write rules-based + property tests for review scheduling/selection BEFORE implementation": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052068
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793210209318
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214627835
+      }
+    ],
+    "6.4 Implement `learning/review.py`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052117
+      },
+      {
+        "executionId": "e526dc22-3c7e-43a7-9a1a-3000028c7fbe",
+        "chatSessionId": "sess_70bde627-6dd5-4204-b719-654c9808c5d4",
+        "timestamp": 1793215434994
+      },
+      {
+        "executionId": "e526dc22-3c7e-43a7-9a1a-3000028c7fbe",
+        "chatSessionId": "sess_70bde627-6dd5-4204-b719-654c9808c5d4",
+        "timestamp": 1793215558633
+      }
+    ],
+    "6.5 Write rules-based + property tests for rubric BEFORE implementation": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052163
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793210210705
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214628515
+      }
+    ],
+    "6.6 Implement `learning/rubric.py`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052212
+      },
+      {
+        "executionId": "e526dc22-3c7e-43a7-9a1a-3000028c7fbe",
+        "chatSessionId": "sess_70bde627-6dd5-4204-b719-654c9808c5d4",
+        "timestamp": 1793215435040
+      },
+      {
+        "executionId": "e526dc22-3c7e-43a7-9a1a-3000028c7fbe",
+        "chatSessionId": "sess_70bde627-6dd5-4204-b719-654c9808c5d4",
+        "timestamp": 1793215559242
+      }
+    ],
+    "7.1 Write the worked-example end-to-end domain test from `docs/RULES-REVIEW.md` D7 §9": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052263
+      },
+      {
+        "executionId": "f32ce1dc-d9fc-4355-8112-9538f5da1e2c",
+        "chatSessionId": "sess_5aa8dcc6-1fb4-4e15-8086-9d3e63ea584f",
+        "timestamp": 1793215598896
+      },
+      {
+        "executionId": "f32ce1dc-d9fc-4355-8112-9538f5da1e2c",
+        "chatSessionId": "sess_5aa8dcc6-1fb4-4e15-8086-9d3e63ea584f",
+        "timestamp": 1793215861697
+      }
+    ],
+    "7.2 Configure the ≥90% domain statement-coverage gate in CI": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052320
+      },
+      {
+        "executionId": "f32ce1dc-d9fc-4355-8112-9538f5da1e2c",
+        "chatSessionId": "sess_5aa8dcc6-1fb4-4e15-8086-9d3e63ea584f",
+        "timestamp": 1793215599308
+      },
+      {
+        "executionId": "f32ce1dc-d9fc-4355-8112-9538f5da1e2c",
+        "chatSessionId": "sess_5aa8dcc6-1fb4-4e15-8086-9d3e63ea584f",
+        "timestamp": 1793215862305
+      }
+    ],
+    "8. Checkpoint — Ensure all tests pass and domain coverage ≥90%": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052366
+      },
+      {
+        "executionId": "71909068-bd0c-435a-89a4-0a7abd2ac749",
+        "chatSessionId": "sess_6cbfca19-ed45-4ee6-87cf-4ee008c59d41",
+        "timestamp": 1793215879259
+      },
+      {
+        "executionId": "71909068-bd0c-435a-89a4-0a7abd2ac749",
+        "chatSessionId": "sess_6cbfca19-ed45-4ee6-87cf-4ee008c59d41",
+        "timestamp": 1793216066925
+      }
+    ],
+    "10.2 Write property test for prerequisite acyclicity + per-check failing fixtures": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052416
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793210212116
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214629332
+      }
+    ],
+    "11.1 Implement `content sync` idempotent upsert keyed by `stable_id`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052463
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793210213164
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214630059
+      }
+    ],
+    "11.2 Write property test for sync idempotence and completion preservation": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052512
+      },
+      {
+        "executionId": "4fde256d-a9aa-4649-9c69-3040ee6ffb77",
+        "chatSessionId": "sess_bacc87dd-22f9-420e-a3f7-3677b089525d",
+        "timestamp": 1793216101974
+      },
+      {
+        "executionId": "4fde256d-a9aa-4649-9c69-3040ee6ffb77",
+        "chatSessionId": "sess_bacc87dd-22f9-420e-a3f7-3677b089525d",
+        "timestamp": 1793216202018
+      }
+    ],
+    "11.3 Implement deferred-archive behavior for removed items during active use": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052562
+      },
+      {
+        "executionId": "4fde256d-a9aa-4649-9c69-3040ee6ffb77",
+        "chatSessionId": "sess_bacc87dd-22f9-420e-a3f7-3677b089525d",
+        "timestamp": 1793216102076
+      },
+      {
+        "executionId": "4fde256d-a9aa-4649-9c69-3040ee6ffb77",
+        "chatSessionId": "sess_bacc87dd-22f9-420e-a3f7-3677b089525d",
+        "timestamp": 1793216202576
+      }
+    ],
+    "11.4 Write property test for deferred archiving during active use": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052644
+      },
+      {
+        "executionId": "4fde256d-a9aa-4649-9c69-3040ee6ffb77",
+        "chatSessionId": "sess_bacc87dd-22f9-420e-a3f7-3677b089525d",
+        "timestamp": 1793216212754
+      },
+      {
+        "executionId": "4fde256d-a9aa-4649-9c69-3040ee6ffb77",
+        "chatSessionId": "sess_bacc87dd-22f9-420e-a3f7-3677b089525d",
+        "timestamp": 1793216290828
+      }
+    ],
+    "12.1 Add a CI step named `content` that runs `edu-it content validate`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052702
+      },
+      {
+        "executionId": "34249d55-690b-450b-8b15-160ce4c24a50",
+        "chatSessionId": "sess_5d21a612-4a91-4485-a22f-d26284faa822",
+        "timestamp": 1793216321586
+      }
+    ],
+    "13. Checkpoint — Ensure content schema, validate, sync, and CI tests pass": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052752
+      },
+      {
+        "executionId": "91d015fc-574f-4b90-bc26-3ee72b6fe38f",
+        "chatSessionId": "sess_25ef8f2b-7a37-40e3-8fff-4491bcb6bb73",
+        "timestamp": 1793216471968
+      },
+      {
+        "executionId": "91d015fc-574f-4b90-bc26-3ee72b6fe38f",
+        "chatSessionId": "sess_25ef8f2b-7a37-40e3-8fff-4491bcb6bb73",
+        "timestamp": 1793218773026
+      }
+    ],
+    "14.2 Validate the authored seed content with `edu-it content validate`": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052800
+      },
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214640346
+      }
+    ],
+    "15. Expert-review checkpoint — STOP and ask the user to review seed content": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052852
+      },
+      {
+        "executionId": "403ab10a-7862-43c1-be18-db39b43193bd",
+        "chatSessionId": "sess_182859a9-fa98-44e9-8554-3ed8bb6e6719",
+        "timestamp": 1793218834700
+      },
+      {
+        "executionId": "403ab10a-7862-43c1-be18-db39b43193bd",
+        "chatSessionId": "sess_182859a9-fa98-44e9-8554-3ed8bb6e6719",
+        "timestamp": 1793218871971
+      }
+    ],
+    "16.1 On approval, record the reviewer in provenance and mark the golden set": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052900
+      },
+      {
+        "executionId": "42ad6537-c926-403f-9be6-b0da267b4200",
+        "chatSessionId": "sess_8b36b03d-110f-4063-87e1-8618f66ffd12",
+        "timestamp": 1793218898786
+      },
+      {
+        "executionId": "42ad6537-c926-403f-9be6-b0da267b4200",
+        "chatSessionId": "sess_8b36b03d-110f-4063-87e1-8618f66ffd12",
+        "timestamp": 1793219111702
+      }
+    ],
+    "16.2 Write tests for approval attribution and golden-set marking (and the rejection path)": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052948
+      },
+      {
+        "executionId": "42ad6537-c926-403f-9be6-b0da267b4200",
+        "chatSessionId": "sess_8b36b03d-110f-4063-87e1-8618f66ffd12",
+        "timestamp": 1793219112301
+      },
+      {
+        "executionId": "42ad6537-c926-403f-9be6-b0da267b4200",
+        "chatSessionId": "sess_8b36b03d-110f-4063-87e1-8618f66ffd12",
+        "timestamp": 1793219220858
+      }
+    ],
+    "17.1 Implement application use cases over the domain services and repository ports": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209052998
+      },
+      {
+        "executionId": "d96a0966-cda2-47a7-a97a-092f48b4e55c",
+        "chatSessionId": "sess_cde01929-c37c-4511-8d17-7b7f2aae2a11",
+        "timestamp": 1793219265582
+      },
+      {
+        "executionId": "d96a0966-cda2-47a7-a97a-092f48b4e55c",
+        "chatSessionId": "sess_cde01929-c37c-4511-8d17-7b7f2aae2a11",
+        "timestamp": 1793220008250
+      }
+    ],
+    "17.2 Implement content-version pinning for in-flight attempts in the attempt-quiz use case": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053050
+      },
+      {
+        "executionId": "d96a0966-cda2-47a7-a97a-092f48b4e55c",
+        "chatSessionId": "sess_cde01929-c37c-4511-8d17-7b7f2aae2a11",
+        "timestamp": 1793220011190
+      },
+      {
+        "executionId": "d96a0966-cda2-47a7-a97a-092f48b4e55c",
+        "chatSessionId": "sess_cde01929-c37c-4511-8d17-7b7f2aae2a11",
+        "timestamp": 1793220414667
+      }
+    ],
+    "17.3 Write property tests for version pinning": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053098
+      },
+      {
+        "executionId": "d96a0966-cda2-47a7-a97a-092f48b4e55c",
+        "chatSessionId": "sess_cde01929-c37c-4511-8d17-7b7f2aae2a11",
+        "timestamp": 1793220421148
+      },
+      {
+        "executionId": "d96a0966-cda2-47a7-a97a-092f48b4e55c",
+        "chatSessionId": "sess_cde01929-c37c-4511-8d17-7b7f2aae2a11",
+        "timestamp": 1793220508889
+      }
+    ],
+    "18.1 Implement learning routers under `/v1` with Pydantic v2 request/response and stable-id addressing": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053147
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793220647458
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221208405
+      }
+    ],
+    "18.2 Implement cursor-based keyset pagination for list endpoints": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053196
+      },
+      {
+        "executionId": "d0e09ead-68b8-480c-96b7-2d2757343805",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793253342778
+      },
+      {
+        "executionId": "d0e09ead-68b8-480c-96b7-2d2757343805",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793253966065
+      }
+    ],
+    "18.3 Write property test for cursor pagination and stable-id addressing": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053241
+      },
+      {
+        "executionId": "7e5f4c51-7c54-42e2-8b2d-e5548e0ff5ad",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793254191003
+      },
+      {
+        "executionId": "7e5f4c51-7c54-42e2-8b2d-e5548e0ff5ad",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793254278304
+      }
+    ],
+    "18.4 Implement RFC 9457 problem-details responses via the existing errors machinery": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053286
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793220647596
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221208495
+      }
+    ],
+    "18.5 Implement `Idempotency-Key` handling for quiz-attempt submission": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053336
+      },
+      {
+        "executionId": "d0e09ead-68b8-480c-96b7-2d2757343805",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793253344639
+      },
+      {
+        "executionId": "d0e09ead-68b8-480c-96b7-2d2757343805",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793253966119
+      }
+    ],
+    "18.6 Write property test for idempotency-key behavior": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053419
+      },
+      {
+        "executionId": "7e5f4c51-7c54-42e2-8b2d-e5548e0ff5ad",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793254191527
+      },
+      {
+        "executionId": "7e5f4c51-7c54-42e2-8b2d-e5548e0ff5ad",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793254277639
+      }
+    ],
+    "18.7 Implement cooldown rejection on quiz-attempt submission": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053484
+      },
+      {
+        "executionId": "d0e09ead-68b8-480c-96b7-2d2757343805",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793253345535
+      },
+      {
+        "executionId": "d0e09ead-68b8-480c-96b7-2d2757343805",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793253966903
+      }
+    ],
+    "18.8 Write property test for cooldown rejection": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053530
+      },
+      {
+        "executionId": "7e5f4c51-7c54-42e2-8b2d-e5548e0ff5ad",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793254192182
+      },
+      {
+        "executionId": "7e5f4c51-7c54-42e2-8b2d-e5548e0ff5ad",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793254278689
+      }
+    ],
+    "18.9 Implement project-submission validation and review routing": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053578
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221213561
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221443974
+      }
+    ],
+    "18.10 Implement review-endpoint decline for pools below the minimum": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053621
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221213672
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221444616
+      }
+    ],
+    "19.1 Implement English locale fallback for lesson requests": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053669
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221487178
+      },
+      {
+        "executionId": "2277a8ef-ba1e-4d3d-ae20-7fa40698cf69",
+        "chatSessionId": "sess_45b76e24-df7a-4f75-a6f7-012a2f37d55c",
+        "timestamp": 1793254447973
+      }
+    ],
+    "19.2 Write property test for locale fallback": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053719
+      },
+      {
+        "executionId": "2277a8ef-ba1e-4d3d-ae20-7fa40698cf69",
+        "chatSessionId": "sess_45b76e24-df7a-4f75-a6f7-012a2f37d55c",
+        "timestamp": 1793254449655
+      },
+      {
+        "executionId": "2277a8ef-ba1e-4d3d-ae20-7fa40698cf69",
+        "chatSessionId": "sess_45b76e24-df7a-4f75-a6f7-012a2f37d55c",
+        "timestamp": 1793254516092
+      }
+    ],
+    "19.3 Define placement and final-assessment interfaces and schemas (TODO grading only)": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053770
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221487975
+      },
+      {
+        "executionId": "2277a8ef-ba1e-4d3d-ae20-7fa40698cf69",
+        "chatSessionId": "sess_45b76e24-df7a-4f75-a6f7-012a2f37d55c",
+        "timestamp": 1793254448085
+      }
+    ],
+    "19.4 Implement recording `tested_out` on `module_progress` at placement": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053819
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221488792
+      },
+      {
+        "executionId": "2277a8ef-ba1e-4d3d-ae20-7fa40698cf69",
+        "chatSessionId": "sess_45b76e24-df7a-4f75-a6f7-012a2f37d55c",
+        "timestamp": 1793254516935
+      }
+    ],
+    "19.5 Extend the GDPR application service to cover learning personal-data tables": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053885
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221489593
+      },
+      {
+        "executionId": "2277a8ef-ba1e-4d3d-ae20-7fa40698cf69",
+        "chatSessionId": "sess_45b76e24-df7a-4f75-a6f7-012a2f37d55c",
+        "timestamp": 1793254448352
+      }
+    ],
+    "19.6 Write property test for GDPR coverage": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053935
+      },
+      {
+        "executionId": "2277a8ef-ba1e-4d3d-ae20-7fa40698cf69",
+        "chatSessionId": "sess_45b76e24-df7a-4f75-a6f7-012a2f37d55c",
+        "timestamp": 1793254450100
+      },
+      {
+        "executionId": "2277a8ef-ba1e-4d3d-ae20-7fa40698cf69",
+        "chatSessionId": "sess_45b76e24-df7a-4f75-a6f7-012a2f37d55c",
+        "timestamp": 1793254517242
+      }
+    ],
+    "20.1 Implement PostgreSQL adapters for the learning repository ports": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209053987
+      },
+      {
+        "executionId": "123ac766-f67c-4ac7-9222-1edd3cc2b077",
+        "chatSessionId": "sess_ef1270e0-26b2-4fd6-b93c-59a9bd1fe775",
+        "timestamp": 1793221490176
+      },
+      {
+        "executionId": "0ff33bb5-8c8d-439e-a663-63ca23dd0344",
+        "chatSessionId": "sess_8288264d-8a13-4a62-a33d-1439d972a1d2",
+        "timestamp": 1793256646976
+      }
+    ],
+    "21. Checkpoint — Ensure API, application, and infrastructure tests pass": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054037
+      },
+      {
+        "executionId": "60fef0ae-1af0-4a46-b246-31e835a98b6f",
+        "chatSessionId": "sess_d782dda9-a2cf-4fc6-bd3f-dfceaa02fba6",
+        "timestamp": 1793256681025
+      },
+      {
+        "executionId": "60fef0ae-1af0-4a46-b246-31e835a98b6f",
+        "chatSessionId": "sess_d782dda9-a2cf-4fc6-bd3f-dfceaa02fba6",
+        "timestamp": 1793258667407
+      }
+    ],
+    "22.1 Implement dashboard, track, and module pages": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054150
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793258699384
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793258974423
+      }
+    ],
+    "22.2 Implement the lesson reader with the MDX component allowlist": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054197
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793258699483
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793258974541
+      }
+    ],
+    "22.3 Implement the quiz player, review session, and project submission pages": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054248
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793258699760
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793258974812
+      }
+    ],
+    "22.4 Implement the lab \"coming soon\" replacement everywhere a lab is referenced": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054302
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793258700318
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793258975343
+      }
+    ],
+    "22.5 Write vitest logic/component tests for web behavior": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054353
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793258978095
+      },
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793259150782
+      }
+    ],
+    "23.1 Write the end-to-end integration suite": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054411
+      },
+      {
+        "executionId": "e1e5390e-8ccb-4b5b-b360-8480e20fe34f",
+        "chatSessionId": "sess_e5b12374-a2af-4214-92c3-acb9ef84e5a7",
+        "timestamp": 1793259181612
+      },
+      {
+        "executionId": "e1e5390e-8ccb-4b5b-b360-8480e20fe34f",
+        "chatSessionId": "sess_e5b12374-a2af-4214-92c3-acb9ef84e5a7",
+        "timestamp": 1793259765597
+      }
+    ],
+    "24.1 Assemble the verification suite aggregating the required checks": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054464
+      },
+      {
+        "executionId": "b3d0ffb7-fb82-46d6-819b-f28eb9c375ff",
+        "chatSessionId": "sess_e1b83c32-3d02-4f0c-bef4-49a7801d3e41",
+        "timestamp": 1793259790538
+      },
+      {
+        "executionId": "b3d0ffb7-fb82-46d6-819b-f28eb9c375ff",
+        "chatSessionId": "sess_e1b83c32-3d02-4f0c-bef4-49a7801d3e41",
+        "timestamp": 1793260320633
+      }
+    ],
+    "24.2 Run Playwright + axe-core on every learner page under /fr and /en": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054518
+      },
+      {
+        "executionId": "b3d0ffb7-fb82-46d6-819b-f28eb9c375ff",
+        "chatSessionId": "sess_e1b83c32-3d02-4f0c-bef4-49a7801d3e41",
+        "timestamp": 1793259791009
+      },
+      {
+        "executionId": "b3d0ffb7-fb82-46d6-819b-f28eb9c375ff",
+        "chatSessionId": "sess_e1b83c32-3d02-4f0c-bef4-49a7801d3e41",
+        "timestamp": 1793260320734
+      }
+    ],
+    "24.3 Implement the p95 latency measurement against the Seed_Content": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054567
+      },
+      {
+        "executionId": "b3d0ffb7-fb82-46d6-819b-f28eb9c375ff",
+        "chatSessionId": "sess_e1b83c32-3d02-4f0c-bef4-49a7801d3e41",
+        "timestamp": 1793259791613
+      },
+      {
+        "executionId": "b3d0ffb7-fb82-46d6-819b-f28eb9c375ff",
+        "chatSessionId": "sess_e1b83c32-3d02-4f0c-bef4-49a7801d3e41",
+        "timestamp": 1793260320789
+      }
+    ],
+    "25. Final task — write the phase-2 report": [
+      {
+        "executionId": "96791874-3f84-4c66-b08c-17a3e60d7b29",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793209054614
+      },
+      {
+        "executionId": "4d763ac4-6412-477d-b8aa-0de7909f45a4",
+        "chatSessionId": "sess_869d5ca2-42b4-4999-97c7-790fa0745106",
+        "timestamp": 1793260435288
+      },
+      {
+        "executionId": "4d763ac4-6412-477d-b8aa-0de7909f45a4",
+        "chatSessionId": "sess_869d5ca2-42b4-4999-97c7-790fa0745106",
+        "timestamp": 1793265854690
+      }
+    ],
+    "10. `edu-it content validate` command": [
+      {
+        "executionId": "3989ba94-b337-4c00-a282-52a37e617e72",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793214629392
+      }
+    ],
+    "4. Scoring, cooldown, anti-farming, and hints services (rules-first)": [
+      {
+        "executionId": "857a8d94-a3b2-4d52-a379-f13d8df5adc3",
+        "chatSessionId": "sess_bfe6ceab-3c0c-4fdc-a0ae-8eb3ef4f10c7",
+        "timestamp": 1793215148618
+      }
+    ],
+    "6. Decay, review scheduling/selection, and rubric services (rules-first)": [
+      {
+        "executionId": "e526dc22-3c7e-43a7-9a1a-3000028c7fbe",
+        "chatSessionId": "sess_70bde627-6dd5-4204-b719-654c9808c5d4",
+        "timestamp": 1793215559318
+      }
+    ],
+    "7. Encode the worked mastery example and enforce the domain coverage gate": [
+      {
+        "executionId": "f32ce1dc-d9fc-4355-8112-9538f5da1e2c",
+        "chatSessionId": "sess_5aa8dcc6-1fb4-4e15-8086-9d3e63ea584f",
+        "timestamp": 1793215862358
+      }
+    ],
+    "11. Idempotent `edu-it content sync` command": [
+      {
+        "executionId": "4fde256d-a9aa-4649-9c69-3040ee6ffb77",
+        "chatSessionId": "sess_bacc87dd-22f9-420e-a3f7-3677b089525d",
+        "timestamp": 1793216290892
+      }
+    ],
+    "14. Author seed content (origin ai) for \"Linux Fundamentals\"": [
+      {
+        "executionId": "f1b25c49-69a0-4fd5-a3f7-7d431e621da5",
+        "chatSessionId": "sess_08f46a41-6de3-4e60-b94e-36464ad6ceb4",
+        "timestamp": 1793218812352
+      }
+    ],
+    "16. Record approval and mark the golden set": [
+      {
+        "executionId": "42ad6537-c926-403f-9be6-b0da267b4200",
+        "chatSessionId": "sess_8b36b03d-110f-4063-87e1-8618f66ffd12",
+        "timestamp": 1793219220929
+      }
+    ],
+    "17. Learning API — application use cases (Milestone C)": [
+      {
+        "executionId": "d96a0966-cda2-47a7-a97a-092f48b4e55c",
+        "chatSessionId": "sess_cde01929-c37c-4511-8d17-7b7f2aae2a11",
+        "timestamp": 1793220508971
+      }
+    ],
+    "18. Learning API — FastAPI routers, idempotency, and problem details": [
+      {
+        "executionId": "7e5f4c51-7c54-42e2-8b2d-e5548e0ff5ad",
+        "chatSessionId": "sess_102b7cd9-8b04-446b-b6b4-3aee2f109fc0",
+        "timestamp": 1793254278742
+      }
+    ],
+    "19. Learning API — lesson locale fallback, placement/final-assessment interfaces, GDPR": [
+      {
+        "executionId": "2277a8ef-ba1e-4d3d-ae20-7fa40698cf69",
+        "chatSessionId": "sess_45b76e24-df7a-4f75-a6f7-012a2f37d55c",
+        "timestamp": 1793254517340
+      }
+    ],
+    "20. Infrastructure — PostgreSQL repositories for learning state": [
+      {
+        "executionId": "0ff33bb5-8c8d-439e-a663-63ca23dd0344",
+        "chatSessionId": "sess_8288264d-8a13-4a62-a33d-1439d972a1d2",
+        "timestamp": 1793256647059
+      }
+    ],
+    "22. apps/web learner pages under /fr and /en": [
+      {
+        "executionId": "12b08ff6-8a87-40d5-ba4e-bf804a719234",
+        "chatSessionId": "sess_825d86c8-48c9-495a-9a1d-84cfe07eed9c",
+        "timestamp": 1793259150855
+      }
+    ],
+    "23. Integration tests across application + infrastructure": [
+      {
+        "executionId": "e1e5390e-8ccb-4b5b-b360-8480e20fe34f",
+        "chatSessionId": "sess_e5b12374-a2af-4214-92c3-acb9ef84e5a7",
+        "timestamp": 1793259765657
+      }
+    ]
+  }
+}

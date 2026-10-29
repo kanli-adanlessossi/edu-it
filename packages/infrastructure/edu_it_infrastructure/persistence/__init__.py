@@ -18,6 +18,18 @@ behavior (Req 20.1-20.3); only the schema is created.
 
 from __future__ import annotations
 
+from edu_it_infrastructure.persistence.learning_repositories import (
+    DuplicateQuizAttemptError,
+    LessonContentSource,
+    Postgres_AssessmentRepository,
+    Postgres_AttemptRepository,
+    Postgres_CatalogRepository,
+    Postgres_EnrollmentRepository,
+    Postgres_LessonRepository,
+    Postgres_MasteryRepository,
+    Postgres_ProgressRepository,
+    Postgres_ReviewRepository,
+)
 from edu_it_infrastructure.persistence.metadata import (
     DATA_MODEL_TABLE_NAMES,
     STABLE_ID_TABLE_NAMES,
@@ -33,7 +45,17 @@ from edu_it_infrastructure.persistence.repositories import (
 __all__ = [
     "DATA_MODEL_TABLE_NAMES",
     "STABLE_ID_TABLE_NAMES",
+    "DuplicateQuizAttemptError",
+    "LessonContentSource",
+    "Postgres_AssessmentRepository",
+    "Postgres_AttemptRepository",
+    "Postgres_CatalogRepository",
+    "Postgres_EnrollmentRepository",
+    "Postgres_LessonRepository",
+    "Postgres_MasteryRepository",
     "Postgres_PersonalDataGateway",
+    "Postgres_ProgressRepository",
+    "Postgres_ReviewRepository",
     "Postgres_RoleAssignmentRepository",
     "Postgres_SessionRepository",
     "Postgres_UserRepository",

@@ -1,0 +1,182 @@
+[
+  {
+    "provenance": {
+      "stable_id": "question.rp.1-ls-l-fields",
+      "content_version": "sha256:4b5c6d7e8f90112233445566778899aabbccddeeff0011223344556677889900",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.reading-permissions",
+    "prompt_text": {
+      "en": "In the output of `ls -l`, which character at the very start of a line tells you the entry is a directory?",
+      "fr": "Dans la sortie de `ls -l`, quel caractère au tout début d'une ligne indique que l'entrée est un répertoire ?"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "question.rp.2-rwx-meaning",
+      "content_version": "sha256:5c6d7e8f90112233445566778899aabbccddeeff001122334455667788990011",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.reading-permissions",
+    "prompt_text": {
+      "en": "For a regular file, what does the `x` permission grant to the user it applies to?",
+      "fr": "Pour un fichier ordinaire, qu'accorde la permission `x` à l'utilisateur à qui elle s'applique ?"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "question.rp.3-octal-from-symbolic",
+      "content_version": "sha256:6d7e8f90112233445566778899aabbccddeeff00112233445566778899001122",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.reading-permissions",
+    "prompt_text": {
+      "en": "A file shows the permission string `rw-r--r--`. What is the equivalent octal notation?",
+      "fr": "Un fichier affiche la chaîne de permissions `rw-r--r--`. Quelle est la notation octale équivalente ?"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "question.rp.4-group-read-true-false",
+      "content_version": "sha256:7e8f90112233445566778899aabbccddeeff0011223344556677889900112233",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.reading-permissions",
+    "prompt_text": {
+      "en": "True or false: in the permission string `-rwxr-x---`, members of the file's group are allowed to write to the file.",
+      "fr": "Vrai ou faux : dans la chaîne de permissions `-rwxr-x---`, les membres du groupe du fichier sont autorisés à écrire dans le fichier."
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "question.rp.5-command-output",
+      "content_version": "sha256:8f90112233445566778899aabbccddeeff001122334455667788990011223344",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question.command-output",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.reading-permissions",
+    "prompt_text": {
+      "en": "Command-output question. You run `ls -l report.txt` on a file owned by user `amina` and group `staff`, with read and write for the owner, read for the group, and nothing for others. Which line of output matches?",
+      "fr": "Question de sortie de commande. Vous exécutez `ls -l report.txt` sur un fichier appartenant à l'utilisateur `amina` et au groupe `staff`, avec lecture et écriture pour le propriétaire, lecture pour le groupe, et rien pour les autres. Quelle ligne de sortie correspond ?"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "question.cp.1-chmod-symbolic",
+      "content_version": "sha256:90112233445566778899aabbccddeeff00112233445566778899001122334455",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.changing-permissions",
+    "prompt_text": {
+      "en": "Which `chmod` command uses symbolic notation to add execute permission for the owner only, leaving all other bits unchanged?",
+      "fr": "Quelle commande `chmod` utilise la notation symbolique pour ajouter la permission d'exécution au propriétaire uniquement, sans modifier les autres bits ?"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "question.cp.2-chmod-octal",
+      "content_version": "sha256:0112233445566778899aabbccddeeff0011223344556677889900112233445566",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.changing-permissions",
+    "prompt_text": {
+      "en": "You want a file to be readable, writable, and executable by its owner, and readable and executable by group and others. Which octal `chmod` argument sets exactly that?",
+      "fr": "Vous voulez qu'un fichier soit lisible, modifiable et exécutable par son propriétaire, et lisible et exécutable par le groupe et les autres. Quel argument octal de `chmod` règle exactement cela ?"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "question.cp.3-chown-chgrp",
+      "content_version": "sha256:112233445566778899aabbccddeeff001122334455667788990011223344556677",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.changing-permissions",
+    "prompt_text": {
+      "en": "Which single command changes both the owner to `deploy` and the group to `www` for the file `app.conf`?",
+      "fr": "Quelle commande unique change à la fois le propriétaire en `deploy` et le groupe en `www` pour le fichier `app.conf` ?"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "question.cp.4-setgid-umask",
+      "content_version": "sha256:2233445566778899aabbccddeeff00112233445566778899001122334455667788",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.changing-permissions",
+    "prompt_text": {
+      "en": "Why is the setgid bit useful on a shared project directory?",
+      "fr": "Pourquoi le bit setgid est-il utile sur un répertoire de projet partagé ?"
+    }
+  },
+  {
+    "provenance": {
+      "stable_id": "question.cp.5-command-output",
+      "content_version": "sha256:33445566778899aabbccddeeff0011223344556677889900112233445566778899",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.question.command-output",
+      "prompt_version": "1",
+      "generation_date": "2024-01-02T00:00:00Z",
+      "reviewed_by": null,
+      "reviewed_at": null
+    },
+    "quiz_stable_id": "quiz.changing-permissions",
+    "prompt_text": {
+      "en": "Command-output question. The current umask is `022`. You run `touch newfile && ls -l newfile`. Which permission string appears for the new regular file?",
+      "fr": "Question de sortie de commande. Le umask courant est `022`. Vous exécutez `touch newfile && ls -l newfile`. Quelle chaîne de permissions apparaît pour le nouveau fichier ordinaire ?"
+    }
+  }
+]
