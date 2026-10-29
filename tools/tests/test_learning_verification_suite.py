@@ -357,7 +357,7 @@ def test_both_seed_lessons_complete_in_each_language_and_locks_lift_by_mastery(
 
     clock = Test_Clock(start=datetime(2024, 6, 1, 9, tzinfo=UTC))
     progress = In_Memory_ProgressRepository()
-    read = GetLessonUseCase(lessons=_SeedLessons(lessons))  # type: ignore[arg-type]
+    read = GetLessonUseCase(lessons=_SeedLessons(lessons))
     for lesson_id in required_lessons:
         view = read.execute(lesson_id, locale)
         assert view.locale == locale  # served natively, no English fallback
@@ -411,9 +411,19 @@ def test_approval_records_reviewer_and_marks_seed_as_golden_set(seed: LoadedCont
 
 
 def test_without_approval_nothing_is_synced_attributed_or_marked(seed: LoadedContent) -> None:
+    # The committed seed now carries its recorded approval; strip it in memory to
+    # exercise the unapproved path (Req 16.4).
+    raw = copy.deepcopy({k: list(v) for k, v in seed.raw_items.items()})
+    for items in raw.values():
+        for item in items:
+            provenance = item.get("provenance")
+            if isinstance(provenance, dict):
+                provenance["reviewed_by"] = None
+                provenance["reviewed_at"] = None
+    unapproved = replace(seed, raw_items=raw)
     store = In_Memory_ContentStore()
     with pytest.raises(ValueError, match="ai-reviewer-present"):
-        sync_content(store, seed)
+        sync_content(store, unapproved)
     assert store.golden_ids() == frozenset()
     assert store.list_active_ids() == frozenset()
     assert store.review_of("track.linux-fundamentals") is None

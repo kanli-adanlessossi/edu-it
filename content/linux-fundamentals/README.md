@@ -58,16 +58,13 @@ prerequisites: processes -> reading-permissions, processes -> changing-permissio
 
 ## Provenance state
 
-Every item carries `provenance.origin = "ai"`. `reviewed_by` / `reviewed_at` are
-intentionally `null`: no reviewer is recorded yet. Expert review is the task 15 STOP
-checkpoint; the approving reviewer is attributed only on approval (task 16). Because
-origin is `ai` with no reviewer, `edu-it content validate` will report the
-missing-reviewer rule (Req 13.6) until approval — that is expected at this stage and
-is why nothing here is synced, served, or marked golden.
-
-On approval, the approving user is supplied explicitly:
+Every item carries `provenance.origin = "ai"`. The user approved the seed content: each item
+records `reviewed_by = "kanli-adanlessossi"` (GitHub handle, to be replaced by the real
+`user.stable_id` once accounts exist) and a `reviewed_at` timestamp, so `edu-it content
+validate` passes the reviewer rule (Req 13.6).
+Approval is supplied explicitly when syncing:
 `edu-it-content sync --approved-by <user-stable-id> [--approved-at <ISO8601>]`
-records them as `reviewed_by`/`reviewed_at` and marks the synced content as the
+records the approver as `reviewed_by`/`reviewed_at` and marks the synced content as the
 `Golden_Set` (Req 16.2, 16.3). Without `--approved-by` nothing is attributed or
 marked golden (Req 16.4).
 

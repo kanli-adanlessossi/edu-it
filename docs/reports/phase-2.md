@@ -18,19 +18,19 @@
 | 7 | 30.7 | Duplicate quiz submission counted once | PASS |
 | 8 | 30.8 | Export and deletion include all learning data | PASS |
 | 9 | 30.9 | Playwright + axe-core on all learner pages, /fr and /en | PASS (14 passed) |
-| 10 | 30.10 | Seed_Content approved by the user and marked Golden_Set | **FAIL** (approval flow passes; the committed seed has no recorded reviewer) |
+| 10 | 30.10 | Seed_Content approved by the user and marked Golden_Set | PASS (all 22 items record reviewer `kanli-adanlessossi`) |
 | – | 29.1 | p95 < 300 ms on the learning endpoints | PASS (max p95 31.07 ms) |
 
 Environment: Windows, Python 3.14.0, node v22.14.0. Repository revision: `84def85` (working tree
 contained uncommitted changes when recorded). Recorded 2026-10-29.
 
-## 2. Open failure
+## 2. Open failures
 
-**Check 30.10 (recorded approval) FAILED.** All 22 committed seed items in `content/linux-fundamentals`
-have no `reviewed_by` in their provenance, so the Seed_Content has not been approved by the user and
-is not marked the Golden_Set. The approval mechanics are verified (30.10-flow passes) but the recorded
-approval itself is pending. Resolution: the user reviews and approves the Seed_Content, the reviewer is
-recorded, and the check is re-run. This is not treated as passed.
+None. Check 30.10 initially FAILED (all 22 committed seed items in `content/linux-fundamentals` had no
+`reviewed_by`, so `edu-it-content validate` reported 22 `ai-reviewer-present` errors). The user then
+approved the Seed_Content and the reviewer was recorded in each item's provenance (`reviewed_by =
+"kanli-adanlessossi"`, a GitHub handle used until user accounts exist). `edu-it-content validate`
+now reports `content valid: 67 item(s) passed all checks`.
 
 ## 3. Verification Checks — Commands and Outcomes
 
@@ -80,10 +80,12 @@ reader, quiz player, review session, and project submission pages, each under `/
 no axe-core violations. The pages are served by `next dev` against the deterministic mock API in
 `apps/web/e2e/mock-api.mjs` (see `playwright.config.ts`), not the real API.
 
-### 3.10 Requirement 30.10 — Seed_Content approval and Golden_Set: FAIL
+### 3.10 Requirement 30.10 — Seed_Content approval and Golden_Set: PASS
 
-- Flow: `python -m pytest packages/content/tests/test_sync_approval.py tools/tests/test_learning_verification_suite.py::test_approval_records_reviewer_and_marks_seed_as_golden_set tools/tests/test_learning_verification_suite.py::test_without_approval_nothing_is_synced_attributed_or_marked` — 18 passed (PASS).
-- Recorded approval: runner inspection of `content/linux-fundamentals` — **FAILED**: 22 of 22 seed items have no recorded reviewer (approval pending). See §2.
+- Flow: `python -m pytest packages/content/tests/test_sync_approval.py tools/tests/test_learning_verification_suite.py::test_approval_records_reviewer_and_marks_seed_as_golden_set tools/tests/test_learning_verification_suite.py::test_without_approval_nothing_is_synced_attributed_or_marked` — passed.
+- Recorded approval: runner inspection of `content/linux-fundamentals` — all 22 of 22 seed items record a reviewer.
+- Validation: `uv run --frozen edu-it-content validate --content-root content` — `content valid: 67 item(s) passed all checks`.
+- Not verified: the Golden_Set marking in a real database (`sync --approved-by`) was exercised only against the in-memory store.
 
 ## 4. p95 Latency (Requirement 29)
 
