@@ -46,10 +46,14 @@ from dataclasses import dataclass
 from typing import Final
 
 from edu_it_domain.ports.clock import Clock
+from edu_it_domain.ports.lab_sessions import LabSessionRepository
 from edu_it_domain.ports.object_storage import ObjectStorage
 from edu_it_domain.ports.personal_data import PersonalDataGateway
 from edu_it_domain.ports.repository import SessionRepository
+from edu_it_domain.ports.sandbox import SandboxHandle, SandboxProvider
 from edu_it_domain.ports.session_store import SessionStore
+
+from edu_it_application.labs.save_files import sandbox_handle
 
 __all__ = [
     "AccountDeletionError",
@@ -69,6 +73,9 @@ _LOGGER: Final[logging.Logger] = logging.getLogger("edu_it_application.gdpr")
 
 #: Structured-log event recorded when the atomic data delete fails (Req 14.4).
 _DELETION_FAILED_EVENT: Final[str] = "account_deletion_failed"
+
+#: Structured-log event recorded when destroying the Sandbox after deletion fails.
+_SANDBOX_DESTROY_FAILED_EVENT: Final[str] = "account_deletion_sandbox_destroy_failed"
 
 #: The MIME type of the stored export document.
 _EXPORT_CONTENT_TYPE: Final[str] = "application/json"
@@ -220,12 +227,20 @@ class DeleteAccountUseCase:
         sessions: SessionRepository,
         session_store: SessionStore,
         clock: Clock,
+        lab_sessions: LabSessionRepository | None = None,
+        sandbox: SandboxProvider | None = None,
+        sandbox_provider_name: str = "docker",
     ) -> None:
         """Wire the use case to its collaborators.
 
         ``clock`` supplies the revocation instant for the durable Session
-        records, so the flow is deterministic under test.
+        records, so the flow is deterministic under test. ``lab_sessions`` and
+        ``sandbox`` (both or neither) let the deletion destroy the learner's
+        Active_Session Sandbox (Req 24.2).
         """
+        self._lab_sessions = lab_sessions
+        self._sandbox = sandbox
+        self._sandbox_provider_name = sandbox_provider_name
         self._personal_data = personal_data
         self._sessions = sessions
         self._session_store = session_store
@@ -259,6 +274,9 @@ class DeleteAccountUseCase:
         )
         self._session_store.revoke_all_for_user(user_stable_id)
 
+        # Capture the Sandbox handle before the rows disappear (Req 24.2).
+        handle = self._active_sandbox_handle(user_stable_id)
+
         try:
             rows_removed = self._personal_data.delete_user_data(user_stable_id)
         except Exception as error:
@@ -271,11 +289,32 @@ class DeleteAccountUseCase:
             )
             raise AccountDeletionError from error
 
+        # Destroy only after the atomic delete succeeded. A failed destroy is logged;
+        # the reaper's orphan sweep destroys a Sandbox whose session no longer exists.
+        if handle is not None and self._sandbox is not None:
+            try:
+                self._sandbox.destroy(handle)
+            except Exception:
+                _LOGGER.warning(
+                    "sandbox destruction after account deletion failed",
+                    extra={"event": _SANDBOX_DESTROY_FAILED_EVENT},
+                    exc_info=True,
+                )
+
         return DeleteAccountResult(
             deleted=True,
             rows_removed=rows_removed,
             sessions_revoked=sessions_revoked,
         )
+
+    def _active_sandbox_handle(self, user_stable_id: str) -> SandboxHandle | None:
+        """Return the handle of the User's Active_Session Sandbox, if any."""
+        if self._lab_sessions is None or self._sandbox is None:
+            return None
+        session = self._lab_sessions.get_active_for_user(user_stable_id)
+        if session is None or session.sandbox_ref is None:
+            return None
+        return sandbox_handle(session.stable_id, session.sandbox_ref, self._sandbox_provider_name)
 
 
 def _default_export_key(user_stable_id: str) -> str:

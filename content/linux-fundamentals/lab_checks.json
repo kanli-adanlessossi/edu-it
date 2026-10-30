@@ -1,0 +1,267 @@
+[
+  {
+    "stable_id": "lab-check.fix-the-shared-folder.dirs-exist",
+    "lab_task_stable_id": "lab-task.fix-the-shared-folder.1-create-dirs",
+    "timeout_seconds": 2,
+    "script": "checks/lab-check.fix-the-shared-folder.dirs-exist.sh",
+    "outcomes": [
+      {
+        "code": "pass",
+        "exit_code": 0,
+        "feedback_key": "lab.fix-the-shared-folder.dirs-exist.pass",
+        "message": {
+          "fr": "Les dossiers docs et scripts existent.",
+          "en": "The docs and scripts folders exist."
+        }
+      },
+      {
+        "code": "missing-docs",
+        "exit_code": 11,
+        "feedback_key": "lab.fix-the-shared-folder.dirs-exist.missing-docs",
+        "message": {
+          "fr": "Le dossier docs est introuvable dans /workspace/team.",
+          "en": "The docs folder is missing from /workspace/team."
+        }
+      },
+      {
+        "code": "missing-scripts",
+        "exit_code": 12,
+        "feedback_key": "lab.fix-the-shared-folder.dirs-exist.missing-scripts",
+        "message": {
+          "fr": "Le dossier scripts est introuvable dans /workspace/team.",
+          "en": "The scripts folder is missing from /workspace/team."
+        }
+      },
+      {
+        "code": "not-a-directory",
+        "exit_code": 13,
+        "feedback_key": "lab.fix-the-shared-folder.dirs-exist.not-a-directory",
+        "message": {
+          "fr": "Un élément attendu est un fichier et non un dossier. Supprimez-le puis créez le dossier.",
+          "en": "An expected folder is a file instead. Remove it, then create the folder."
+        }
+      },
+      {
+        "code": "unsafe-path",
+        "exit_code": 90,
+        "feedback_key": "lab.fix-the-shared-folder.dirs-exist.unsafe-path",
+        "message": {
+          "fr": "Un lien symbolique, un tube ou un fichier spécial se trouve à la place d'un fichier ou d'un dossier attendu. Remplacez-le par un vrai dossier ou fichier ordinaire, puis relancez la vérification.",
+          "en": "A symbolic link, pipe or special file sits where a regular file or folder is expected. Replace it with a real folder or regular file, then check again."
+        }
+      }
+    ]
+  },
+  {
+    "stable_id": "lab-check.fix-the-shared-folder.group-setgid",
+    "lab_task_stable_id": "lab-task.fix-the-shared-folder.2-group-setgid",
+    "timeout_seconds": 2,
+    "script": "checks/lab-check.fix-the-shared-folder.group-setgid.sh",
+    "outcomes": [
+      {
+        "code": "pass",
+        "exit_code": 0,
+        "feedback_key": "lab.fix-the-shared-folder.group-setgid.pass",
+        "message": {
+          "fr": "/workspace/team appartient au groupe devs et le bit setgid est activé.",
+          "en": "/workspace/team belongs to the group devs and has the setgid bit."
+        }
+      },
+      {
+        "code": "wrong-group",
+        "exit_code": 21,
+        "feedback_key": "lab.fix-the-shared-folder.group-setgid.wrong-group",
+        "message": {
+          "fr": "Le groupe de /workspace/team n'est pas devs.",
+          "en": "The group of /workspace/team is not devs."
+        }
+      },
+      {
+        "code": "setgid-missing",
+        "exit_code": 22,
+        "feedback_key": "lab.fix-the-shared-folder.group-setgid.setgid-missing",
+        "message": {
+          "fr": "Le groupe est bon, mais le bit setgid n'est pas activé sur /workspace/team.",
+          "en": "The group is right, but the setgid bit is not set on /workspace/team."
+        }
+      },
+      {
+        "code": "team-not-directory",
+        "exit_code": 23,
+        "feedback_key": "lab.fix-the-shared-folder.group-setgid.team-not-directory",
+        "message": {
+          "fr": "/workspace/team n'est pas un dossier. Il doit exister et en être un.",
+          "en": "/workspace/team is not a folder. It must exist and be a folder."
+        }
+      },
+      {
+        "code": "unsafe-path",
+        "exit_code": 90,
+        "feedback_key": "lab.fix-the-shared-folder.group-setgid.unsafe-path",
+        "message": {
+          "fr": "Un lien symbolique, un tube ou un fichier spécial se trouve à la place d'un fichier ou d'un dossier attendu. Remplacez-le par un vrai dossier ou fichier ordinaire, puis relancez la vérification.",
+          "en": "A symbolic link, pipe or special file sits where a regular file or folder is expected. Replace it with a real folder or regular file, then check again."
+        }
+      }
+    ]
+  },
+  {
+    "stable_id": "lab-check.fix-the-shared-folder.no-world-writable",
+    "lab_task_stable_id": "lab-task.fix-the-shared-folder.3-no-world-write",
+    "timeout_seconds": 2,
+    "script": "checks/lab-check.fix-the-shared-folder.no-world-writable.sh",
+    "outcomes": [
+      {
+        "code": "pass",
+        "exit_code": 0,
+        "feedback_key": "lab.fix-the-shared-folder.no-world-writable.pass",
+        "message": {
+          "fr": "Plus aucun élément de /workspace/team n'est modifiable par tout le monde.",
+          "en": "Nothing in /workspace/team is writable by everyone any more."
+        }
+      },
+      {
+        "code": "world-writable-remains",
+        "exit_code": 31,
+        "feedback_key": "lab.fix-the-shared-folder.no-world-writable.world-writable-remains",
+        "message": {
+          "fr": "Un élément de /workspace/team est encore modifiable par tout le monde.",
+          "en": "Something in /workspace/team is still writable by everyone."
+        }
+      },
+      {
+        "code": "unsafe-path",
+        "exit_code": 90,
+        "feedback_key": "lab.fix-the-shared-folder.no-world-writable.unsafe-path",
+        "message": {
+          "fr": "Un lien symbolique, un tube ou un fichier spécial se trouve à la place d'un fichier ou d'un dossier attendu. Remplacez-le par un vrai dossier ou fichier ordinaire, puis relancez la vérification.",
+          "en": "A symbolic link, pipe or special file sits where a regular file or folder is expected. Replace it with a real folder or regular file, then check again."
+        }
+      }
+    ]
+  },
+  {
+    "stable_id": "lab-check.fix-the-shared-folder.planted-intact",
+    "lab_task_stable_id": "lab-task.fix-the-shared-folder.3-no-world-write",
+    "timeout_seconds": 2,
+    "script": "checks/lab-check.fix-the-shared-folder.planted-intact.sh",
+    "outcomes": [
+      {
+        "code": "pass",
+        "exit_code": 0,
+        "feedback_key": "lab.fix-the-shared-folder.planted-intact.pass",
+        "message": {
+          "fr": "Le fichier shared-notes.txt est toujours là, avec son contenu d'origine.",
+          "en": "shared-notes.txt is still there with its original content."
+        }
+      },
+      {
+        "code": "planted-missing",
+        "exit_code": 41,
+        "feedback_key": "lab.fix-the-shared-folder.planted-intact.planted-missing",
+        "message": {
+          "fr": "Le fichier shared-notes.txt a disparu. Il ne fallait pas le supprimer.",
+          "en": "shared-notes.txt is gone. It should not have been deleted."
+        }
+      },
+      {
+        "code": "planted-changed",
+        "exit_code": 42,
+        "feedback_key": "lab.fix-the-shared-folder.planted-intact.planted-changed",
+        "message": {
+          "fr": "Le contenu de shared-notes.txt a changé. Seules ses permissions devaient être modifiées.",
+          "en": "The content of shared-notes.txt changed. Only its permissions should change."
+        }
+      },
+      {
+        "code": "unsafe-path",
+        "exit_code": 90,
+        "feedback_key": "lab.fix-the-shared-folder.planted-intact.unsafe-path",
+        "message": {
+          "fr": "Un lien symbolique, un tube ou un fichier spécial se trouve à la place d'un fichier ou d'un dossier attendu. Remplacez-le par un vrai dossier ou fichier ordinaire, puis relancez la vérification.",
+          "en": "A symbolic link, pipe or special file sits where a regular file or folder is expected. Replace it with a real folder or regular file, then check again."
+        }
+      }
+    ]
+  },
+  {
+    "stable_id": "lab-check.world-writable-entries.basic-entries",
+    "lab_task_stable_id": "lab-task.world-writable-entries.1-basic-entries",
+    "timeout_seconds": 5,
+    "script": "cases/lab-check.world-writable-entries.basic-entries.json",
+    "outcomes": [
+      {
+        "code": "pass",
+        "feedback_key": "lab.world-writable-entries.basic-entries.pass",
+        "message": {
+          "fr": "Tous les cas de cette vérification donnent la bonne sortie.",
+          "en": "Every case in this check produces the right output."
+        }
+      },
+      {
+        "code": "wrong-output",
+        "feedback_key": "lab.world-writable-entries.basic-entries.wrong-output",
+        "message": {
+          "fr": "Votre programme s'exécute, mais sa sortie diffère de celle attendue pour au moins un cas. Relisez la règle : types d'entrées, droit d'écriture pour tous et ordre des noms.",
+          "en": "Your program runs, but its output differs from the expected output for at least one case. Re-read the rule: entry types, write permission for everyone, and name order."
+        }
+      },
+      {
+        "code": "crashed",
+        "feedback_key": "lab.world-writable-entries.basic-entries.crashed",
+        "message": {
+          "fr": "Votre programme s'est arrêté sur une erreur avant la fin. Testez-le sur une entrée simple pour trouver la ligne en cause.",
+          "en": "Your program stopped on an error before finishing. Try it on a simple input to find the line that fails."
+        }
+      },
+      {
+        "code": "no-output",
+        "feedback_key": "lab.world-writable-entries.basic-entries.no-output",
+        "message": {
+          "fr": "Votre programme s'est terminé sans rien afficher alors que des noms étaient attendus. Vérifiez que vous utilisez print pour chaque nom à signaler.",
+          "en": "Your program finished without printing anything although some names were expected. Check that you print each name to report."
+        }
+      }
+    ]
+  },
+  {
+    "stable_id": "lab-check.world-writable-entries.edge-entries",
+    "lab_task_stable_id": "lab-task.world-writable-entries.2-edge-entries",
+    "timeout_seconds": 5,
+    "script": "cases/lab-check.world-writable-entries.edge-entries.json",
+    "outcomes": [
+      {
+        "code": "pass",
+        "feedback_key": "lab.world-writable-entries.edge-entries.pass",
+        "message": {
+          "fr": "Tous les cas de cette vérification donnent la bonne sortie.",
+          "en": "Every case in this check produces the right output."
+        }
+      },
+      {
+        "code": "wrong-output",
+        "feedback_key": "lab.world-writable-entries.edge-entries.wrong-output",
+        "message": {
+          "fr": "Votre programme s'exécute, mais sa sortie diffère de celle attendue pour au moins un cas. Relisez la règle : types d'entrées, droit d'écriture pour tous et ordre des noms.",
+          "en": "Your program runs, but its output differs from the expected output for at least one case. Re-read the rule: entry types, write permission for everyone, and name order."
+        }
+      },
+      {
+        "code": "crashed",
+        "feedback_key": "lab.world-writable-entries.edge-entries.crashed",
+        "message": {
+          "fr": "Votre programme s'est arrêté sur une erreur avant la fin. Testez-le sur une entrée simple pour trouver la ligne en cause.",
+          "en": "Your program stopped on an error before finishing. Try it on a simple input to find the line that fails."
+        }
+      },
+      {
+        "code": "no-output",
+        "feedback_key": "lab.world-writable-entries.edge-entries.no-output",
+        "message": {
+          "fr": "Votre programme s'est terminé sans rien afficher alors que des noms étaient attendus. Vérifiez que vous utilisez print pour chaque nom à signaler.",
+          "en": "Your program finished without printing anything although some names were expected. Check that you print each name to report."
+        }
+      }
+    ]
+  }
+]

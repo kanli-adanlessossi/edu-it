@@ -34,12 +34,14 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 __all__ = [
     "Concept",
     "Lab",
     "LabCheck",
+    "LabCheckOutcome",
+    "LabKind",
     "LabTask",
     "Lesson",
     "Localized",
@@ -208,44 +210,143 @@ class Lesson(_ProvenancedContent):
     title: Localized = Field(description="The lesson's bilingual title.")
 
 
-class Lab(_ProvenancedContent):
-    """A hands-on lab attached to a lesson (D3 §6, Req 12.1).
+class LabKind(StrEnum):
+    """The kind of a lab (hands-on-labs design, content schema table).
 
-    :attr:`lesson_stable_id` references the owning :class:`Lesson`. Labs are
-    surfaced as "coming soon" in this phase (Req 15.7), but their schema is
-    defined so authored content can carry them.
+    ``TERMINAL`` labs attach an xterm.js terminal to the Sandbox; ``CODE`` labs
+    are Code_Exercises edited in Monaco and tested inside the Sandbox.
+    """
+
+    TERMINAL = "terminal"
+    CODE = "code"
+
+
+#: The mandatory outcome code every :class:`LabCheck` must declare (Req 20.1).
+PASS_OUTCOME_CODE: Final[str] = "pass"
+
+#: The default directory the Check_Bundle is copied into at grading time.
+DEFAULT_CHECK_BUNDLE_DEST: Final[str] = "/grader"
+
+
+class Lab(_ProvenancedContent):
+    """A hands-on lab attached to a lesson (D3 §6, Req 12.1, 20.1).
+
+    :attr:`lesson_stable_id` references the owning :class:`Lesson`.
+    :attr:`kind` is ``terminal`` or ``code``; :attr:`image` names the Lab_Image;
+    :attr:`concept_stable_ids` lists the concepts the lab covers.
+    :attr:`check_bundle` is the repository path of the Check_Bundle, copied into
+    the Sandbox at :attr:`check_bundle_dest` only at grading time.
+    :attr:`learner_files` names the flat learner files graded for a code lab and
+    :attr:`starter_files` the repository paths of the starter skeletons.
+    Reference and location rules are enforced by the validate command
+    (Req 20.3, 20.6), not by this schema.
     """
 
     lesson_stable_id: str = Field(min_length=1, description="Stable id of the owning lesson.")
     title: Localized = Field(description="The lab's bilingual title.")
+    kind: LabKind = Field(description="Whether the lab is a terminal lab or a code exercise.")
+    image: str = Field(min_length=1, description="Name of the Lab_Image the Sandbox runs.")
+    concept_stable_ids: tuple[str, ...] = Field(
+        default=(),
+        description="Stable ids of the concepts the lab covers.",
+    )
+    instructions: Localized = Field(description="The lab's bilingual instructions.")
+    setup_script: str | None = Field(
+        default=None,
+        description="Repository path of the script that prepares the Sandbox, if any.",
+    )
+    check_bundle: str | None = Field(
+        default=None,
+        description="Repository path of the read-only Check_Bundle directory.",
+    )
+    check_bundle_dest: str = Field(
+        default=DEFAULT_CHECK_BUNDLE_DEST,
+        min_length=1,
+        description="Sandbox directory the Check_Bundle is copied into at grading time.",
+    )
+    learner_files: tuple[str, ...] = Field(
+        default=(),
+        description="Flat names of the learner files a code lab grades.",
+    )
+    starter_files: tuple[str, ...] = Field(
+        default=(),
+        description="Repository paths of the starter files provided to the learner.",
+    )
 
 
 class LabTask(_ContentModel):
-    """An ordered step within a lab (D3 §6, Req 12.1).
+    """An ordered step within a lab (D3 §6, Req 12.1, 20.1).
 
     :attr:`lab_stable_id` references the owning :class:`Lab`; :attr:`ordinal` is
-    the task's position within the lab. D3 models ``lab_task`` without its own
-    provenance row, so it carries none.
+    the task's position within the lab. :attr:`required` marks whether the task
+    must be completed for the lab to count as passed; :attr:`hints` are the
+    progressive bilingual hints, in reveal order. D3 models ``lab_task`` without
+    its own provenance row, so it carries none.
     """
 
     stable_id: str = Field(min_length=1, description="Immutable identity anchor for the task.")
     lab_stable_id: str = Field(min_length=1, description="Stable id of the owning lab.")
     ordinal: int = Field(ge=0, description="Position of the task within its lab.")
     title: Localized = Field(description="The lab task's bilingual title.")
+    description: Localized = Field(description="The lab task's bilingual description.")
+    required: bool = Field(default=True, description="Whether the task is required for the lab.")
+    hints: tuple[Localized, ...] = Field(
+        default=(),
+        description="Progressive bilingual hints, in reveal order.",
+    )
+
+
+class LabCheckOutcome(_ContentModel):
+    """One possible result of a :class:`LabCheck` (hands-on-labs design).
+
+    :attr:`code` is the symbolic outcome name (``pass``, ``wrong-output``, ...);
+    :attr:`exit_code` is the script exit status mapped to it, or ``None`` when
+    the outcome is reported through the result channel instead.
+    :attr:`feedback_key` is the stable identifier of the learner-facing
+    :attr:`message`, which must carry both translations and never include
+    expected output.
+    """
+
+    code: str = Field(min_length=1, description="Symbolic outcome code.")
+    exit_code: int | None = Field(
+        default=None,
+        ge=0,
+        le=255,
+        description="Check script exit status mapped to this outcome, if any.",
+    )
+    feedback_key: str = Field(min_length=1, description="Stable Feedback_Key of the message.")
+    message: Localized = Field(description="The outcome's bilingual learner-facing message.")
 
 
 class LabCheck(_ContentModel):
-    """A graded check on a lab task (D3 §6, Req 12.1).
+    """A graded check on a lab task (D3 §6, Req 12.1, 20.1).
 
-    :attr:`lab_task_stable_id` references the owning :class:`LabTask`;
-    :attr:`check_kind` identifies how the check is graded. A passing lab check
-    contributes to reaching ``Mastered`` where a lab covers the concept
-    (domain rules), but that is a domain behavior, not a schema concern.
+    :attr:`lab_task_stable_id` references the owning :class:`LabTask`.
+    :attr:`timeout_seconds` is the per-Check timeout and :attr:`script` the
+    Check_Bundle script that is run. :attr:`outcomes` lists the possible
+    results; one with code ``pass`` is mandatory and codes must be unique. The
+    bound on :attr:`timeout_seconds` (Usable_Run_Budget) and the Feedback_Key
+    completeness rules are enforced by the validate command (Req 20.4, 20.5).
     """
 
     stable_id: str = Field(min_length=1, description="Immutable identity anchor for the check.")
     lab_task_stable_id: str = Field(min_length=1, description="Stable id of the owning lab task.")
-    check_kind: str = Field(min_length=1, description="How the check is graded.")
+    timeout_seconds: int = Field(gt=0, description="Per-Check timeout in seconds.")
+    script: str = Field(min_length=1, description="Check_Bundle path of the check script.")
+    outcomes: tuple[LabCheckOutcome, ...] = Field(
+        description="Possible outcomes; a `pass` outcome is mandatory.",
+    )
+
+    @model_validator(mode="after")
+    def _outcomes_have_unique_codes_and_pass(self) -> LabCheck:
+        codes = [outcome.code for outcome in self.outcomes]
+        if PASS_OUTCOME_CODE not in codes:
+            msg = f"outcomes must include the mandatory {PASS_OUTCOME_CODE!r} code"
+            raise ValueError(msg)
+        if len(set(codes)) != len(codes):
+            msg = "outcome codes must be unique"
+            raise ValueError(msg)
+        return self
 
 
 class RubricCriterion(_ContentModel):

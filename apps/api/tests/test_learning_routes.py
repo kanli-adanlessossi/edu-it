@@ -266,16 +266,12 @@ def test_project_submission_is_pending_until_reviewed() -> None:
 
 
 def test_review_without_schedule_is_not_served_as_questions() -> None:
-    # No review is scheduled until a concept reaches Practiced; the route
-    # surfaces the application error for the errors module (18.4) to map.
-    from edu_it_application.learning import ReviewNotAvailableError
-
+    # No review is scheduled until a concept reaches Practiced; the versioned
+    # app renders the application error as a problem document (18.4), never questions.
     app = _app()
-    try:
-        _call(app, "GET", "/reviews", query="concept_id=con-1")
-    except ReviewNotAvailableError:
-        return
-    raise AssertionError("expected ReviewNotAvailableError to propagate")
+    status, result = _call(app, "GET", "/reviews", query="concept_id=con-1")
+    assert status == 409
+    assert "questions" not in result
 
 
 def test_review_below_minimum_pool_is_declined_with_problem_and_no_schedule_change() -> None:

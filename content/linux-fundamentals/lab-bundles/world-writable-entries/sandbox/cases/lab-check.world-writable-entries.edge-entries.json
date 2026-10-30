@@ -1,0 +1,41 @@
+{
+  "learner_files": [
+    "solution.py"
+  ],
+  "entrypoint": "solution.py",
+  "case_timeout_s": 1,
+  "cases": [
+    {
+      "case_id": "sticky-world-writable",
+      "stdin_b64": "ZHJ3eHJ3eHJ3dCAxMCByb290IHJvb3QgNDA5NiBNYXIgIDMgMDk6MTUgdG1wCmRyd3hyLXhyLXggMiBsZWFybmVyIGxlYXJuZXIgNDA5NiBNYXIgIDMgMDk6MTUgaG9tZQo="
+    },
+    {
+      "case_id": "sticky-not-world-writable",
+      "stdin_b64": "ZHJ3eHIteHItdCAyIHJvb3Qgcm9vdCA0MDk2IE1hciAgMyAwOToxNSBzaGFyZWQKZHJ3eHJ3eC0tVCAyIHJvb3QgZGV2cyA0MDk2IE1hciAgMyAwOToxNSBzcG9vbAotcnd4ci14ci10IDEgbGVhcm5lciBsZWFybmVyIDEwMjQgTWFyICAzIDA5OjE1IHN0dWNrLmJpbgo="
+    },
+    {
+      "case_id": "sticky-and-plain-mix",
+      "stdin_b64": "ZHJ3eHJ3eHJ3dCAzIHJvb3Qgcm9vdCA0MDk2IE1hciAgMyAwOToxNSBzY3JhdGNoCmRyd3hyLXhyLXQgMyByb290IHJvb3QgNDA5NiBNYXIgIDMgMDk6MTUga2VwdAotcnctcnctcnctIDEgbGVhcm5lciBsZWFybmVyIDEwMjQgTWFyICAzIDA5OjE1IG9wZW4udHh0Cg=="
+    },
+    {
+      "case_id": "total-header-with-reported",
+      "stdin_b64": "dG90YWwgMTIKLXJ3LXJ3LXJ3LSAxIGxlYXJuZXIgbGVhcm5lciAxMDI0IE1hciAgMyAwOToxNSByZXBvcnQudHh0Ci1ydy1yLS1yLS0gMSBsZWFybmVyIGxlYXJuZXIgMTAyNCBNYXIgIDMgMDk6MTUgb3RoZXIudHh0Cg=="
+    },
+    {
+      "case_id": "total-header-only",
+      "stdin_b64": "dG90YWwgMAo="
+    },
+    {
+      "case_id": "space-name-reported",
+      "stdin_b64": "dG90YWwgOAotcnctcnctcnctIDEgbGVhcm5lciBsZWFybmVyIDEwMjQgTWFyICAzIDA5OjE1IG15IG5vdGVzIGZpbmFsLnR4dApkcnd4cnd4cnd4IDIgbGVhcm5lciBsZWFybmVyIDQwOTYgTWFyICAzIDA5OjE1IHNoYXJlZCBmaWxlcwo="
+    },
+    {
+      "case_id": "space-name-not-reported",
+      "stdin_b64": "dG90YWwgOApkcnd4ci14ci14IDIgbGVhcm5lciBsZWFybmVyIDQwOTYgTWFyICAzIDA5OjE1IG9sZCBiYWNrdXBzCi1ydy1yLS1yLS0gMSBsZWFybmVyIGxlYXJuZXIgMTAyNCBNYXIgIDMgMDk6MTUgcmVhZCBtZS50eHQK"
+    },
+    {
+      "case_id": "empty-input",
+      "stdin_b64": ""
+    }
+  ]
+}

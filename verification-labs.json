@@ -1,0 +1,1066 @@
+{
+  "checks": [
+    {
+      "check_id": "labs-unit",
+      "requirement": "5-30",
+      "description": "Labs unit tests (Docker-marked tests excluded)",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider",
+        "-m",
+        "not docker",
+        "-k",
+        "not propert"
+      ],
+      "status": "passed",
+      "detail": "1306 passed, 16 skipped, 510 deselected, 17 warnings in 45.62s",
+      "seconds": 47.1,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-property",
+      "requirement": "1-30",
+      "description": "Labs property-based tests (Docker-marked tests excluded)",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider",
+        "-m",
+        "not docker",
+        "-k",
+        "propert"
+      ],
+      "status": "passed",
+      "detail": "295 passed, 1 skipped, 1536 deselected in 188.03s (0:03:08)",
+      "seconds": 189.5,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-docker",
+      "requirement": "3, 10, 14, 28, 29",
+      "description": "Docker-marked tests against the Docker_Provider and the lab images",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider",
+        "-m",
+        "docker"
+      ],
+      "status": "passed",
+      "detail": "  warnings.warn(pytest.PytestUnraisableExceptionWarning(msg))",
+      "seconds": 240.1,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-web",
+      "requirement": "15, 16, 18",
+      "description": "Web unit and property tests (vitest)",
+      "command": [
+        "npm",
+        "test"
+      ],
+      "status": "passed",
+      "detail": "   Duration  2.44s (import 39%, environment 33%, tests 20%, transform 5%, worker 3%)",
+      "seconds": 3.2,
+      "cwd": "apps/web"
+    },
+    {
+      "check_id": "labs-playwright",
+      "requirement": "15, 32",
+      "description": "Playwright seed-lab page tests against the deterministic mock API",
+      "command": [
+        "npx",
+        "playwright",
+        "test",
+        "e2e/seed-labs.spec.ts"
+      ],
+      "status": "passed",
+      "detail": "[WebServer]   Learn more: https://nextjs.org/docs/messages/middleware-to-proxy",
+      "seconds": 7.8,
+      "cwd": "apps/web"
+    },
+    {
+      "check_id": "labs-playwright-real",
+      "requirement": "32",
+      "description": "Playwright learner journey against the real stack (needs the stack and E2E_MAIL_LOG)",
+      "command": [
+        "npm",
+        "run",
+        "test:e2e:real"
+      ],
+      "status": "failed",
+      "detail": "    e2e\\real\\learner-journey.e2e.ts:82:1 \u00e2\u20ac\u00ba learner journey: sign up to Processes unlocked \u00e2\u201d\u20ac\u00e2\u201d\u20ac\u00e2\u201d\u20ac\u00e2\u201d\u20ac\u00e2\u201d\u20ac\u00e2\u201d\u20ac\u00e2\u201d\u20ac\u00e2\u201d\u20ac\u00e2\u201d\u20ac\u00e2\u201d\u20ac",
+      "seconds": 2.7,
+      "cwd": "apps/web"
+    },
+    {
+      "check_id": "labs-axe",
+      "requirement": "16",
+      "description": "axe-core accessibility on the lab view and every learner page, /fr and /en",
+      "command": [
+        "npx",
+        "playwright",
+        "test",
+        "e2e/lab-view-a11y.spec.ts",
+        "e2e/learner-a11y.spec.ts"
+      ],
+      "status": "passed",
+      "detail": "[WebServer]   Learn more: https://nextjs.org/docs/messages/middleware-to-proxy",
+      "seconds": 38.8,
+      "cwd": "apps/web"
+    },
+    {
+      "check_id": "labs-content-strict",
+      "requirement": "20, 23.8",
+      "description": "content validate, strict (no tolerated failure)",
+      "command": [
+        "python",
+        "-m",
+        "edu_it_content.cli",
+        "validate",
+        "--content-root",
+        "content"
+      ],
+      "status": "passed",
+      "detail": "content valid: 80 item(s) passed all checks in content",
+      "seconds": 0.3,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-content-pending",
+      "requirement": "20.12, 20.13",
+      "description": "content validate, --allow-pending (the CI mode)",
+      "command": [
+        "python",
+        "-m",
+        "edu_it_content.cli",
+        "validate",
+        "--allow-pending",
+        "--content-root",
+        "content"
+      ],
+      "status": "passed",
+      "detail": "content valid: 80 item(s) passed all checks in content",
+      "seconds": 0.3,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-review-approval",
+      "requirement": "23",
+      "description": "Approval flow: reviewer recorded, Golden_Set only after confirmation, rejection path",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider",
+        "packages/content/tests/test_lab_approval.py"
+      ],
+      "status": "passed",
+      "detail": "8 passed in 1.29s",
+      "seconds": 1.8,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-adr-pins",
+      "requirement": "4.13, 4.14",
+      "description": "ADR 0001 pins match the manifests for the dependencies this spec introduces",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider",
+        "tools/tests/test_labs_adr_pins.py"
+      ],
+      "status": "passed",
+      "detail": "5 passed in 0.21s",
+      "seconds": 0.8,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-traceability",
+      "requirement": "33",
+      "description": "Every labs rule maps to a requirement and an existing test",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider",
+        "tools/tests/test_labs_verification_suite.py"
+      ],
+      "status": "passed",
+      "detail": "13 passed in 0.23s",
+      "seconds": 0.8,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-performance",
+      "requirement": "31",
+      "description": "Start-to-ready, keystroke and shell-Check performance (30/200 samples, 3 warm-ups, at most one re-measurement)",
+      "command": [
+        "python",
+        "tools/perf/lab_perf.py",
+        "--start-cmd",
+        "C:/PUBLIC/PROJECTS/EDU-IT/dev/edu-it/.venv/Scripts/python.exe tools/perf/start_driver.py",
+        "--keystroke-cmd",
+        "C:/PUBLIC/PROJECTS/EDU-IT/dev/edu-it/.venv/Scripts/python.exe tools/perf/keystroke_driver.py",
+        "--check-cmd",
+        "C:/PUBLIC/PROJECTS/EDU-IT/dev/edu-it/.venv/Scripts/python.exe tools/perf/check_driver.py",
+        "--out",
+        "tools/perf/lab-perf-raw.json"
+      ],
+      "status": "failed",
+      "detail": "(Background on this error at: https://sqlalche.me/e/21/e3q8)",
+      "seconds": 262.2,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-image-build",
+      "requirement": "4",
+      "description": "Build both Lab_Images with docker buildx bake",
+      "command": [
+        "docker",
+        "buildx",
+        "bake",
+        "--load"
+      ],
+      "status": "failed",
+      "detail": "View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/u5qonop1z95ewpsp64fkl48g7",
+      "seconds": 309.2,
+      "cwd": "lab-images"
+    },
+    {
+      "check_id": "labs-image-scan-lab-linux-base",
+      "requirement": "4",
+      "description": "Trivy scan of edu-it/lab-linux-base:dev: fail on any finding, every severity",
+      "command": [
+        "trivy",
+        "image",
+        "--scanners",
+        "vuln",
+        "--severity",
+        "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
+        "--exit-code",
+        "1",
+        "edu-it/lab-linux-base:dev"
+      ],
+      "status": "not-run",
+      "detail": "tool not found on PATH: trivy",
+      "seconds": 0.0,
+      "cwd": ""
+    },
+    {
+      "check_id": "labs-image-scan-lab-python",
+      "requirement": "4",
+      "description": "Trivy scan of edu-it/lab-python:dev: fail on any finding, every severity",
+      "command": [
+        "trivy",
+        "image",
+        "--scanners",
+        "vuln",
+        "--severity",
+        "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
+        "--exit-code",
+        "1",
+        "edu-it/lab-python:dev"
+      ],
+      "status": "not-run",
+      "detail": "tool not found on PATH: trivy",
+      "seconds": 0.0,
+      "cwd": ""
+    }
+  ],
+  "groups": [
+    {
+      "test_file": "packages/infrastructure/tests/test_lab_check_gate_property.py",
+      "status": "passed",
+      "detail": "1 passed in 0.99s",
+      "rules": [
+        "Learners rebuild skills",
+        "A lab check contributes"
+      ],
+      "requirements": [
+        "19.1",
+        "19.3",
+        "19.6"
+      ]
+    },
+    {
+      "test_file": "packages/domain/tests/test_property_lab_mastery.py",
+      "status": "passed",
+      "detail": "1 passed in 0.43s",
+      "rules": [
+        "Learners rebuild skills",
+        "A lab check contributes"
+      ],
+      "requirements": [
+        "19.1",
+        "19.3",
+        "19.6"
+      ]
+    },
+    {
+      "test_file": "packages/infrastructure/tests/test_sandbox_provider_contract.py",
+      "status": "passed",
+      "detail": "12 passed in 4.70s",
+      "rules": [
+        "Sandbox: Behind `SandboxProvider`",
+        "The sandbox sits behind"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.4",
+        "1.3"
+      ]
+    },
+    {
+      "test_file": "packages/infrastructure/tests/test_sandbox_provider_lifecycle_property.py",
+      "status": "passed",
+      "detail": "1 passed in 1.98s",
+      "rules": [
+        "Sandbox: Behind `SandboxProvider`"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.4"
+      ]
+    },
+    {
+      "test_file": "packages/domain/tests/test_lab_ports.py",
+      "status": "passed",
+      "detail": "11 passed in 0.23s",
+      "rules": [
+        "The sandbox sits behind",
+        "`SandboxProvider`: implementations"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.5",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "test_file": "packages/infrastructure/tests/test_fake_lab_adapters.py",
+      "status": "passed",
+      "detail": "8 passed in 0.70s",
+      "rules": [
+        "The sandbox sits behind"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3"
+      ]
+    },
+    {
+      "test_file": "packages/infrastructure/tests/test_sandbox_provider_selection.py",
+      "status": "passed",
+      "detail": "9 passed in 0.83s",
+      "rules": [
+        "`SandboxProvider`: implementations",
+        "Dedicated lab node pool",
+        "security: the Docker provider is dev only and refused in production"
+      ],
+      "requirements": [
+        "1.2",
+        "1.5",
+        "2.1",
+        "2.2",
+        "1.1",
+        "2.3"
+      ]
+    },
+    {
+      "test_file": "apps/web/src/components/terminal-pane.test.tsx",
+      "status": "passed",
+      "detail": "covered by check labs-web",
+      "rules": [
+        "`apps/web`: renders the xterm.js terminal",
+        "presents a reconnect indication"
+      ],
+      "requirements": [
+        "13.3",
+        "13.4",
+        "15.2",
+        "15.10",
+        "26.1"
+      ]
+    },
+    {
+      "test_file": "apps/web/src/lab-state.property.test.ts",
+      "status": "passed",
+      "detail": "covered by check labs-web",
+      "rules": [
+        "`apps/web`: renders the xterm.js terminal",
+        "presents a reconnect indication"
+      ],
+      "requirements": [
+        "13.3",
+        "13.4",
+        "15.2",
+        "15.10",
+        "26.1"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_terminal_property_auth.py",
+      "status": "passed",
+      "detail": "1 passed in 1.46s",
+      "rules": [
+        "`apps/api`: hosts the authenticated terminal WebSocket",
+        "re-verifies session ownership"
+      ],
+      "requirements": [
+        "12.1",
+        "12.2",
+        "12.10",
+        "12.11",
+        "26.2"
+      ]
+    },
+    {
+      "test_file": "apps/api/tests/test_labs_terminal_route.py",
+      "status": "passed",
+      "detail": "5 passed in 0.97s",
+      "rules": [
+        "`apps/api`: hosts the authenticated terminal WebSocket"
+      ],
+      "requirements": [
+        "12.1",
+        "12.2",
+        "12.10",
+        "12.11"
+      ]
+    },
+    {
+      "test_file": "apps/worker/tests/test_lab_worker_wiring.py",
+      "status": "passed",
+      "detail": "9 passed in 0.71s",
+      "rules": [
+        "`apps/worker`: lab provisioning"
+      ],
+      "requirements": [
+        "6.1",
+        "6.5",
+        "8.1",
+        "9.1"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_reap_sessions_property.py",
+      "status": "passed",
+      "detail": "1 passed in 1.28s",
+      "rules": [
+        "`apps/worker`: lab provisioning",
+        "lets the reaper clean orphaned"
+      ],
+      "requirements": [
+        "6.1",
+        "6.5",
+        "8.1",
+        "9.1",
+        "8.4",
+        "25.5"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_provision_sandbox_properties.py",
+      "status": "passed",
+      "detail": "1 passed in 0.95s",
+      "rules": [
+        "`apps/worker`: lab provisioning",
+        "IF sandbox provisioning fails",
+        "leaves no partial session running",
+        "applies provisioning rate-limits",
+        "Maximum provisioning retries"
+      ],
+      "requirements": [
+        "6.1",
+        "6.5",
+        "8.1",
+        "9.1",
+        "25.1",
+        "25.2",
+        "25.3",
+        "25.5",
+        "25.6",
+        "7.5",
+        "7.6"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_docker_terminal.py",
+      "status": "passed",
+      "detail": "5 passed in 6.46s",
+      "rules": [
+        "The api can attach terminal TTY",
+        "Labs are hands-on"
+      ],
+      "requirements": [
+        "12.3",
+        "12.4",
+        "14.3",
+        "21.1",
+        "22.1"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_terminal_gateway.py",
+      "status": "passed",
+      "detail": "10 passed in 1.35s",
+      "rules": [
+        "The api can attach terminal TTY"
+      ],
+      "requirements": [
+        "12.3",
+        "12.4"
+      ]
+    },
+    {
+      "test_file": "packages/infrastructure/tests/test_docker_spec_properties.py",
+      "status": "passed",
+      "detail": "1 passed in 0.88s",
+      "rules": [
+        "labs namespace",
+        "Default-deny NetworkPolicy",
+        "security: Sandbox processes run as a non-root user",
+        "security: the four resource limits (CPU, memory, PIDs, writable disk)"
+      ],
+      "requirements": [
+        "1.5",
+        "3.4",
+        "3.5",
+        "3.2",
+        "3.7",
+        "3.1",
+        "3.10",
+        "3.3",
+        "3.6",
+        "3.8",
+        "3.9"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_docker_isolation.py",
+      "status": "passed",
+      "detail": "11 passed in 28.27s",
+      "rules": [
+        "labs namespace",
+        "Default-deny NetworkPolicy",
+        "security: Sandbox processes run as a non-root user",
+        "security: Sandbox has no network beyond loopback",
+        "security: the four resource limits (CPU, memory, PIDs, writable disk)",
+        "security: all capabilities dropped, no-new-privileges, unprivileged"
+      ],
+      "requirements": [
+        "1.5",
+        "3.4",
+        "3.5",
+        "3.2",
+        "3.7",
+        "3.1",
+        "3.10",
+        "3.3",
+        "3.6",
+        "3.8",
+        "3.9"
+      ]
+    },
+    {
+      "test_file": "packages/infrastructure/tests/test_docker_provider.py",
+      "status": "passed",
+      "detail": "11 passed, 1 skipped in 19.57s",
+      "rules": [
+        "Dedicated lab node pool"
+      ],
+      "requirements": [
+        "1.1",
+        "1.5",
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_terminal_property_drain.py",
+      "status": "passed",
+      "detail": "2 passed in 1.20s",
+      "rules": [
+        "Graceful shutdown drains terminal WebSockets",
+        "drains active sockets"
+      ],
+      "requirements": [
+        "12.8",
+        "26.5"
+      ]
+    },
+    {
+      "test_file": "apps/api/tests/test_terminal_failure_scenarios.py",
+      "status": "passed",
+      "detail": "4 passed in 1.15s",
+      "rules": [
+        "Graceful shutdown drains terminal WebSockets",
+        "IF a terminal WebSocket connection drops"
+      ],
+      "requirements": [
+        "12.8",
+        "26.5",
+        "26.1",
+        "26.2",
+        "26.4",
+        "26.6"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_provision_sandbox.py",
+      "status": "passed",
+      "detail": "11 passed in 0.80s",
+      "rules": [
+        "The worker provisions, executes and destroys"
+      ],
+      "requirements": [
+        "6.2",
+        "6.5",
+        "8.2",
+        "10.1"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_reap_sessions.py",
+      "status": "passed",
+      "detail": "9 passed in 0.75s",
+      "rules": [
+        "The worker provisions, executes and destroys"
+      ],
+      "requirements": [
+        "6.2",
+        "6.5",
+        "8.2",
+        "10.1"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_grade_run.py",
+      "status": "passed",
+      "detail": "11 passed in 0.79s",
+      "rules": [
+        "The worker provisions, executes and destroys"
+      ],
+      "requirements": [
+        "6.2",
+        "6.5",
+        "8.2",
+        "10.1"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_grading_acceptance_property.py",
+      "status": "passed",
+      "detail": "8 passed in 0.98s",
+      "rules": [
+        "Grading is bounded",
+        "grading is bounded (results",
+        "security: throttles (one active session, provisioning and grading rate limits)"
+      ],
+      "requirements": [
+        "7.4",
+        "11",
+        "28",
+        "7.1",
+        "7.5",
+        "30.1",
+        "30.3",
+        "30.4"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_grade_run_scheduling_properties.py",
+      "status": "passed",
+      "detail": "2 passed in 1.58s",
+      "rules": [
+        "Grading is bounded",
+        "IF a grading check does not return",
+        "grading is bounded (results",
+        "the run is recorded with a failed status"
+      ],
+      "requirements": [
+        "7.4",
+        "11",
+        "28",
+        "11.3",
+        "28.1",
+        "28.2",
+        "28.3",
+        "11.4"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_grade_run_queue_delay.py",
+      "status": "passed",
+      "detail": "5 passed in 0.77s",
+      "rules": [
+        "Grading is bounded"
+      ],
+      "requirements": [
+        "7.4",
+        "11",
+        "28"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_docker_check_abuse.py",
+      "status": "passed",
+      "detail": "3 passed in 23.71s",
+      "rules": [
+        "Grading is bounded",
+        "IF a grading check does not return",
+        "grading is bounded (results",
+        "the timeout yields a translated",
+        "the run is recorded with a failed status"
+      ],
+      "requirements": [
+        "7.4",
+        "11",
+        "28",
+        "11.3",
+        "28.1",
+        "28.2",
+        "28.3",
+        "18.3",
+        "28.7",
+        "11.4"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_provisioning_failure_scenarios.py",
+      "status": "passed",
+      "detail": "12 passed in 0.86s",
+      "rules": [
+        "IF sandbox provisioning fails",
+        "surfaces a translated error"
+      ],
+      "requirements": [
+        "25.1",
+        "25.2",
+        "25.3",
+        "25.5",
+        "25.4"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_terminal_property_no_persistence.py",
+      "status": "passed",
+      "detail": "1 passed in 4.99s",
+      "rules": [
+        "IF a terminal WebSocket connection drops",
+        "persists no terminal I/O"
+      ],
+      "requirements": [
+        "26.1",
+        "26.2",
+        "26.4",
+        "26.5",
+        "26.6",
+        "12.7"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_docker_harness.py",
+      "status": "passed",
+      "detail": "14 passed in 17.40s",
+      "rules": [
+        "Labs are hands-on",
+        "security: tamper resistance (files, PATH, aliases, environment, special files)"
+      ],
+      "requirements": [
+        "12.3",
+        "14.3",
+        "21.1",
+        "22.1",
+        "14.12",
+        "29.1",
+        "29.2",
+        "29.3",
+        "29.4",
+        "29.5",
+        "29.9",
+        "29.10",
+        "29.11"
+      ]
+    },
+    {
+      "test_file": "apps/api/tests/test_errors_lab_problems_properties.py",
+      "status": "passed",
+      "detail": "1 passed in 1.24s",
+      "rules": [
+        "surfaces a translated error"
+      ],
+      "requirements": [
+        "25.2",
+        "25.4"
+      ]
+    },
+    {
+      "test_file": "packages/domain/tests/test_lab_property_provision_rate.py",
+      "status": "passed",
+      "detail": "2 passed in 0.44s",
+      "rules": [
+        "applies provisioning rate-limits",
+        "Maximum provisioning rate",
+        "security: throttles (one active session, provisioning and grading rate limits)"
+      ],
+      "requirements": [
+        "7.5",
+        "7.6",
+        "25.1",
+        "7.1",
+        "7.4",
+        "30.1",
+        "30.3",
+        "30.4"
+      ]
+    },
+    {
+      "test_file": "packages/domain/tests/test_lab_property_learner_view.py",
+      "status": "passed",
+      "detail": "4 passed in 0.56s",
+      "rules": [
+        "the timeout yields a translated"
+      ],
+      "requirements": [
+        "18.3",
+        "28.2",
+        "28.7"
+      ]
+    },
+    {
+      "test_file": "packages/infrastructure/tests/test_docker_spec.py",
+      "status": "passed",
+      "detail": "10 passed in 0.67s",
+      "rules": [
+        "security: all capabilities dropped, no-new-privileges, unprivileged",
+        "security: the Docker provider is dev only and refused in production"
+      ],
+      "requirements": [
+        "3.4",
+        "3.5",
+        "3.10",
+        "2.1",
+        "2.2",
+        "2.3"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_static_analysis_canary.py",
+      "status": "passed",
+      "detail": "20 passed in 1.57s",
+      "rules": [
+        "security: no learner code in the api or worker process"
+      ],
+      "requirements": [
+        "5.1",
+        "5.2",
+        "5.3",
+        "5.4",
+        "5.5"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_docker_grading_isolation.py",
+      "status": "passed",
+      "detail": "15 passed in 7.90s",
+      "rules": [
+        "security: grading isolation (read-only root-owned bundle, Grader_User, removed after)"
+      ],
+      "requirements": [
+        "10.1",
+        "10.2",
+        "10.3",
+        "10.4",
+        "10.5",
+        "10.6",
+        "10.10",
+        "10.12"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_grade_run_independence_properties.py",
+      "status": "passed",
+      "detail": "1 passed in 1.93s",
+      "rules": [
+        "security: grading isolation (read-only root-owned bundle, Grader_User, removed after)"
+      ],
+      "requirements": [
+        "10.1",
+        "10.2",
+        "10.3",
+        "10.4",
+        "10.5",
+        "10.6",
+        "10.10",
+        "10.12"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_docker_freeze_failure.py",
+      "status": "passed",
+      "detail": "6 passed in 12.28s",
+      "rules": [
+        "security: fail-closed freeze of learner processes before any Check"
+      ],
+      "requirements": [
+        "10.7",
+        "10.8",
+        "10.11",
+        "28.8"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_grade_run_freeze_property.py",
+      "status": "passed",
+      "detail": "1 passed in 1.98s",
+      "rules": [
+        "security: fail-closed freeze of learner processes before any Check"
+      ],
+      "requirements": [
+        "10.7",
+        "10.8",
+        "10.11",
+        "28.8"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_seed_lab_1_tamper.py",
+      "status": "passed",
+      "detail": "19 passed, 2 skipped in 13.75s",
+      "rules": [
+        "security: tamper resistance (files, PATH, aliases, environment, special files)"
+      ],
+      "requirements": [
+        "14.12",
+        "29.1",
+        "29.2",
+        "29.3",
+        "29.4",
+        "29.5",
+        "29.9",
+        "29.10",
+        "29.11"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_seed_lab_2_tamper.py",
+      "status": "passed",
+      "detail": "  warnings.warn(pytest.PytestUnraisableExceptionWarning(msg))",
+      "rules": [
+        "security: tamper resistance (files, PATH, aliases, environment, special files)"
+      ],
+      "requirements": [
+        "14.12",
+        "29.1",
+        "29.2",
+        "29.3",
+        "29.4",
+        "29.5",
+        "29.9",
+        "29.10",
+        "29.11"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_unsafe_learner_files_property.py",
+      "status": "passed",
+      "detail": "1 skipped in 0.24s",
+      "rules": [
+        "security: tamper resistance (files, PATH, aliases, environment, special files)"
+      ],
+      "requirements": [
+        "14.12",
+        "29.1",
+        "29.2",
+        "29.3",
+        "29.4",
+        "29.5",
+        "29.9",
+        "29.10",
+        "29.11"
+      ]
+    },
+    {
+      "test_file": "tests/labs/test_one_active_session_property.py",
+      "status": "passed",
+      "detail": "1 passed in 1.52s",
+      "rules": [
+        "security: throttles (one active session, provisioning and grading rate limits)"
+      ],
+      "requirements": [
+        "7.1",
+        "7.4",
+        "7.5",
+        "30.1",
+        "30.3",
+        "30.4"
+      ]
+    },
+    {
+      "test_file": "packages/application/tests/test_request_grading_sequences_properties.py",
+      "status": "passed",
+      "detail": "1 passed in 1.22s",
+      "rules": [
+        "security: throttles (one active session, provisioning and grading rate limits)"
+      ],
+      "requirements": [
+        "7.1",
+        "7.4",
+        "7.5",
+        "30.1",
+        "30.3",
+        "30.4"
+      ]
+    },
+    {
+      "test_file": "apps/api/tests/test_labs_second_session_failures.py",
+      "status": "passed",
+      "detail": "8 passed in 1.09s",
+      "rules": [
+        "security: throttles (one active session, provisioning and grading rate limits)"
+      ],
+      "requirements": [
+        "7.1",
+        "7.4",
+        "7.5",
+        "30.1",
+        "30.3",
+        "30.4"
+      ]
+    }
+  ],
+  "performance_attempts": [
+    "performance attempts: none logged"
+  ]
+}

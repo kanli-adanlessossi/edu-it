@@ -8,5 +8,7 @@ coverage/
 # from it. Both are regenerated on every build before application code compiles.
 openapi/
 src/generated/
+# Monaco min/vs assets copied by scripts/copy-monaco.mjs (self-hosted, no CDN).
+public/monaco/
 test-results/
 playwright-report/

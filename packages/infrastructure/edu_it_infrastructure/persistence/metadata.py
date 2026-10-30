@@ -33,6 +33,7 @@ from __future__ import annotations
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     Float,
@@ -44,6 +45,9 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    false,
+    text,
+    true,
 )
 
 __all__ = [
@@ -61,6 +65,7 @@ metadata = MetaData(
         "uq": "uq_%(table_name)s_%(column_0_name)s",
         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
         "pk": "pk_%(table_name)s",
+        "ck": "ck_%(table_name)s_%(constraint_name)s",
     }
 )
 
@@ -197,6 +202,13 @@ lab = Table(
     _stable_id(),
     Column("lesson_id", Integer, ForeignKey("lesson.id"), nullable=False),
     Column("provenance_id", Integer, ForeignKey("content_provenance.id"), nullable=False),
+    # Lab runtime columns (revision 0002_labs_runtime): ``terminal`` or ``code``,
+    # the pinned image reference, the covered concepts as a JSON array of
+    # stable_ids (like ``question``), and the archive instant.
+    Column("kind", String(16), nullable=False, server_default="terminal"),
+    Column("image", String(255)),
+    Column("concept_stable_ids", Text),
+    Column("archived_at", DateTime(timezone=True)),
 )
 
 lab_task = Table(
@@ -206,6 +218,7 @@ lab_task = Table(
     _stable_id(),
     Column("lab_id", Integer, ForeignKey("lab.id"), nullable=False),
     Column("ordinal", Integer, nullable=False),
+    Column("required", Boolean, nullable=False, server_default=true()),
 )
 
 lab_check = Table(
@@ -215,6 +228,8 @@ lab_check = Table(
     _stable_id(),
     Column("lab_task_id", Integer, ForeignKey("lab_task.id"), nullable=False),
     Column("check_kind", String(32), nullable=False),
+    Column("timeout_seconds", Integer),
+    Column("script", Text),
 )
 
 project = Table(
@@ -348,15 +363,36 @@ lab_session = Table(
     Column("started_at", DateTime(timezone=True)),
     Column("ttl_at", DateTime(timezone=True)),
     Column("status", String(32), nullable=False),
+    Column("sandbox_ref", String(255)),
+    Column("last_activity_at", DateTime(timezone=True)),
+    Column("last_grading_accepted_at", DateTime(timezone=True)),
+    Column("ended_at", DateTime(timezone=True)),
+    Column("provision_attempts", Integer, nullable=False, server_default="0"),
+    Column("next_provision_at", DateTime(timezone=True)),
+    Column("terminal_epoch", Integer, nullable=False, server_default="0"),
+    # At most one active session per learner (revision 0002_labs_runtime).
+    Index(
+        "uq_lab_session_active_user",
+        "user_id",
+        unique=True,
+        postgresql_where=text("status in ('provisioning', 'ready', 'grading')"),
+        sqlite_where=text("status in ('provisioning', 'ready', 'grading')"),
+    ),
 )
 
 lab_run = Table(
     "lab_run",
     metadata,
     _internal_pk(),
+    _stable_id(),
     Column("lab_session_id", Integer, ForeignKey("lab_session.id"), nullable=False),
     Column("status", String(32), nullable=False),
     Column("graded_at", DateTime(timezone=True)),
+    # accepted_at from the Clock; deadline_at = accepted_at + run deadline.
+    Column("accepted_at", DateTime(timezone=True), nullable=False),
+    Column("deadline_at", DateTime(timezone=True), nullable=False),
+    Column("started_at", DateTime(timezone=True)),
+    Column("results", Text),
 )
 
 lab_task_completion = Table(
@@ -366,6 +402,7 @@ lab_task_completion = Table(
     Column("lab_run_id", Integer, ForeignKey("lab_run.id"), nullable=False),
     Column("lab_task_id", Integer, ForeignKey("lab_task.id"), nullable=False),
     Column("passed", Boolean, nullable=False),
+    Column("counted_for_mastery", Boolean, nullable=False, server_default=false()),
 )
 
 quiz_attempt = Table(
@@ -467,8 +504,15 @@ hint_reveal = Table(
     metadata,
     _internal_pk(),
     Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
-    Column("question_id", Integer, ForeignKey("question.id"), nullable=False),
+    # Exactly one of question_id / lab_task_id is set (quiz or lab hint).
+    Column("question_id", Integer, ForeignKey("question.id")),
     Column("revealed_at", DateTime(timezone=True)),
+    Column("lab_task_id", Integer, ForeignKey("lab_task.id")),
+    CheckConstraint(
+        "(question_id IS NOT NULL AND lab_task_id IS NULL) OR "
+        "(question_id IS NULL AND lab_task_id IS NOT NULL)",
+        name="hint_reveal_exactly_one_target",
+    ),
 )
 
 # ---------------------------------------------------------------------------

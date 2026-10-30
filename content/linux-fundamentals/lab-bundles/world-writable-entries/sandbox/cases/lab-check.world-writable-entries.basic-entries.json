@@ -1,0 +1,41 @@
+{
+  "learner_files": [
+    "solution.py"
+  ],
+  "entrypoint": "solution.py",
+  "case_timeout_s": 1,
+  "cases": [
+    {
+      "case_id": "file-reported",
+      "stdin_b64": "LXJ3LXJ3LXJ3LSAxIGxlYXJuZXIgbGVhcm5lciAxMDI0IE1hciAgMyAwOToxNSBub3Rlcy50eHQKLXJ3LXItLXItLSAxIGxlYXJuZXIgbGVhcm5lciAxMDI0IE1hciAgMyAwOToxNSByZWFkbWUubWQKLXJ3eHJ3eHJ3eCAxIGxlYXJuZXIgbGVhcm5lciAyMjAgSmFuICA1IDEwOjAwIHJ1bi5zaAo="
+    },
+    {
+      "case_id": "file-other-write-only",
+      "stdin_b64": "LXJ3eHIteC13LSAxIGxlYXJuZXIgbGVhcm5lciAxMDI0IE1hciAgMyAwOToxNSBkcm9wLmRhdAotcnctcnctci0tIDEgbGVhcm5lciBsZWFybmVyIDEwMjQgTWFyICAzIDA5OjE1IHRlYW0udHh0Cg=="
+    },
+    {
+      "case_id": "file-not-reported",
+      "stdin_b64": "LXJ3LXItLXItLSAxIGxlYXJuZXIgbGVhcm5lciAxMDI0IE1hciAgMyAwOToxNSBhLnR4dAotcnd4ci14ci14IDEgbGVhcm5lciBsZWFybmVyIDEwMjQgTWFyICAzIDA5OjE1IGIuc2gKLXJ3LXJ3LXItLSAxIGxlYXJuZXIgbGVhcm5lciAxMDI0IE1hciAgMyAwOToxNSBjLnR4dAotcnctLS0tLS0tIDEgbGVhcm5lciBsZWFybmVyIDEwMjQgTWFyICAzIDA5OjE1IGQua2V5Cg=="
+    },
+    {
+      "case_id": "dir-reported",
+      "stdin_b64": "ZHJ3eHIteHIteCAyIGxlYXJuZXIgbGVhcm5lciA0MDk2IE1hciAgMyAwOToxNSBzcmMKZHJ3eHJ3eHJ3eCAyIGxlYXJuZXIgbGVhcm5lciA0MDk2IE1hciAgMyAwOToxNSBzaGFyZWQK"
+    },
+    {
+      "case_id": "dir-not-reported",
+      "stdin_b64": "ZHJ3eHIteHIteCAyIGxlYXJuZXIgbGVhcm5lciA0MDk2IE1hciAgMyAwOToxNSBzcmMKZHJ3eHJ3eC0tLSAyIGxlYXJuZXIgZGV2cyA0MDk2IE1hciAgMyAwOToxNSBwcml2YXRlCmRyd3hyd3hyLXggMiBsZWFybmVyIGRldnMgNDA5NiBNYXIgIDMgMDk6MTUgdGVhbQo="
+    },
+    {
+      "case_id": "symlink-not-reported",
+      "stdin_b64": "bHJ3eHJ3eHJ3eCAxIGxlYXJuZXIgbGVhcm5lciAxMSBNYXIgIDMgMDk6MTUgbGluayAtPiAvZXRjL2hvc3RzCmxyd3hyd3hyd3ggMSBsZWFybmVyIGxlYXJuZXIgOSBNYXIgIDMgMDk6MTUgbGF0ZXN0IC0+IG5vdGVzLnR4dAo="
+    },
+    {
+      "case_id": "symlink-among-entries",
+      "stdin_b64": "LXJ3LXItLXItLSAxIGxlYXJuZXIgbGVhcm5lciAxMDI0IE1hciAgMyAwOToxNSBiZWZvcmUudHh0Cmxyd3hyd3hyd3ggMSBsZWFybmVyIGxlYXJuZXIgOCBNYXIgIDMgMDk6MTUgdG1wLWxpbmsgLT4gL3RtcAotcnctcnctcnctIDEgbGVhcm5lciBsZWFybmVyIDEwMjQgTWFyICAzIDA5OjE1IGFmdGVyLnR4dAo="
+    },
+    {
+      "case_id": "order-kept",
+      "stdin_b64": "LXJ3LXJ3LXJ3LSAxIGxlYXJuZXIgbGVhcm5lciAxMDI0IE1hciAgMyAwOToxNSB6ZXRhCmRyd3hyd3hyd3ggMiBsZWFybmVyIGxlYXJuZXIgNDA5NiBNYXIgIDMgMDk6MTUgYWxwaGEKLXJ3LXJ3LXJ3LSAxIGxlYXJuZXIgbGVhcm5lciAxMDI0IE1hciAgMyAwOToxNSBtaWQK"
+    }
+  ]
+}

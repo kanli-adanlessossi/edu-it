@@ -15,8 +15,11 @@ tasks.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 
+from edu_it_domain import config as _domain_config
+from edu_it_domain.labs.config_rules import LabConfigError, validate_lab_config
 from edu_it_domain.ports.health import DependencyProbe
 from edu_it_infrastructure.reachability import required_dependency_probes
 from fastapi import APIRouter, FastAPI
@@ -35,6 +38,8 @@ __all__ = ["create_app"]
 def create_app(
     probes_provider: ProbesProvider | None = None,
     learning_router: APIRouter | None = None,
+    lab_config: object = _domain_config,
+    lab_router: APIRouter | None = None,
 ) -> FastAPI:
     """Build and return the configured FastAPI application.
 
@@ -47,6 +52,10 @@ def create_app(
     assignment without a live datastore.
     """
     configure_logging()
+    # Validate the lab Config before composing anything that could reach a
+    # provider (Req 1.8, 1.11). A LabConfigError propagates: the API refuses to
+    # start, the offending keys are logged, and no Sandbox is created.
+    _validate_lab_config_or_refuse(lab_config)
 
     app = FastAPI(title="EDU-IT API", version=__version__)
     # Starlette runs the most-recently-added middleware outermost, so adding the
@@ -61,8 +70,20 @@ def create_app(
     # publishes exactly one OpenAPI_Document per major version at
     # /v{major}/openapi.json (Req 16.1). Feature routers are registered on their
     # version's sub-app by their own tasks.
-    mount_version_apps(app, {1: [learning_router]} if learning_router is not None else None)
+    v1_routers = [r for r in (learning_router, lab_router) if r is not None]
+    mount_version_apps(app, {1: v1_routers} if v1_routers else None)
     return app
+
+
+def _validate_lab_config_or_refuse(lab_config: object) -> None:
+    """Validate the lab Config; log the offending keys and re-raise on failure."""
+    try:
+        validate_lab_config(lab_config)
+    except LabConfigError as exc:
+        logging.getLogger(__name__).critical(
+            "refusing to start: invalid lab Config", extra={"keys": list(exc.keys)}
+        )
+        raise
 
 
 def _default_probes_provider() -> Sequence[DependencyProbe]:

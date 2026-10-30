@@ -663,7 +663,15 @@ def _seed_remaining_personal_data(w: _World, user: str) -> None:
             )
         )
         run_id = _pk(
-            c.execute(insert(_T["lab_run"]).values(lab_session_id=session_id, status="graded"))
+            c.execute(
+                insert(_T["lab_run"]).values(
+                    stable_id=f"lr-{user}",
+                    lab_session_id=session_id,
+                    status="graded",
+                    accepted_at=_T0,
+                    deadline_at=_T0 + timedelta(seconds=15),
+                )
+            )
         )
         c.execute(
             insert(_T["lab_task_completion"]).values(lab_run_id=run_id, lab_task_id=1, passed=True)

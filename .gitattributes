@@ -1,0 +1,2 @@
+# Lab scripts run in Alpine sandboxes: keep LF endings on every platform.
+content/**/lab-bundles/** text eol=lf

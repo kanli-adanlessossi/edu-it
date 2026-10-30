@@ -18,6 +18,10 @@ behavior (Req 20.1-20.3); only the schema is created.
 
 from __future__ import annotations
 
+from edu_it_infrastructure.persistence.lab_repositories import (
+    Postgres_GradingRunRepository,
+    Postgres_LabSessionRepository,
+)
 from edu_it_infrastructure.persistence.learning_repositories import (
     DuplicateQuizAttemptError,
     LessonContentSource,
@@ -51,6 +55,8 @@ __all__ = [
     "Postgres_AttemptRepository",
     "Postgres_CatalogRepository",
     "Postgres_EnrollmentRepository",
+    "Postgres_GradingRunRepository",
+    "Postgres_LabSessionRepository",
     "Postgres_LessonRepository",
     "Postgres_MasteryRepository",
     "Postgres_PersonalDataGateway",

@@ -293,6 +293,185 @@ DEFAULT_PAGE_SIZE: Final[int] = 50
 #: The largest page size a client may request from a list endpoint (Req 17.5).
 MAX_PAGE_SIZE: Final[int] = 100
 
+# =============================================================================
+# Hands-on-labs business numbers (hands-on-labs spec)
+# =============================================================================
+#
+# Every tunable number of the lab, sandbox, terminal, grading, and retention
+# features lives here and nowhere else (design "Config additions"). Durations
+# are ``timedelta``; sizes are bytes; counts are ``int``. Values marked "fixed"
+# come from the requirements or steering; the rest are initial values for
+# review. ``validate_lab_config`` (task 1.3) checks these at startup.
+
+_KIB: Final[int] = 1024
+_MIB: Final[int] = 1024 * 1024
+
+# --- Lab session lifetime ----------------------------------------------------
+
+#: Maximum lifetime of a Lab_Session from creation (Req 3.3).
+LAB_SESSION_TTL: Final[timedelta] = timedelta(minutes=60)
+
+#: Inactivity after which a Lab_Session is expired (fixed, Req 3.3).
+LAB_IDLE_TIMEOUT: Final[timedelta] = timedelta(minutes=15)
+
+# --- Grading -----------------------------------------------------------------
+
+#: Minimum spacing between accepted grading requests per session (fixed).
+LAB_GRADING_MIN_INTERVAL: Final[timedelta] = timedelta(seconds=10)
+
+#: Total wall-clock deadline of a grading run from acceptance (fixed).
+LAB_GRADING_RUN_DEADLINE: Final[timedelta] = timedelta(seconds=15)
+
+#: Total time allowed to verify the learner processes are frozen.
+LAB_GRADING_FREEZE_BOUND: Final[timedelta] = timedelta(seconds=1)
+
+#: Freeze verification attempts within :data:`LAB_GRADING_FREEZE_BOUND`.
+LAB_GRADING_FREEZE_ATTEMPTS: Final[int] = 5
+
+#: Time reserved at the end of a run for teardown and thawing.
+LAB_GRADING_TEARDOWN_RESERVE: Final[timedelta] = timedelta(seconds=2)
+
+#: The time actually available for running Checks. Derived, never stored
+#: separately: deadline - freeze bound - teardown reserve (15 - 1 - 2 = 12 s).
+USABLE_RUN_BUDGET: Final[timedelta] = (
+    LAB_GRADING_RUN_DEADLINE - LAB_GRADING_FREEZE_BOUND - LAB_GRADING_TEARDOWN_RESERVE
+)
+
+
+def usable_run_budget(
+    run_deadline: timedelta = LAB_GRADING_RUN_DEADLINE,
+    freeze_bound: timedelta = LAB_GRADING_FREEZE_BOUND,
+    teardown_reserve: timedelta = LAB_GRADING_TEARDOWN_RESERVE,
+) -> timedelta:
+    """Return ``run_deadline - freeze_bound - teardown_reserve`` (Usable_Run_Budget)."""
+
+    return run_deadline - freeze_bound - teardown_reserve
+
+
+#: Default timeout for a single Check that declares none.
+LAB_CHECK_TIMEOUT_DEFAULT: Final[timedelta] = timedelta(seconds=5)
+
+#: Poll interval for grading results (client and SSE loop).
+LAB_RESULT_POLL_INTERVAL: Final[timedelta] = timedelta(milliseconds=500)
+
+# --- Sandbox provider --------------------------------------------------------
+
+#: Bound on every call to the sandbox backend (Docker daemon).
+SANDBOX_OPERATION_TIMEOUT: Final[timedelta] = timedelta(seconds=10)
+
+#: Origins allowed to open the terminal WebSocket. Defaults to the existing
+#: configured web origin (``WEB_BASE_URL`` default); composition may override
+#: it from settings. Must be non-empty.
+LAB_ALLOWED_WEB_ORIGINS: Final[tuple[str, ...]] = ("http://localhost:3000",)
+
+# --- Provisioning ------------------------------------------------------------
+
+#: Retries after the first failed provisioning attempt (fixed); attempts = 3.
+LAB_PROVISION_MAX_RETRIES: Final[int] = 2
+
+#: Minimum spacing between provisioning attempts of one session (fixed).
+LAB_PROVISION_MIN_INTERVAL: Final[timedelta] = timedelta(seconds=10)
+
+#: Timeout of one provisioning attempt.
+LAB_PROVISION_TIMEOUT: Final[timedelta] = timedelta(seconds=30)
+
+#: Target time for a session to become ready.
+LAB_PROVISION_READY_TARGET: Final[timedelta] = timedelta(seconds=20)
+
+#: Lab starts allowed per user within :data:`LAB_PROVISION_RATE_WINDOW`.
+LAB_PROVISION_RATE_LIMIT: Final[int] = 5
+
+#: Trailing window of :data:`LAB_PROVISION_RATE_LIMIT`.
+LAB_PROVISION_RATE_WINDOW: Final[timedelta] = timedelta(minutes=10)
+
+# --- Sandbox resource limits -------------------------------------------------
+
+#: CPU limit of a Sandbox, in CPUs.
+SANDBOX_CPU_LIMIT: Final[int] = 1
+
+#: Memory limit of a Sandbox, in bytes (512 MiB).
+SANDBOX_MEMORY_LIMIT: Final[int] = 512 * _MIB
+
+#: Process-count limit of a Sandbox.
+SANDBOX_PID_LIMIT: Final[int] = 128
+
+#: Total writable quota of a Sandbox, in bytes (256 MiB).
+SANDBOX_WRITABLE_QUOTA: Final[int] = 256 * _MIB
+
+#: Split of the writable quota (bytes) across /workspace, /home/learner, /tmp,
+#: /grader. The parts sum exactly to :data:`SANDBOX_WRITABLE_QUOTA`.
+SANDBOX_QUOTA_WORKSPACE: Final[int] = 160 * _MIB
+SANDBOX_QUOTA_HOME: Final[int] = 32 * _MIB
+SANDBOX_QUOTA_TMP: Final[int] = 32 * _MIB
+SANDBOX_QUOTA_GRADER: Final[int] = 32 * _MIB
+
+#: Memory limit for a learner program run inside a Sandbox, in bytes (128 MiB).
+LAB_PROGRAM_MEMORY_LIMIT: Final[int] = 128 * _MIB
+
+#: Process limit for a learner program run inside a Sandbox.
+LAB_PROGRAM_PROC_LIMIT: Final[int] = 32
+
+# --- Periodic jobs and retention ---------------------------------------------
+
+#: Interval of the session reaper job.
+LAB_REAPER_INTERVAL: Final[timedelta] = timedelta(seconds=30)
+
+#: Interval of the provisioning sweep job.
+LAB_SWEEP_INTERVAL: Final[timedelta] = timedelta(seconds=5)
+
+#: How long lab data is retained before purge (proposed, to confirm).
+LAB_RETENTION_PERIOD: Final[timedelta] = timedelta(days=90)
+
+#: Interval of the retention purge job.
+LAB_RETENTION_INTERVAL: Final[timedelta] = timedelta(hours=24)
+
+# --- Terminal gateway --------------------------------------------------------
+
+#: Interval between server pings on a terminal connection.
+TERMINAL_PING_INTERVAL: Final[timedelta] = timedelta(seconds=20)
+
+#: Missed pongs after which a terminal connection is closed.
+TERMINAL_MAX_MISSED_PONGS: Final[int] = 2
+
+#: Largest accepted terminal message, in bytes (64 KiB).
+TERMINAL_MAX_MESSAGE_BYTES: Final[int] = 64 * _KIB
+
+#: Terminal message rate limit, messages per second.
+TERMINAL_MAX_MESSAGES_PER_SECOND: Final[int] = 1000
+
+#: How often the gateway re-checks the session status.
+TERMINAL_STATUS_POLL_INTERVAL: Final[timedelta] = timedelta(seconds=2)
+
+#: Minimum spacing of ``last_activity_at`` writes.
+LAB_ACTIVITY_WRITE_INTERVAL: Final[timedelta] = timedelta(seconds=5)
+
+#: Client reconnect delays (1, 2, 4, 8 s); the last repeats until
+#: :data:`LAB_RECONNECT_WINDOW` has passed.
+LAB_RECONNECT_BACKOFF: Final[tuple[timedelta, ...]] = (
+    timedelta(seconds=1),
+    timedelta(seconds=2),
+    timedelta(seconds=4),
+    timedelta(seconds=8),
+)
+
+#: Total time the client keeps reconnecting before giving up.
+LAB_RECONNECT_WINDOW: Final[timedelta] = timedelta(seconds=60)
+
+# --- Learner files, warnings, progression ------------------------------------
+
+#: Maximum number of learner files per save.
+LAB_FILE_MAX_COUNT: Final[int] = 10
+
+#: Maximum size of one learner file, in bytes (64 KiB).
+LAB_FILE_MAX_BYTES: Final[int] = 64 * _KIB
+
+#: Time before expiry at which the learner is warned.
+LAB_WARNING_THRESHOLD: Final[timedelta] = timedelta(minutes=2)
+
+#: Mastery points per first-passed lab task per covered concept. A hint
+#: tempers it by :data:`HINT_MULTIPLIER` (reused, not duplicated).
+LAB_TASK_MASTERY_GAIN: Final[int] = 15
+
 
 __all__ = [
     "ANTI_FARMING_WINDOW",
@@ -305,6 +484,35 @@ __all__ = [
     "HINT_MULTIPLIER",
     "HINT_REVEAL_MASTERY_DELTA",
     "INITIAL_REVIEW_INTERVAL",
+    "LAB_ACTIVITY_WRITE_INTERVAL",
+    "LAB_ALLOWED_WEB_ORIGINS",
+    "LAB_CHECK_TIMEOUT_DEFAULT",
+    "LAB_FILE_MAX_BYTES",
+    "LAB_FILE_MAX_COUNT",
+    "LAB_GRADING_FREEZE_ATTEMPTS",
+    "LAB_GRADING_FREEZE_BOUND",
+    "LAB_GRADING_MIN_INTERVAL",
+    "LAB_GRADING_RUN_DEADLINE",
+    "LAB_GRADING_TEARDOWN_RESERVE",
+    "LAB_IDLE_TIMEOUT",
+    "LAB_PROGRAM_MEMORY_LIMIT",
+    "LAB_PROGRAM_PROC_LIMIT",
+    "LAB_PROVISION_MAX_RETRIES",
+    "LAB_PROVISION_MIN_INTERVAL",
+    "LAB_PROVISION_RATE_LIMIT",
+    "LAB_PROVISION_RATE_WINDOW",
+    "LAB_PROVISION_READY_TARGET",
+    "LAB_PROVISION_TIMEOUT",
+    "LAB_REAPER_INTERVAL",
+    "LAB_RECONNECT_BACKOFF",
+    "LAB_RECONNECT_WINDOW",
+    "LAB_RESULT_POLL_INTERVAL",
+    "LAB_RETENTION_INTERVAL",
+    "LAB_RETENTION_PERIOD",
+    "LAB_SESSION_TTL",
+    "LAB_SWEEP_INTERVAL",
+    "LAB_TASK_MASTERY_GAIN",
+    "LAB_WARNING_THRESHOLD",
     "MASTERY_GAIN_PER_CORRECT_ANSWER",
     "MASTERY_MAX",
     "MASTERY_MIN",
@@ -320,10 +528,26 @@ __all__ = [
     "REVIEW_PASS_SCORE",
     "REVIEW_QUESTION_COUNT",
     "RUBRIC_PASS_THRESHOLD",
+    "SANDBOX_CPU_LIMIT",
+    "SANDBOX_MEMORY_LIMIT",
+    "SANDBOX_OPERATION_TIMEOUT",
+    "SANDBOX_PID_LIMIT",
+    "SANDBOX_QUOTA_GRADER",
+    "SANDBOX_QUOTA_HOME",
+    "SANDBOX_QUOTA_TMP",
+    "SANDBOX_QUOTA_WORKSPACE",
+    "SANDBOX_WRITABLE_QUOTA",
     "SESSION_DURATION",
     "SIGN_IN_RATE_LIMIT_THRESHOLD",
     "SIGN_IN_RATE_LIMIT_WINDOW",
+    "TERMINAL_MAX_MESSAGES_PER_SECOND",
+    "TERMINAL_MAX_MESSAGE_BYTES",
+    "TERMINAL_MAX_MISSED_PONGS",
+    "TERMINAL_PING_INTERVAL",
+    "TERMINAL_STATUS_POLL_INTERVAL",
+    "USABLE_RUN_BUDGET",
     "VERIFICATION_LINK_TTL",
     "MasteryThresholds",
     "PasswordPolicy",
+    "usable_run_budget",
 ]

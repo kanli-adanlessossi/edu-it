@@ -125,9 +125,40 @@ re-stated in `apps/worker/pyproject.toml` (its authoritative manifest).
 | --- | --- | --- |
 | `starlette` | 1.10.0 | ASGI app for the worker Health_Endpoint / Readiness_Endpoint |
 
-xterm.js, the Monaco editor, and the MDX renderer named in the technology steering are introduced by
-the later tasks that first use them (labs/terminal and MDX rendering) and will be pinned here at that
-time; this phase pins only the frameworks and tooling the foundations work installs.
+The MDX renderer named in the technology steering is introduced by the later task that first uses it
+(MDX rendering) and will be pinned here at that time. xterm.js and the Monaco editor are pinned in
+the hands-on-labs section below.
+
+### Hands-on labs — dependencies introduced by the `hands-on-labs` spec
+
+These pins are recorded before any manifest change (Requirements 4.12, 4.13). Each is the current
+stable release verified against its registry (npm, PyPI, GitHub releases) at the time of pinning and
+is pinned **exactly** (no `^`/`~`/`>=` ranges) in the manifest that adds it. The ADR-vs-manifest test
+(`tools/tests/test_labs_adr_pins.py`) fails when a manifest or workflow carries one of these at a
+different version or without a pin here.
+
+| Dependency | Version | Registry | Manifest / location | Role |
+| --- | --- | --- | --- | --- |
+| `@xterm/xterm` | 6.0.0 | npm | `apps/web/package.json` | terminal emulator (xterm.js) |
+| `@xterm/addon-fit` | 0.11.0 | npm | `apps/web/package.json` | xterm.js fit addon (terminal resize) |
+| `monaco-editor` | 0.57.0 | npm | `apps/web/package.json` | code editor; `min/vs` assets self-hosted under `public/monaco` |
+| `@monaco-editor/loader` | 1.7.0 | npm | `apps/web/package.json` | Monaco loader, configured to the self-hosted path (no CDN) |
+| `websockets` | 17.3 | PyPI | `apps/api/pyproject.toml` | WebSocket protocol implementation used by uvicorn for the terminal route |
+| `uvicorn` | 0.54.0 | PyPI | `apps/api/pyproject.toml` | ASGI server (already in the manifest at this version; the draining `uvicorn.Server` subclass depends on it) |
+| `docker` | 7.2.0 | PyPI | `packages/infrastructure/pyproject.toml` | Docker SDK for Python, used by the dev-only `DockerSandboxProvider` |
+| `trivy` | 0.76.1 | GitHub release (aquasecurity/trivy) | `.github/workflows/lab-images.yml` | vulnerability scanner for Lab_Images, configured to fail on any finding |
+| `aquasecurity/trivy-action` | 0.36.0 | GitHub Action | `.github/workflows/lab-images.yml` | runs Trivy in CI; the `version:` input is set to the Trivy pin above |
+
+Notes:
+
+- `websockets` is the library uvicorn selects for WebSocket support. It is pinned directly so the
+  version is not chosen by the resolver; `uvicorn` is installed without the `standard` extra so no
+  other optional packages enter the tree unpinned.
+- The GitHub Action is referenced by the commit SHA of the `v0.36.0` tag with the tag in a comment,
+  and Trivy itself is installed at `0.76.1`, so neither floats.
+- No other tool is introduced by this spec. The Lab_Image base images are pinned by digest in their
+  Dockerfiles (Requirements 4.5 to 4.7), and `docker buildx bake` ships with the Docker installation
+  already used by CI, so it adds no separately versioned dependency.
 
 ## Consequences
 

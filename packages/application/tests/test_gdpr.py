@@ -27,9 +27,15 @@ from edu_it_application.gdpr import (
     ExportUserDataRequest,
     ExportUserDataUseCase,
 )
+from edu_it_domain.labs.models import LabSession, SessionStatus
+from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
+from edu_it_domain.ports.lab_catalog import LabDefinition, LabTaskDefinition
 from edu_it_domain.ports.personal_data import PERSONAL_DATA_TABLES
 from edu_it_domain.ports.repository import SessionRecord
+from edu_it_domain.ports.sandbox import SandboxHandle
 from edu_it_infrastructure.fakes import (
+    Fake_SandboxProvider,
+    In_Memory_LabSessionRepository,
     In_Memory_ObjectStorage,
     In_Memory_PersonalDataGateway,
     In_Memory_SessionRepository,
@@ -173,3 +179,99 @@ def test_deletion_failure_raises_and_leaves_tables_unchanged() -> None:
     # Atomic: every personal-data table is left unchanged on failure (Req 14.4).
     assert gateway.row_count("user", _USER) == 1
     assert gateway.row_count("enrollment", _USER) == 1
+
+
+# --- Lab data (Req 24.1 - 24.3) ----------------------------------------------
+
+_LAB_TABLES = ("lab_session", "lab_run", "lab_task_completion")
+
+
+def _lab_gateway() -> In_Memory_PersonalDataGateway:
+    gateway = In_Memory_PersonalDataGateway()
+    gateway.add_row("user", _USER, {"stable_id": _USER})
+    gateway.add_row("lab_session", _USER, {"stable_id": "ls1", "status": "ended"})
+    gateway.add_row("lab_run", _USER, {"stable_id": "lr1", "status": "passed"})
+    gateway.add_row("lab_task_completion", _USER, {"passed": True})
+    gateway.add_row("lab_session", "other", {"stable_id": "ls2", "status": "ended"})
+    return gateway
+
+
+def test_export_includes_lab_rows_of_the_learner_and_no_terminal_io() -> None:
+    storage = In_Memory_ObjectStorage()
+    result = ExportUserDataUseCase(personal_data=_lab_gateway(), object_storage=storage).execute(
+        ExportUserDataRequest(user_stable_id=_USER)
+    )
+    document = json.loads(storage.get(result.storage_key).data)
+    assert document["lab_session"] == [{"stable_id": "ls1", "status": "ended"}]
+    assert document["lab_run"] == [{"stable_id": "lr1", "status": "passed"}]
+    assert document["lab_task_completion"] == [{"passed": True}]
+    assert not [key for key in document if "terminal" in key]
+
+
+def _active_lab_session(
+    sandbox: Fake_SandboxProvider,
+) -> tuple[In_Memory_LabSessionRepository, SandboxHandle]:
+    lab = LabDefinition(
+        lab_id="lab1",
+        kind="terminal",
+        image="img",
+        concept_ids=("cn1",),
+        tasks=(LabTaskDefinition("t1", required=True),),
+        checks=(),
+        bundle_path="lab1",
+    )
+    handle = sandbox.provision(build_sandbox_spec(lab, "ls1"))
+    now = _T0
+    repo = In_Memory_LabSessionRepository()
+    repo.add_if_no_active(
+        LabSession(
+            "ls1",
+            _USER,
+            "lab1",
+            SessionStatus.READY,
+            now,
+            now + timedelta(hours=1),
+            sandbox_ref=handle.sandbox_id,
+        )
+    )
+    return repo, handle
+
+
+def test_deletion_destroys_the_active_session_sandbox() -> None:
+    clock = _clock()
+    sandbox = Fake_SandboxProvider(clock)
+    lab_sessions, handle = _active_lab_session(sandbox)
+    gateway = _lab_gateway()
+    use_case = DeleteAccountUseCase(
+        personal_data=gateway,
+        sessions=In_Memory_SessionRepository(),
+        session_store=In_Memory_SessionStore(clock),
+        clock=clock,
+        lab_sessions=lab_sessions,
+        sandbox=sandbox,
+    )
+    result = use_case.execute(DeleteAccountRequest(user_stable_id=_USER, confirmed=True))
+    assert result.deleted is True
+    assert all(gateway.row_count(table, _USER) == 0 for table in _LAB_TABLES)
+    assert gateway.row_count("lab_session", "other") == 1
+    assert handle not in sandbox.list_sandboxes()
+
+
+def test_failed_deletion_keeps_the_sandbox() -> None:
+    clock = _clock()
+    sandbox = Fake_SandboxProvider(clock)
+    lab_sessions, handle = _active_lab_session(sandbox)
+    gateway = In_Memory_PersonalDataGateway(fail_on_table="lab_run")
+    gateway.add_row("lab_run", _USER, {"stable_id": "lr1"})
+    use_case = DeleteAccountUseCase(
+        personal_data=gateway,
+        sessions=In_Memory_SessionRepository(),
+        session_store=In_Memory_SessionStore(clock),
+        clock=clock,
+        lab_sessions=lab_sessions,
+        sandbox=sandbox,
+    )
+    with pytest.raises(AccountDeletionError):
+        use_case.execute(DeleteAccountRequest(user_stable_id=_USER, confirmed=True))
+    assert gateway.row_count("lab_run", _USER) == 1
+    assert handle in sandbox.list_sandboxes()

@@ -63,6 +63,10 @@ dev = [
     # the adapter's unit tests run without a live Redis server.
     "fakeredis==2.40.0",
     "pytest-cov==7.1.0",
+    # Pre-run CPU/memory snapshot of the lab performance harness (tools/perf, task 21.5).
+    "psutil==7.2.2",
+    # WebSocket client of the terminal keystroke driver (tools/perf, task 21.5).
+    "websockets==17.3",
 ]
 
 # -- Ruff (lint + format) -----------------------------------------------------
@@ -204,6 +208,8 @@ mypy_path = [
     "packages/content",
     "apps/api",
     "apps/worker",
+    "tools",
+    "tools/perf",
 ]
 files = [
     "packages/domain",
@@ -215,13 +221,23 @@ files = [
 ]
 exclude = "(^|/)(\\.venv|node_modules)/"
 
+# The Docker SDK for Python ships no py.typed marker or stubs (dev-only
+# DockerSandboxProvider, hands-on-labs task 2.5).
+[[tool.mypy.overrides]]
+module = ["docker", "docker.*"]
+ignore_missing_imports = true
+
 # -- pytest (test) ------------------------------------------------------------
 # On a test failure pytest exits non-zero and identifies the failing tests; it
 # exits zero when every collected test passes. `--import-mode=importlib` keeps
 # same-named test modules across components from colliding.
 [tool.pytest.ini_options]
 addopts = "-ra --import-mode=importlib"
+markers = [
+    "docker: needs a reachable Docker daemon and the locally built lab images (skipped otherwise)",
+]
 testpaths = [
+    "tests",
     "packages/domain",
     "packages/application",
     "packages/infrastructure",

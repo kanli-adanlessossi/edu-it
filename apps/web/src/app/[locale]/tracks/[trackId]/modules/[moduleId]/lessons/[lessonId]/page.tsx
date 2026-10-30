@@ -6,6 +6,7 @@
 // localized error instead of rendering.
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { renderLessonMdx } from '../../../../../../../../components/lesson-mdx.js';
@@ -41,6 +42,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
     notFound();
   }
 
+  const labIds = lesson.lab_ids ?? [];
   let content;
   try {
     content = await renderLessonMdx(lesson.body);
@@ -61,6 +63,20 @@ export default async function LessonPage({ params }: LessonPageProps) {
       <h1>{lesson.title}</h1>
       {lesson.locale !== locale ? <p>{t('fallbackNotice')}</p> : null}
       {content}
+      {labIds.length > 0 ? (
+        <section aria-labelledby="lesson-labs-heading">
+          <h2 id="lesson-labs-heading">{t('labsHeading')}</h2>
+          <ul>
+            {labIds.map((labId, index) => (
+              <li key={labId}>
+                <Link href={`/${locale}/labs/${encodeURIComponent(labId)}`}>
+                  {t('openLab', { number: index + 1 })}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </article>
   );
 }

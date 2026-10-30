@@ -104,11 +104,111 @@
   },
   "Lesson": {
     "unsupportedContent": "Cette leçon contient un contenu qui ne peut pas être affiché.",
-    "fallbackNotice": "Cette leçon n'est pas encore disponible dans votre langue. Affichage de la version anglaise."
+    "fallbackNotice": "Cette leçon n'est pas encore disponible dans votre langue. Affichage de la version anglaise.",
+    "labsHeading": "Labos pratiques",
+    "openLab": "Ouvrir le labo {number}"
   },
-  "LabPlaceholder": {
-    "title": "Labos",
-    "comingSoon": "Bientôt disponible"
+  "Labs": {
+    "title": "Labo",
+    "instructions": "Consignes",
+    "tasks": "Tâches",
+    "taskRequired": "Obligatoire",
+    "taskOptional": "Facultative",
+    "taskDone": "Terminée",
+    "taskTodo": "Pas encore terminée",
+    "terminalLabel": "Terminal",
+    "editorLabel": "Éditeur de code",
+    "starterFiles": "Fichiers de départ",
+    "startLab": "Démarrer le labo",
+    "resetLab": "Réinitialiser le labo",
+    "resetConfirmTitle": "Réinitialiser ce labo ?",
+    "resetConfirmBody": "Votre session actuelle et ses fichiers seront supprimés et une nouvelle session démarrera. Vos réussites enregistrées sont conservées.",
+    "resetConfirm": "Réinitialiser",
+    "resetCancel": "Annuler",
+    "checkWork": "Vérifier mon travail",
+    "checkWaiting": "Vous pourrez revérifier dans {seconds} s.",
+    "checkRunning": "Vérification en cours…",
+    "checkDisabledGrading": "Une vérification est déjà en cours.",
+    "checkDisabledThrottle": "Patientez {seconds} s avant de vérifier à nouveau.",
+    "checkDisabledNotReady": "Le labo n'est pas encore prêt.",
+    "status": {
+      "provisioning": "Préparation de votre labo…",
+      "ready": "Votre labo est prêt.",
+      "grading": "Vérification de votre travail…",
+      "results": "Les résultats sont disponibles.",
+      "reconnecting": "Connexion perdue. Reconnexion…",
+      "reconnected": "Reconnecté à votre labo.",
+      "ended": "Cette session de labo est terminée.",
+      "expired": "Cette session de labo a expiré.",
+      "failed": "Votre labo n'a pas pu démarrer.",
+      "loading": "Chargement…"
+    },
+    "results": {
+      "title": "Résultats",
+      "passed": "Réussi",
+      "failed": "Pas encore réussi",
+      "allPassed": "Toutes les tâches obligatoires sont terminées.",
+      "someFailed": "Certaines vérifications ont échoué. Lisez les retours et réessayez.",
+      "gradingFailed": "Nous n'avons pas pu terminer la vérification. Veuillez réessayer.",
+      "timedOut": "La vérification a pris trop de temps. Veuillez réessayer."
+    },
+    "hints": {
+      "title": "Indices",
+      "reveal": "Afficher l'indice {level}",
+      "level": "Indice {level}",
+      "none": "Aucun indice n'est disponible pour ce labo.",
+      "revealError": "Nous n'avons pas pu afficher cet indice. Veuillez réessayer."
+    },
+    "timer": {
+      "label": "Temps restant",
+      "remaining": "{minutes}:{seconds}",
+      "ttlWarning": "Votre labo se terminera dans moins de {minutes} minutes.",
+      "idleWarning": "Votre labo va bientôt se terminer pour cause d'inactivité. Saisissez dans le terminal ou l'éditeur pour le conserver.",
+      "idleLabel": "Limite d'inactivité"
+    },
+    "shortcut": {
+      "leaveTerminal": "Appuyez sur {shortcut} pour quitter le terminal et placer le focus sur « Vérifier mon travail ».",
+      "leaveEditor": "Appuyez sur {shortcut} pour quitter l'éditeur et placer le focus sur « Vérifier mon travail ».",
+      "default": "Ctrl+M",
+      "mac": "Ctrl+Maj+M"
+    },
+    "provisioning": {
+      "slow": "Le démarrage de votre labo prend plus de temps que prévu. Nous y travaillons toujours, gardez cette page ouverte.",
+      "failedTitle": "Votre labo n'a pas pu démarrer",
+      "failedBody": "Rien ne reste en cours d'exécution. Veuillez réessayer dans un instant.",
+      "retry": "Réessayer"
+    },
+    "reconnect": {
+      "indicator": "Connexion perdue. Reconnexion…",
+      "attempt": "Tentative de reconnexion {attempt}",
+      "restored": "Connexion rétablie.",
+      "serverRestart": "Le serveur redémarre. Reconnexion automatique…",
+      "failed": "Reconnexion impossible. Rechargez la page pour réessayer.",
+      "reload": "Recharger"
+    },
+    "session": {
+      "endedTitle": "Votre session de labo est terminée",
+      "endedBody": "La session s'est terminée pendant votre absence. Vos réussites enregistrées sont conservées.",
+      "expiredBody": "Le temps de votre labo est écoulé. Vos réussites enregistrées sont conservées.",
+      "idleBody": "Votre labo s'est terminé pour cause d'inactivité. Vos réussites enregistrées sont conservées.",
+      "startNew": "Démarrer une nouvelle session",
+      "activeElsewhere": "Vous avez déjà une session de labo active. Terminez-la avant d'en démarrer une autre."
+    },
+    "errors": {
+      "generic": "Une erreur est survenue. Veuillez réessayer.",
+      "loadFailed": "Nous n'avons pas pu charger ce labo.",
+      "notFound": "Ce labo n'est pas disponible.",
+      "sessionActive": "Vous avez déjà une session de labo active.",
+      "provisionRateLimited": "Vous avez démarré trop de labos récemment. Veuillez réessayer plus tard.",
+      "gradingThrottled": "Patientez quelques secondes avant de vérifier à nouveau.",
+      "gradingInProgress": "Une vérification est déjà en cours.",
+      "sessionExpired": "Cette session de labo a expiré.",
+      "sessionNotReady": "Le labo n'est pas encore prêt.",
+      "sessionNotFound": "Cette session de labo n'existe plus.",
+      "filesInvalid": "Vos fichiers n'ont pas pu être enregistrés. Vérifiez leur taille et leurs noms.",
+      "sandboxUnavailable": "Les labos sont temporairement indisponibles. Veuillez réessayer plus tard.",
+      "saveFailed": "Nous n'avons pas pu enregistrer vos fichiers. Veuillez réessayer."
+    }
   },
   "Learning": {
     "loadError": "Impossible de charger vos données d'apprentissage. Réessayez plus tard.",

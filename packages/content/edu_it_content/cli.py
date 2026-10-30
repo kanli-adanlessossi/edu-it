@@ -57,7 +57,9 @@ from edu_it_content.sync import Approval, sync_content
 from edu_it_content.validation import (
     ContentLoadError,
     ValidationFailure,
+    apply_pending_allowance,
     load_content,
+    load_pending_review_list,
     validate_content,
 )
 
@@ -116,6 +118,14 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     _add_content_root_argument(validate)
+    validate.add_argument(
+        "--allow-pending",
+        action="store_true",
+        help=(
+            "tolerate only the ai-reviewer-present failure for labs listed in "
+            "pending-review.json; every other failure still fails (Req 20.13)"
+        ),
+    )
     validate.set_defaults(handler=_run_validate)
 
     sync = subcommands.add_parser(
@@ -184,6 +194,13 @@ def _run_validate(args: argparse.Namespace) -> int:
         return _LOAD_ERROR_EXIT
 
     failures = validate_content(content)
+    if args.allow_pending:
+        try:
+            pending = load_pending_review_list(content_root)
+        except ContentLoadError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return _LOAD_ERROR_EXIT
+        failures = apply_pending_allowance(failures, content, pending)
     if failures:
         _report_failures(failures)
         return _VALIDATION_FAILED_EXIT

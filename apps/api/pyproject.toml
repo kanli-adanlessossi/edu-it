@@ -13,9 +13,11 @@ dependencies = [
     "edu-it-domain",
     "edu-it-application",
     "edu-it-infrastructure",
+    "edu-it-content",
     "fastapi==0.162.0",
     "pydantic==2.14.1",
     "uvicorn==0.54.0",
+    "websockets==17.3",
 ]
 
 [build-system]
@@ -29,3 +31,4 @@ packages = ["edu_it_api"]
 edu-it-domain = { workspace = true }
 edu-it-application = { workspace = true }
 edu-it-infrastructure = { workspace = true }
+edu-it-content = { workspace = true }

@@ -70,6 +70,8 @@ __all__ = [
 #: Provenance fields excluded from an item's canonical payload: ``content_version``
 #: is the identity hash (compared on its own) and the review trail is attached at
 #: approval time, not authoring, so neither counts as a content change (D3 §1.2).
+_LAB_TYPES: frozenset[str] = frozenset({"lab", "lab_task", "lab_check"})
+
 _NON_CONTENT_PROVENANCE_FIELDS: frozenset[str] = frozenset(
     {"content_version", "reviewed_by", "reviewed_at"}
 )
@@ -95,6 +97,9 @@ class SyncReport:
     deferred: tuple[str, ...] = ()
     """Removed items whose archive was deferred because sessions still reference
     them (Req 26.2); they stay ``ACTIVE`` and are archived by a later sync."""
+    orphaned: tuple[str, ...] = ()
+    """Labs, lab tasks, and Checks that changed or were archived; learner progress
+    tied to them is kept as orphaned data, never purged (Req 20.11)."""
 
     @property
     def changed(self) -> bool:
@@ -170,6 +175,10 @@ def sync_content(
     if approval is not None:
         content = _stamp_review(content, approval)
 
+    # Independent of validation (and of any Pending_Review_List): an unreviewed
+    # AI lab is never synced (Req 23.7).
+    _refuse_unreviewed_ai_labs(content)
+
     failures = validate_content(content)
     if failures:
         raise ValueError(_format_validation_failures(failures))
@@ -179,6 +188,7 @@ def sync_content(
     inserted: list[str] = []
     updated: list[str] = []
     unchanged: list[str] = []
+    orphaned: list[str] = []
 
     for stable_id, (content_type, content_version, payload) in authored.items():
         new_item = StoredItem(
@@ -197,6 +207,9 @@ def sync_content(
         else:
             store.upsert(new_item)
             updated.append(stable_id)
+            if content_type in _LAB_TYPES:
+                store.orphan_progress(stable_id)
+                orphaned.append(stable_id)
 
     authored_ids = frozenset(authored)
     removed = [stable_id for stable_id in store.list_active_ids() if stable_id not in authored_ids]
@@ -208,8 +221,12 @@ def sync_content(
         if store.has_active_sessions(stable_id):
             deferred.append(stable_id)
         else:
+            stored = store.get(stable_id)
             store.archive(stable_id)
             archived.append(stable_id)
+            if stored is not None and stored.content_type in _LAB_TYPES:
+                store.orphan_progress(stable_id)
+                orphaned.append(stable_id)
 
     if approval is not None:
         reviewed_ids = {
@@ -232,7 +249,27 @@ def sync_content(
         unchanged=tuple(unchanged),
         archived=tuple(sorted(archived)),
         deferred=tuple(sorted(deferred)),
+        orphaned=tuple(sorted(orphaned)),
     )
+
+
+def _refuse_unreviewed_ai_labs(content: LoadedContent) -> None:
+    """Raise when a lab with ``origin`` ``ai`` has no recorded reviewer (Req 23.7)."""
+    offenders: list[str] = []
+    for raw in content.raw_items.get("lab", ()):
+        provenance = raw.get("provenance")
+        if not isinstance(provenance, Mapping):
+            continue
+        reviewer = provenance.get("reviewed_by")
+        if provenance.get("origin") == "ai" and not (
+            isinstance(reviewer, str) and reviewer.strip()
+        ):
+            offenders.append(str(provenance.get("stable_id", "?")))
+    if offenders:
+        raise ValueError(
+            "cannot sync invalid content (ai-reviewer-present): "
+            f"lab(s) {', '.join(sorted(offenders))} have origin 'ai' and no reviewer"
+        )
 
 
 def _is_unchanged(existing: StoredItem, incoming: StoredItem) -> bool:

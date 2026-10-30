@@ -35,6 +35,7 @@ from edu_it_domain.ports.mailer import Mailer
 from edu_it_domain.ports.rate_limiter import SignInRateLimiter
 from edu_it_domain.ports.repository import SessionRepository, UserRepository
 from edu_it_domain.ports.role_assignment import RoleAssignmentRepository
+from edu_it_domain.ports.sandbox import SandboxProvider
 from edu_it_domain.ports.session_store import SessionStore
 from pydantic import BaseModel, ConfigDict
 
@@ -44,6 +45,7 @@ from edu_it_infrastructure.adapters.session_store import Redis_SessionStore
 from edu_it_infrastructure.clock import System_Clock
 from edu_it_infrastructure.fakes.clock import Test_Clock
 from edu_it_infrastructure.fakes.mailer import Console_Mailer
+from edu_it_infrastructure.fakes.sandbox_provider import Fake_SandboxProvider
 from edu_it_infrastructure.mailer import SMTP_Mailer, SMTPConfig
 from edu_it_infrastructure.persistence.repositories import (
     Postgres_RoleAssignmentRepository,
@@ -56,7 +58,10 @@ __all__ = [
     "Environment",
     "MailerBackend",
     "Ports",
+    "ProviderSelectionError",
+    "SandboxBackend",
     "build_ports",
+    "build_sandbox_provider",
 ]
 
 
@@ -85,6 +90,17 @@ class MailerBackend(StrEnum):
     SMTP = "smtp"
 
 
+class SandboxBackend(StrEnum):
+    """The ``SandboxProvider`` selection (``SANDBOX_PROVIDER``). Docker is dev only."""
+
+    DOCKER = "docker"
+    FAKE = "fake"
+
+
+class ProviderSelectionError(ValueError):
+    """Raised at composition when the configured sandbox provider is not allowed."""
+
+
 class CompositionSettings(BaseModel):
     """Environment-driven settings for the composition root.
 
@@ -99,7 +115,10 @@ class CompositionSettings(BaseModel):
 
     environment: Environment = Environment.DEVELOPMENT
     mailer_backend: MailerBackend = MailerBackend.CONSOLE
+    sandbox_provider: SandboxBackend = SandboxBackend.FAKE
 
+    #: Tag of the locally built Lab_Images (``edu-it/lab-<image>:<tag>``), Docker provider only.
+    lab_image_tag: str = "dev"
     smtp_host: str = "localhost"
     smtp_port: int = 25
     smtp_username: str | None = None
@@ -120,6 +139,8 @@ class CompositionSettings(BaseModel):
     _ENV_ALIASES: ClassVar[Mapping[str, str]] = {
         "environment": "EDU_IT_ENV",
         "mailer_backend": "MAILER_BACKEND",
+        "sandbox_provider": "SANDBOX_PROVIDER",
+        "lab_image_tag": "LAB_IMAGE_TAG",
         "smtp_host": "SMTP_HOST",
         "smtp_port": "SMTP_PORT",
         "smtp_username": "SMTP_USERNAME",
@@ -213,6 +234,35 @@ def build_ports(settings: CompositionSettings | None = None) -> Ports:
         sign_in_rate_limiter=Redis_SignInRateLimiter(redis_client, clock),
         role_assignment_repository=Postgres_RoleAssignmentRepository(settings.database_url),
     )
+
+
+def build_sandbox_provider(
+    settings: CompositionSettings | None = None,
+    *,
+    clock: Clock | None = None,
+) -> SandboxProvider:
+    """Select the ``SandboxProvider`` from configuration (Req 2.1, 2.2).
+
+    Shared by api and worker composition. Raises :class:`ProviderSelectionError`
+    when ``docker`` is selected with ``EDU_IT_ENV=production`` (the Docker
+    provider is dev only), before any provider is constructed. ``fake`` is driven
+    by a ``Test_Clock``: ``clock`` when it is one, otherwise a fresh one. Taking any
+    ``Clock`` here keeps production app modules from importing ``Test_Clock``
+    (Req 6.3).
+    """
+    if not isinstance(clock, Test_Clock):
+        clock = None
+    settings = settings if settings is not None else CompositionSettings.from_env()
+    if settings.sandbox_provider is SandboxBackend.DOCKER:
+        if settings.environment.is_production:
+            raise ProviderSelectionError(
+                "refusing to start: SANDBOX_PROVIDER=docker is dev only and "
+                "cannot be used with EDU_IT_ENV=production"
+            )
+        from edu_it_infrastructure.sandbox.docker_provider import DockerSandboxProvider
+
+        return DockerSandboxProvider(image_tag=settings.lab_image_tag)
+    return Fake_SandboxProvider(clock if clock is not None else Test_Clock())
 
 
 def _build_clock(settings: CompositionSettings) -> Clock:

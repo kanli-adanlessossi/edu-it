@@ -43,6 +43,7 @@ from edu_it_api.learning_schemas import (
     EnrollmentResponse,
     HintRequest,
     HintResponse,
+    LabProgressResponse,
     LessonCompletionResponse,
     LessonResponse,
     MasteryResponse,
@@ -144,6 +145,15 @@ def build_learning_router(services: LearningServices) -> APIRouter:
                 for m in view.modules
             ],
             mastery=[_mastery(m) for m in view.mastery],
+            labs=[
+                LabProgressResponse(
+                    lab_id=lab.lab_id,
+                    completed_task_ids=list(lab.completed_task_ids),
+                    passed=lab.passed,
+                    mastery=[_mastery(m) for m in lab.mastery],
+                )
+                for lab in view.labs
+            ],
         )
 
     @router.get("/lessons/{stable_id}", response_model=LessonResponse)
@@ -161,6 +171,7 @@ def build_learning_router(services: LearningServices) -> APIRouter:
             body=view.body,
             locale=view.locale,
             content_version=view.content_version,
+            lab_ids=list(view.lab_ids),
         )
 
     @router.post("/quiz-attempts", response_model=QuizAttemptResponse)
@@ -199,7 +210,7 @@ def build_learning_router(services: LearningServices) -> APIRouter:
         """Reveal the next progressive hint level of a question (Req 18.3)."""
         result = services.reveal_hint.execute(user_of(request), body.quiz_id, body.question_id)
         return HintResponse(
-            question_id=result.reveal.question_id,
+            question_id=result.reveal.question_id or body.question_id,
             hint_level=result.hint_level,
             revealed_at=result.reveal.revealed_at,
             mastery=[_mastery(m) for m in result.mastery],

@@ -667,6 +667,14 @@ personal data are out of scope for export/deletion/retention and are listed as "
 | `content_provenance` | No (provenance; `reviewed_by` references a reviewer account, covered via `user`) | not personal data | not personal data | not personal data |
 | `review_queue_item`, `variant`, `generation_job`, `item_statistic`, `budget_ledger` | No (AI/review ops) | not personal data | not personal data | not personal data |
 
+Lab tables (additive columns): added columns are covered by the same export, deletion, and retention paths as their parent rows; no lab column is excluded.
+
+- `lab_session`: `sandbox_ref`, `last_activity_at`, `last_grading_accepted_at`, `ended_at`, `provision_attempts`, `next_provision_at`, `terminal_epoch`. Exported with the session, deleted with the user, retained under the lab-session retention window.
+- `lab_run`: `stable_id`, `accepted_at`, `deadline_at`, `started_at`, `results`. `accepted_at` and `deadline_at` are timestamps from the injected `Clock`. Exported with the run, deleted with the user, retained under the lab-run retention window.
+- `lab_task_completion`: `counted_for_mastery`. Exported, deleted, and retained with the completion.
+- `hint_reveal`: `lab_task_id` (exactly one of `lab_task_id` and `question_id` is set). Covered by the existing `hint_reveal` export, deletion, and retention.
+- Catalog columns added to `lab`, `lab_task`, and `lab_check` (`kind`, `image`, `concept_stable_ids`, `archived_at`, `required`, `timeout_seconds`, `script`) are not personal data.
+
 Note: content archival on sync (Section 10, item 5) is distinct from personal-data deletion. A
 learner deletion follows the deletion path above; a sync that removes a catalog item archives it
 rather than deleting it, so progress referencing its `stable_id` stays valid.

@@ -10,6 +10,8 @@ export interface Lesson {
   body: string;
   locale: string;
   content_version: string;
+  /** Labs the lesson references; the reader links to the Lab_View when non-empty. */
+  lab_ids?: string[];
 }
 
 function apiBaseUrl(): string {
@@ -43,5 +45,11 @@ export async function fetchLesson(
     return undefined;
   }
   const body: unknown = await response.json();
-  return isLesson(body) ? body : undefined;
+  if (!isLesson(body)) {
+    return undefined;
+  }
+  const labIds = Array.isArray(body.lab_ids)
+    ? body.lab_ids.filter((id): id is string => typeof id === 'string')
+    : [];
+  return { ...body, lab_ids: labIds };
 }

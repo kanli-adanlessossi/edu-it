@@ -1,0 +1,2 @@
+# Per-run driver state (learner cookies, session ids) of the measurement drivers.
+.state/

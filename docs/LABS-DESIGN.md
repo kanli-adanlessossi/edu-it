@@ -46,12 +46,13 @@ illustrative and defers here.
 ```pascal
 INTERFACE SandboxProvider              // authoritative signatures — docs/LABS-DESIGN.md (D4)
   FUNCTION provision(spec) RETURNS SandboxHandle
-  FUNCTION exec(handle, command, as_user, env, cwd) RETURNS ExecResult
+  FUNCTION exec(handle, command, as_user, env, cwd, timeout_s = NONE) RETURNS ExecResult
   FUNCTION attach_terminal(handle) RETURNS TerminalChannel
-  FUNCTION copy_in(handle, source_ro, dest) RETURNS Void    // read-only source for grading
+  FUNCTION copy_in(handle, source_ro, dest, as_user = NONE) RETURNS Void    // read-only source for grading
   FUNCTION copy_out(handle, source, dest) RETURNS Void
   FUNCTION destroy(handle) RETURNS Void
   FUNCTION health(handle) RETURNS HealthStatus
+  FUNCTION list_sandboxes() RETURNS List<SandboxHandle>      // managed sandboxes only (reaper)
   // Implementations: Docker (dev only), Kubernetes (prod), Fake (tests). Warm-pool extension point.
 END INTERFACE
 ```
@@ -61,12 +62,37 @@ END INTERFACE
 | Function | Responsibility |
 |----------|----------------|
 | `provision(spec)` | Create the per-session sandbox from a spec (image, resource limits, RuntimeClass, TTL) and return a `SandboxHandle`. One pod per session. |
-| `exec(handle, command, as_user, env, cwd)` | Run a single command inside the sandbox and return an `ExecResult`. Used by grading orchestration; runs the check as a specific user, environment, and working directory. |
-| `attach_terminal(handle)` | Open a `TerminalChannel` (TTY) to the sandbox for the interactive terminal; the api attaches the terminal TTY to the sandbox over this channel. |
-| `copy_in(handle, source_ro, dest)` | Copy files into the sandbox from a read-only source. The read-only source is used for grading so a check cannot mutate its own fixtures. |
+| `exec(handle, command, as_user, env, cwd, timeout_s)` | Run a single command inside the sandbox and return an `ExecResult`. Used by grading orchestration; runs the check as a specific user, environment, and working directory. `timeout_s` is optional (additive); when given, the provider kills the command and its process group on expiry and reports `timed_out`. Omitting it keeps the prior behavior. |
+| `attach_terminal(handle)` | Open a synchronous `TerminalChannel` (TTY) to the sandbox for the interactive terminal; the api attaches the terminal TTY to the sandbox over this channel. |
+| `copy_in(handle, source_ro, dest, as_user)` | Copy files into the sandbox from a read-only source. The read-only source is used for grading so a check cannot mutate its own fixtures. `as_user` is optional (additive); when given, copied files are owned by and written as that user. |
 | `copy_out(handle, source, dest)` | Copy files out of the sandbox (for example, lab artifacts routed to object storage). |
 | `destroy(handle)` | Tear the sandbox down and release its resources; leaves no partial session running. |
 | `health(handle)` | Report a `HealthStatus` for the sandbox, used by provisioning and by the reaper. |
+| `list_sandboxes()` | Return the handles of all sandboxes the provider holds that carry the managed label (additive). The reaper compares this list with session rows to destroy orphans; unmanaged resources are never returned. |
+
+### Amendments: result and channel types
+
+The following are additive amendments; callers of the earlier signatures remain valid.
+
+```pascal
+RECORD ExecResult
+  exit_code : Integer      // process exit code; 137 when killed by timeout
+  stdout    : Bytes        // captured standard output
+  stderr    : Bytes        // captured standard error
+  timed_out : Boolean      // true when timeout_s expired and the command was killed
+END RECORD
+
+INTERFACE TerminalChannel                // synchronous (blocking) interface
+  FUNCTION read(max_bytes, timeout_s = NONE) RETURNS Bytes   // empty Bytes on timeout; raises SandboxGone when closed
+  FUNCTION write(data) RETURNS Void
+  FUNCTION resize(rows, cols) RETURNS Void
+  FUNCTION close() RETURNS Void                              // idempotent
+END INTERFACE
+```
+
+`ExecResult` output is consumed only by the grading harness and is never shown to the learner.
+`TerminalChannel` is synchronous; the api adapts it to the async WebSocket by running its blocking
+calls off the event loop. Terminal I/O is never persisted.
 
 The port keeps the domain and application layers free of any sandbox technology: swapping Docker
 (dev only), Kubernetes (prod), or Fake (tests) changes only the infrastructure implementation.

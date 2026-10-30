@@ -33,7 +33,10 @@ _fixed_offset_zones = st.builds(
     timezone,
     st.timedeltas(min_value=timedelta(hours=-14), max_value=timedelta(hours=14)),
 )
-_aware_instants = st.datetimes(timezones=_fixed_offset_zones)
+_aware_instants = st.datetimes(
+    max_value=datetime(9000, 1, 1),  # leave headroom so instant + duration cannot overflow
+    timezones=_fixed_offset_zones,
+)
 
 # A non-negative duration (Req 6.2/6.5): zero up to ~10 years, at microsecond
 # resolution, which is the span the clock is exercised over in tests.

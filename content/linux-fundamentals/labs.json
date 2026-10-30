@@ -1,0 +1,67 @@
+[
+  {
+    "provenance": {
+      "stable_id": "lab.fix-the-shared-folder",
+      "content_version": "sha256:c28818ca8a0e24222abf2726d9edc2ca6bcd852989f54309ea3913bcd8aca696",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.lab",
+      "prompt_version": "1",
+      "generation_date": "2026-11-01T00:00:00Z",
+      "reviewed_by": "kanli-adanlessossi",
+      "reviewed_at": "2026-11-02T09:00:00Z"
+    },
+    "lesson_stable_id": "lesson.changing-permissions",
+    "title": {
+      "fr": "Réparer le dossier partagé",
+      "en": "Fix the shared folder"
+    },
+    "kind": "terminal",
+    "image": "linux-base",
+    "concept_stable_ids": [
+      "concept.changing-permissions"
+    ],
+    "instructions": {
+      "fr": "Votre équipe partage le dossier /workspace/team. Il n'est pas encore prêt : il manque des sous-dossiers, son groupe n'est pas le bon et un fichier y est modifiable par tout le monde. Dans le terminal, créez les dossiers docs et scripts, donnez le dossier au groupe devs avec le bit setgid, puis retirez le droit d'écriture pour tous sur le fichier planté, sans le supprimer ni changer son contenu. Cliquez sur « Vérifier mon travail » quand vous avez terminé.",
+      "en": "Your team shares the folder /workspace/team. It is not ready yet: sub-folders are missing, its group is wrong, and one file in it can be modified by everyone. In the terminal, create the docs and scripts folders, give the folder to the group devs with the setgid bit, then remove write permission for others on the planted file, without deleting it or changing its content. Select \"Check my work\" when you are done."
+    },
+    "setup_script": "content/linux-fundamentals/lab-bundles/fix-the-shared-folder/setup/setup.sh",
+    "check_bundle": "content/linux-fundamentals/lab-bundles/fix-the-shared-folder",
+    "check_bundle_dest": "/grader"
+  },
+  {
+    "provenance": {
+      "stable_id": "lab.world-writable-entries",
+      "content_version": "sha256:4d3b286f6ad016a59363a417a76a8ba6ca255fc517b0286b72e7093c4399bad3",
+      "origin": "ai",
+      "model": "anthropic.claude-sonnet",
+      "prompt_id": "seed.linux-fundamentals.lab",
+      "prompt_version": "1",
+      "generation_date": "2026-11-01T00:00:00Z",
+      "reviewed_by": "kanli-adanlessossi",
+      "reviewed_at": "2026-11-02T09:00:00Z"
+    },
+    "lesson_stable_id": "lesson.reading-permissions",
+    "title": {
+      "fr": "Entrées modifiables par tout le monde",
+      "en": "World-writable entries"
+    },
+    "kind": "code",
+    "image": "python",
+    "concept_stable_ids": [
+      "concept.reading-permissions"
+    ],
+    "instructions": {
+      "fr": "Écrivez un programme Python dans solution.py. Il lit la sortie de « ls -l » sur l'entrée standard et affiche, un par ligne et dans l'ordre de l'entrée, le nom de chaque entrée modifiable par tout le monde (le droit d'écriture w dans le dernier groupe de trois). Un lien symbolique n'est jamais signalé, car ses bits de mode ne sont pas appliqués. Un dossier avec le bit sticky et l'écriture pour tous (drwxrwxrwt) est signalé ; une entrée sticky sans écriture pour tous (drwxr-xr-t) ne l'est pas. Ignorez la ligne « total ». Les noms peuvent contenir des espaces. Le fichier de départ contient le squelette du programme. Cliquez sur « Vérifier mon travail » quand vous avez terminé.",
+      "en": "Write a Python program in solution.py. It reads the output of \"ls -l\" on standard input and prints, one per line and in input order, the name of every world-writable entry (the write permission w in the last group of three). A symbolic link is never reported, because its mode bits are not enforced. A directory with the sticky bit and world-write (drwxrwxrwt) is reported; a sticky entry without world-write (drwxr-xr-t) is not. Ignore the \"total\" line. Names may contain spaces. The starter file holds the program skeleton. Select \"Check my work\" when you are done."
+    },
+    "check_bundle": "content/linux-fundamentals/lab-bundles/world-writable-entries",
+    "check_bundle_dest": "/grader",
+    "learner_files": [
+      "solution.py"
+    ],
+    "starter_files": [
+      "content/linux-fundamentals/lab-bundles/world-writable-entries/starter/solution.py"
+    ]
+  }
+]

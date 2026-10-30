@@ -104,11 +104,111 @@
   },
   "Lesson": {
     "unsupportedContent": "This lesson contains content that cannot be displayed.",
-    "fallbackNotice": "This lesson is not yet available in your language. Showing the English version."
+    "fallbackNotice": "This lesson is not yet available in your language. Showing the English version.",
+    "labsHeading": "Hands-on labs",
+    "openLab": "Open lab {number}"
   },
-  "LabPlaceholder": {
-    "title": "Labs",
-    "comingSoon": "Coming soon"
+  "Labs": {
+    "title": "Lab",
+    "instructions": "Instructions",
+    "tasks": "Tasks",
+    "taskRequired": "Required",
+    "taskOptional": "Optional",
+    "taskDone": "Completed",
+    "taskTodo": "Not completed yet",
+    "terminalLabel": "Terminal",
+    "editorLabel": "Code editor",
+    "starterFiles": "Starter files",
+    "startLab": "Start lab",
+    "resetLab": "Reset lab",
+    "resetConfirmTitle": "Reset this lab?",
+    "resetConfirmBody": "Your current session and its files will be deleted and a fresh one will start. Your recorded completions are kept.",
+    "resetConfirm": "Reset",
+    "resetCancel": "Cancel",
+    "checkWork": "Check my work",
+    "checkWaiting": "You can check again in {seconds} s.",
+    "checkRunning": "Checking your work…",
+    "checkDisabledGrading": "A check is already running.",
+    "checkDisabledThrottle": "Please wait {seconds} s before checking again.",
+    "checkDisabledNotReady": "The lab is not ready yet.",
+    "status": {
+      "provisioning": "Preparing your lab…",
+      "ready": "Your lab is ready.",
+      "grading": "Checking your work…",
+      "results": "Results are available.",
+      "reconnecting": "Connection lost. Reconnecting…",
+      "reconnected": "Reconnected to your lab.",
+      "ended": "This lab session has ended.",
+      "expired": "This lab session has expired.",
+      "failed": "Your lab could not start.",
+      "loading": "Loading…"
+    },
+    "results": {
+      "title": "Results",
+      "passed": "Passed",
+      "failed": "Not passed yet",
+      "allPassed": "All required tasks are complete.",
+      "someFailed": "Some checks did not pass. Review the feedback and try again.",
+      "gradingFailed": "We could not complete the check. Please try again.",
+      "timedOut": "The check took too long. Please try again."
+    },
+    "hints": {
+      "title": "Hints",
+      "reveal": "Show hint {level}",
+      "level": "Hint {level}",
+      "none": "No hints are available for this lab.",
+      "revealError": "We could not show this hint. Please try again."
+    },
+    "timer": {
+      "label": "Time remaining",
+      "remaining": "{minutes}:{seconds}",
+      "ttlWarning": "Your lab will end in less than {minutes} minutes.",
+      "idleWarning": "Your lab will end soon because of inactivity. Type in the terminal or editor to keep it.",
+      "idleLabel": "Inactivity limit"
+    },
+    "shortcut": {
+      "leaveTerminal": "Press {shortcut} to leave the terminal and move focus to \"Check my work\".",
+      "leaveEditor": "Press {shortcut} to leave the editor and move focus to \"Check my work\".",
+      "default": "Ctrl+M",
+      "mac": "Ctrl+Shift+M"
+    },
+    "provisioning": {
+      "slow": "Starting your lab is taking longer than usual. We are still working on it, please keep this page open.",
+      "failedTitle": "Your lab could not start",
+      "failedBody": "Nothing is left running. Please try again in a moment.",
+      "retry": "Try again"
+    },
+    "reconnect": {
+      "indicator": "Connection lost. Reconnecting…",
+      "attempt": "Reconnection attempt {attempt}",
+      "restored": "Connection restored.",
+      "serverRestart": "The server is restarting. Reconnecting automatically…",
+      "failed": "We could not reconnect. Reload the page to try again.",
+      "reload": "Reload"
+    },
+    "session": {
+      "endedTitle": "Your lab session has ended",
+      "endedBody": "The session ended while you were away. Your recorded completions are kept.",
+      "expiredBody": "Your lab time ran out. Your recorded completions are kept.",
+      "idleBody": "Your lab ended because of inactivity. Your recorded completions are kept.",
+      "startNew": "Start a new session",
+      "activeElsewhere": "You already have an active lab session. End it before starting another."
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "loadFailed": "We could not load this lab.",
+      "notFound": "This lab is not available.",
+      "sessionActive": "You already have an active lab session.",
+      "provisionRateLimited": "You started too many labs recently. Please try again later.",
+      "gradingThrottled": "Please wait a few seconds before checking again.",
+      "gradingInProgress": "A check is already running.",
+      "sessionExpired": "This lab session has expired.",
+      "sessionNotReady": "The lab is not ready yet.",
+      "sessionNotFound": "This lab session no longer exists.",
+      "filesInvalid": "Your files could not be saved. Check their size and names.",
+      "sandboxUnavailable": "Labs are temporarily unavailable. Please try again later.",
+      "saveFailed": "We could not save your files. Please try again."
+    }
   },
   "Learning": {
     "loadError": "We could not load your learning data. Please try again later.",

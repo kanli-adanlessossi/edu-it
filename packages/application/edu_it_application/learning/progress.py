@@ -21,6 +21,8 @@ from edu_it_domain.ports.catalog import CatalogRepository, ModuleRecord
 from edu_it_domain.ports.clock import Clock
 from edu_it_domain.ports.enrollment import EnrollmentRecord, EnrollmentRepository
 from edu_it_domain.ports.id_generator import IdGenerator
+from edu_it_domain.ports.lab_catalog import LabCatalog
+from edu_it_domain.ports.lab_sessions import LabCompletionReader
 from edu_it_domain.ports.mastery import MasteryRepository
 from edu_it_domain.ports.progress import (
     MODULE_STATE_COMPLETED,
@@ -38,6 +40,7 @@ __all__ = [
     "EnrollResult",
     "EnrollUseCase",
     "GetProgressUseCase",
+    "LabProgressView",
     "ModuleProgressView",
     "ProgressView",
 ]
@@ -148,6 +151,21 @@ class ModuleProgressView:
 
 
 @dataclass(frozen=True, slots=True)
+class LabProgressView:
+    """One lab's completed tasks and the mastery of the concepts it covers (labs Req 19.7)."""
+
+    lab_id: StableId
+    completed_task_ids: tuple[StableId, ...]
+    """Tasks the learner completed, in the lab's authored task order."""
+
+    passed: bool
+    """Whether every required task is completed."""
+
+    mastery: tuple[Mastery, ...]
+    """Current mastery of the lab's covered concepts that the learner has a record for."""
+
+
+@dataclass(frozen=True, slots=True)
 class ProgressView:
     """A learner's progress through a track (Req 17.2)."""
 
@@ -158,6 +176,9 @@ class ProgressView:
 
     mastery: tuple[Mastery, ...]
     """Per-concept mastery for the learner."""
+
+    labs: tuple[LabProgressView, ...] = ()
+    """Lab completion and lab-derived mastery (labs Req 19.7); empty without a lab catalog."""
 
 
 class GetProgressUseCase:
@@ -170,8 +191,12 @@ class GetProgressUseCase:
         enrollments: EnrollmentRepository,
         progress: ProgressRepository,
         mastery: MasteryRepository,
+        labs: LabCatalog | None = None,
+        lab_completions: LabCompletionReader | None = None,
     ) -> None:
-        """Wire the ports the use case reads."""
+        """Wire the ports the use case reads; the lab ports are optional (additive)."""
+        self._labs = labs
+        self._lab_completions = lab_completions
         self._catalog = catalog
         self._enrollments = enrollments
         self._progress = progress
@@ -208,4 +233,24 @@ class GetProgressUseCase:
             track_id=track_id,
             modules=tuple(views),
             mastery=mastery,
+            labs=self._lab_views(user_id, by_concept),
         )
+
+    def _lab_views(
+        self, user_id: StableId, by_concept: dict[StableId, Mastery]
+    ) -> tuple[LabProgressView, ...]:
+        if self._labs is None or self._lab_completions is None:
+            return ()
+        done = {c.task_id for c in self._lab_completions.list_task_completions(user_id)}
+        views: list[LabProgressView] = []
+        for lab in self._labs.list_labs():
+            required = {t.task_id for t in lab.tasks if t.required}
+            views.append(
+                LabProgressView(
+                    lab_id=lab.lab_id,
+                    completed_task_ids=tuple(t.task_id for t in lab.tasks if t.task_id in done),
+                    passed=bool(required) and required <= done,
+                    mastery=tuple(by_concept[c] for c in lab.concept_ids if c in by_concept),
+                )
+            )
+        return tuple(views)

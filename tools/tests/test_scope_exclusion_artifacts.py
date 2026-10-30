@@ -7,9 +7,10 @@ that implements out-of-scope behavior:
 * 20.1 — learning features (tracks, modules, lessons, quizzes, mastery, review,
   decay, placement, final assessment): the foundations-phase guard against
   these source artifacts has been retired now that the learning-core phase
-  legitimately ships them; the remaining scans (20.2-20.4) still apply.
-* 20.2 — hands-on labs, the sandbox, and the terminal WebSocket runtime: no
-  source/service artifact.
+  legitimately ships them; the remaining scans (20.3-20.4) still apply.
+* 20.2 — hands-on labs, the sandbox, and the terminal WebSocket runtime: the
+  foundations-phase guard against these source artifacts has been retired now
+  that the hands-on-labs phase legitimately ships them.
 * 20.3 — AI content generation and the content-review pipeline: no
   source/service artifact *beyond* providing the ``LLMProvider``
   Fake_Implementation (the domain port plus its fake).
@@ -139,14 +140,6 @@ def _artifact_stems(artifacts: list[Path]) -> list[tuple[Path, str]]:
     return pairs
 
 
-# -- 20.2: labs / sandbox / terminal ------------------------------------------
-_LAB_FEATURE_NAMES = {
-    "lab",
-    "labs",
-    "sandbox",
-    "terminal",
-}
-
 # -- 20.3: AI generation / content-review pipeline ----------------------------
 # The ONLY permitted AI artifacts are the LLMProvider domain port and its fake.
 _AI_FEATURE_NAMES = {
@@ -174,19 +167,6 @@ def test_source_roots_exist() -> None:
     """The shipped source trees exist so the scans below are meaningful."""
     for root in SOURCE_ROOTS:
         assert root.is_dir(), f"missing source root {root}"
-
-
-def test_no_lab_sandbox_or_terminal_source_artifact() -> None:
-    """No hand-written source module/package implements labs, sandbox, or terminal (Req 20.2)."""
-    offenders = [
-        path
-        for path, stem in _artifact_stems(_iter_source_artifacts())
-        if stem in _LAB_FEATURE_NAMES
-    ]
-    assert not offenders, (
-        "labs/sandbox/terminal source artifacts are out of scope (Req 20.2); "
-        f"found: {sorted(str(p) for p in offenders)}"
-    )
 
 
 def test_no_ai_generation_source_artifact_beyond_llmprovider_fake() -> None:

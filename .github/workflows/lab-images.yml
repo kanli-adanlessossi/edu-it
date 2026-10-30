@@ -1,0 +1,68 @@
+# Lab_Image build and vulnerability scan (hands-on-labs Req 4.5, 4.6, 4.7, 4.8, 4.10).
+#
+# Builds both Lab_Images from lab-images/docker-bake.hcl and scans each one. The scanner fails the
+# job on ANY finding: every severity (including UNKNOWN and LOW), fixable or not. There is no
+# scanner ignore file, allowlist, severity threshold, or waiver anywhere in the repository, and
+# none may be added.
+#
+# Triggers are scoped to lab-images/** for push and pull_request, so this workflow is not a gate
+# on other paths. The weekly schedule catches findings published after an image was built; a
+# scheduled finding is simply a failed run.
+#
+# Trivy 0.76.1 and aquasecurity/trivy-action v0.36.0 are pinned in docs/adr/0001-versions.md.
+
+name: Lab images
+
+on:
+  push:
+    paths:
+      - "lab-images/**"
+  pull_request:
+    paths:
+      - "lab-images/**"
+  schedule:
+    # Mondays 05:17 UTC.
+    - cron: "17 5 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lab-images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-scan:
+    name: build and scan (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - edu-it/lab-linux-base:dev
+          - edu-it/lab-python:dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Builds both targets and loads them into the local Docker daemon.
+      - name: Build lab images
+        run: docker buildx bake --load
+        working-directory: lab-images
+
+      # Fail on any finding: all severities, fixed or unfixed, no ignore file, no skip lists.
+      - name: Scan ${{ matrix.image }}
+        # aquasecurity/trivy-action v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          version: v0.76.1
+          image-ref: ${{ matrix.image }}
+          scanners: vuln
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+          format: table
