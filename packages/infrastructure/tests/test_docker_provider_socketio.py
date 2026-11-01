@@ -1,4 +1,4 @@
-﻿"""The Docker provider writes to the hijacked exec socket on Linux hosts.
+"""The Docker provider writes to the hijacked exec socket on Linux hosts.
 
 On a unix-socket daemon (Linux, CI) ``exec_start(socket=True)`` returns a
 ``socket.SocketIO`` wrapper, not a raw socket. ``SocketIO`` has no ``sendall`` or

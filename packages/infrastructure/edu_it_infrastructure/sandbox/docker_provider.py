@@ -265,7 +265,10 @@ def _raw(sock: Any) -> Any:
     pipes (Windows) and TLS connections already return an object with ``sendall``.
     """
 
-    return sock._sock if isinstance(sock, _socket.SocketIO) else sock
+    if isinstance(sock, _socket.SocketIO):
+        wrapped: Any = sock  # typeshed does not declare SocketIO._sock
+        return wrapped._sock
+    return sock
 
 
 def _half_close(sock: Any) -> None:
