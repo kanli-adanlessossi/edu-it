@@ -1,10 +1,11 @@
 """One shell Check run against the real stack (Req 31.3).
 
 Uses a long-lived ready session of the shell seed lab. On first use (untimed) the reference
-solution is typed into the real terminal so every Check passes. Per sample the driver waits
-for the grading rate limit (untimed), then times ``POST .../grading-runs`` ("Check my work")
-until the run leaves ``running``. A run that does not end ``passed`` is an error, never a
-sample. The last stdout line is ``{"seconds": <float>}``.
+solution is typed into the real terminal so every Check passes; that terminal stays open
+until the run of that sample has ended (see ``apply_reference_solution``). Per sample the
+driver waits for the grading rate limit (untimed), then times ``POST .../grading-runs``
+("Check my work") until the run leaves ``running``. A run that does not end ``passed`` is
+an error, never a sample. The last stdout line is ``{"seconds": <float>}``.
 """
 
 from __future__ import annotations
@@ -14,9 +15,10 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import stack  # noqa: E402
+import stack
 
 SOLUTION = (
     b"mkdir -p /workspace/team/docs /workspace/team/scripts && "
@@ -25,11 +27,24 @@ SOLUTION = (
 )
 
 
-def apply_reference_solution(learner: stack.Learner, session_id: str) -> None:
-    with stack.ws_connect(learner, session_id) as ws:
+def apply_reference_solution(learner: stack.Learner, session_id: str) -> Any:
+    """Type the reference solution; return the terminal, still open.
+
+    The caller closes it only after the run has left ``running`` (task 14.4). Closing it
+    makes the API run the provider's terminal-cleanup ``exec`` in the sandbox; started
+    together with the worker's freeze ``exec`` it made the freeze overrun
+    ``LAB_GRADING_FREEZE_BOUND`` and the run end ``could-not-complete``. A browser learner
+    also keeps the terminal open while "Check my work" runs.
+    """
+    ws = stack.ws_connect(learner, session_id)
+    try:
         stack.drain_until_quiet(ws)
         ws.send(SOLUTION)
         stack.read_until(ws, b"SOLVED_0", timeout_s=20.0)
+    except BaseException:
+        ws.close()
+        raise
+    return ws
 
 
 def wait_for_grading_slot(learner: stack.Learner, session_id: str) -> None:
@@ -47,8 +62,15 @@ def wait_for_grading_slot(learner: stack.Learner, session_id: str) -> None:
 
 def main() -> int:
     learner, session_id, created = stack.ensure_ready_session("check")
-    if created:
-        apply_reference_solution(learner, session_id)
+    terminal = apply_reference_solution(learner, session_id) if created else None
+    try:
+        return _timed_check(learner, session_id)
+    finally:
+        if terminal is not None:
+            terminal.close()
+
+
+def _timed_check(learner: stack.Learner, session_id: str) -> int:
     wait_for_grading_slot(learner, session_id)
 
     started = time.perf_counter()

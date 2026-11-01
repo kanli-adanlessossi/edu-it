@@ -35,6 +35,16 @@ from edu_it_domain.ports.verification_link import VerificationLink
 _T0 = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
+class StubLinkBuilder:
+    """Builds ``https://web.test/{locale}/verify-email?token={token}``."""
+
+    def verification_url(self, token: str, locale: str) -> str:
+        return f"https://web.test/{locale}/verify-email?token={token}"
+
+    def reset_url(self, token: str, locale: str) -> str:
+        return f"https://web.test/{locale}/reset-password?token={token}"
+
+
 class _FixedClock:
     def __init__(self, now: datetime) -> None:
         self._now = now
@@ -117,6 +127,7 @@ def _make_use_case(
     return ResendVerificationUseCase(
         users=users,
         verification_links=links,
+        link_builder=StubLinkBuilder(),
         mailer=mailer,  # type: ignore[arg-type]
         clock=clock,
         token_factory=lambda: next(tokens),

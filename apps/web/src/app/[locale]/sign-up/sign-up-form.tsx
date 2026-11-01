@@ -4,6 +4,7 @@
 // adapter to the shared `AuthForm` and renders the surrounding copy from
 // next-intl keys (Req 17.2, 17.3, 15.7).
 
+import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
@@ -18,6 +19,7 @@ interface SignUpFormProps {
 export function SignUpForm({ locale }: SignUpFormProps) {
   const t = useTranslations('Auth');
   const api = useMemo(() => createAuthApi(locale), [locale]);
+  const router = useRouter();
 
   const fields: AuthFormField[] = [
     {
@@ -39,7 +41,13 @@ export function SignUpForm({ locale }: SignUpFormProps) {
   return (
     <section>
       <h1>{t('signUp.title')}</h1>
-      <AuthForm page="sign-up" api={api} fields={fields} submitLabel={t('signUp.submit')} />
+      <AuthForm
+        page="sign-up"
+        api={api}
+        fields={fields}
+        submitLabel={t('signUp.submit')}
+        onSuccess={() => router.push(`/${locale}/verify-email`)}
+      />
     </section>
   );
 }

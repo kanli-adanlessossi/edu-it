@@ -165,7 +165,8 @@ def test_exec_output_exit_code_env_and_cwd(
     assert res.stdout.decode().split() == ["out", "bar", "/workspace", "1000"]
     assert res.stderr.decode().strip() == "err"
     assert not res.timed_out
-    assert provider.exec(sandbox, ["/usr/bin/id", "-u"], as_user="grader", env={}, cwd="/").stdout.strip() == b"1001"
+    result = provider.exec(sandbox, ["/usr/bin/id", "-u"], as_user="grader", env={}, cwd="/")
+    assert result.stdout.strip() == b"1001"
 
 
 @pytest.mark.docker
@@ -191,7 +192,11 @@ def test_timeout_kills_command_and_background_and_sandbox_survives(
     assert "sleep infinity" in args
     # And the keep-alive process was thawed (not left in state T).
     stat = provider.exec(sandbox, ["/bin/ps", "-e", "-o", "stat=", "-o", "args="], **LOCAL)  # type: ignore[arg-type]
-    line = next(x for x in stat.stdout.decode().splitlines() if "sleep infinity" in x and "docker-init" not in x)
+    line = next(
+        x
+        for x in stat.stdout.decode().splitlines()
+        if "sleep infinity" in x and "docker-init" not in x
+    )
     assert not line.split()[0].startswith("T")
 
 
@@ -218,7 +223,9 @@ def test_copy_round_trip_workspace_and_root_grader(
 
     # /grader is a root-owned tmpfs: copy in and out as root (README form).
     provider.copy_in(sandbox, src / "a.txt", "/grader/check.txt", as_user="root")
-    owner = provider.exec(sandbox, ["/bin/ls", "-l", "/grader/check.txt"], as_user="root", env={}, cwd="/")
+    owner = provider.exec(
+        sandbox, ["/bin/ls", "-l", "/grader/check.txt"], as_user="root", env={}, cwd="/"
+    )
     assert owner.stdout.split()[2] == b"root"
     back = tmp_path / "check.txt"
     provider.copy_out(sandbox, "/grader/check.txt", back)
@@ -236,7 +243,10 @@ def test_terminal_echo_and_close(provider: DockerSandboxProvider, sandbox: Sandb
     term.write(b"echo hello-term\n")
     seen = b""
     deadline = time.monotonic() + 10
-    while b"hello-term" not in seen.replace(b"echo hello-term", b"") and time.monotonic() < deadline:
+    while (
+        b"hello-term" not in seen.replace(b"echo hello-term", b"")
+        and time.monotonic() < deadline
+    ):
         seen += term.read(4096, timeout_s=1.0)
     assert b"hello-term" in seen
     while term.read(4096, timeout_s=0.3):

@@ -99,9 +99,10 @@ mutually compatible stable majors (Alembic 1.x targets SQLAlchemy 2.x).
 
 | Package | Version | Role |
 | --- | --- | --- |
-| `sqlalchemy` | 2.1.6 | schema definition / Core for migrations |
+| `sqlalchemy` | 2.1.6 | schema definition / Core for migrations; consumers: `packages/infrastructure`, `packages/content` (`Postgres_ContentStore`, api-route-wiring Requirement 16.4) |
+| `pydantic` | 2.14.1 | Pydantic v2; consumers: `apps/api`, `packages/infrastructure`, `packages/content` (content authoring schemas) |
 | `alembic` | 1.20.1 | migration runner (apply / rollback / version tracking) |
-| `psycopg` | 3.3.6 | PostgreSQL driver (psycopg 3) |
+| `psycopg` | 3.3.6 | PostgreSQL driver (psycopg 3); also the optional `postgres` extra (`psycopg[binary]`) of `packages/content` for `edu-it-content sync --database-url` |
 | `redis` | 8.1.0 | Redis client backing the `TaskQueue` adapter (ADR 0003) and, in a later task, the session / rate-limit stores (ADR 0004) |
 
 The `redis` pin (added when the Redis-backed `TaskQueue` adapter was implemented) is re-stated in

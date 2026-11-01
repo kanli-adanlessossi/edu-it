@@ -59,6 +59,10 @@ SESSION_DURATION: Final[timedelta] = timedelta(days=14)
 #: link cannot linger.
 OAUTH_LINK_CONFIRMATION_WINDOW: Final[timedelta] = timedelta(minutes=15)
 
+#: How long the authorize-time ``state`` and PKCE ``code_verifier`` cookie stays
+#: valid; it is the ``Max-Age`` of that cookie (api-route-wiring Req 6.1).
+OAUTH_STATE_TTL: Final[timedelta] = timedelta(minutes=10)
+
 # --- Sign-in rate-limiting constants -----------------------------------------
 
 #: Number of failed sign-in attempts for a single identifier that may occur
@@ -102,6 +106,25 @@ class PasswordPolicy:
 #: The configured password policy: 12-128 characters inclusive (Req 7.2, and
 #: the ``Password_Policy`` glossary entry).
 PASSWORD_POLICY: Final[PasswordPolicy] = PasswordPolicy(min_length=12, max_length=128)
+
+# --- Password hashing (scrypt) -----------------------------------------------
+
+#: scrypt CPU/memory cost ``N`` (a power of two). With ``r = 8`` this uses about
+#: 16 MiB, within the ``hashlib.scrypt`` default memory limit. Stored hashes carry
+#: their own parameters, so raising it later does not invalidate old hashes.
+PASSWORD_HASH_SCRYPT_N: Final[int] = 2**14
+
+#: scrypt block size ``r``.
+PASSWORD_HASH_SCRYPT_R: Final[int] = 8
+
+#: scrypt parallelization ``p``.
+PASSWORD_HASH_SCRYPT_P: Final[int] = 1
+
+#: Length of the random per-password salt, in bytes.
+PASSWORD_HASH_SALT_BYTES: Final[int] = 16
+
+#: Length of the derived key, in bytes.
+PASSWORD_HASH_KEY_BYTES: Final[int] = 32
 
 
 # =============================================================================
@@ -472,7 +495,6 @@ LAB_WARNING_THRESHOLD: Final[timedelta] = timedelta(minutes=2)
 #: tempers it by :data:`HINT_MULTIPLIER` (reused, not duplicated).
 LAB_TASK_MASTERY_GAIN: Final[int] = 15
 
-
 __all__ = [
     "ANTI_FARMING_WINDOW",
     "COOLDOWN_INTERVAL",
@@ -521,7 +543,13 @@ __all__ = [
     "MIN_ELIGIBLE_QUESTION_COUNT",
     "MIN_PROJECT_EVIDENCE_COUNT",
     "OAUTH_LINK_CONFIRMATION_WINDOW",
+    "OAUTH_STATE_TTL",
     "PASSED_REVIEW_INTERVAL",
+    "PASSWORD_HASH_KEY_BYTES",
+    "PASSWORD_HASH_SALT_BYTES",
+    "PASSWORD_HASH_SCRYPT_N",
+    "PASSWORD_HASH_SCRYPT_P",
+    "PASSWORD_HASH_SCRYPT_R",
     "PASSWORD_POLICY",
     "RESET_LINK_TTL",
     "REVIEW_PASSED_MASTERY_GAIN",

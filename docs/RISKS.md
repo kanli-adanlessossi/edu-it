@@ -76,6 +76,9 @@ quadrantChart
 | 6 | R-08 | Expert reviewer bottleneck stalls the content pipeline | Medium | Medium | `docs/AI-CONTENT-DESIGN.md` (D6) |
 | 7 | R-06 | Terminal WebSocket scaling and reconnect churn | Medium | Low-Medium | `docs/LABS-DESIGN.md` (D4), `docs/DEPLOYMENT-DESIGN.md` (D5) |
 | 8 | R-07 | Framework / tool version drift from pinned versions | Medium-High | Low | ADR A1 (versions) |
+| 9 | R-09 | Abuse of the mail-sending endpoints (sign-up, resend, reset request) | Medium | Medium | `api-route-wiring` spec (Requirement 3, 16.8); later rate-limit change |
+| 10 | R-11 | Account deletion without fresh authentication | Low-Medium | High | `api-route-wiring` design open decision 9; change to Foundations 14 |
+| 11 | R-10 | Residual account-existence timing from mail delivery latency | Medium | Low-Medium | `api-route-wiring` spec (Requirement 3, 16.8); later asynchronous mail delivery |
 
 ---
 
@@ -193,6 +196,59 @@ quadrantChart
   record them. This is an architecture decision, not a per-spec choice.
 - **Owner / Resolution path:** **ADR A1 (versions)** pins current stable versions; drift is then a
   dependency-maintenance concern for later phases.
+
+### R-09 — Abuse of the mail-sending endpoints (Rank 9)
+
+- **Statement:** The sign-up, resend-verification, and password-reset-request routes (Requirement 3
+  of the `api-route-wiring` spec) each send an email. The spec adds no rate limit for them, and
+  adds no number to `packages/domain/edu_it_domain/config.py`. An attacker could script these
+  endpoints to flood a victim's inbox, exhaust the mail provider quota, or damage the sender
+  reputation. Reusing the existing `SIGN_IN_RATE_LIMIT_*` values was considered and rejected,
+  because it would change a business rule.
+- **Likelihood / Impact:** Medium / Medium.
+- **Recommendation (accepted risk, then mitigate):** Accept the gap for this spec. In a later
+  change, decide dedicated rate-limit numbers for the mail-sending endpoints (per address and per
+  source), add them to `domain/config.py`, and apply them through the existing rate-limit port.
+  Until then, rely on the mail provider's own sending limits and monitor delivery volume and
+  bounce rate.
+- **Owner / Resolution path:** A later change that adds mail-endpoint rate-limit business numbers to
+  `domain/config.py` (listed as a Non-goal of the `api-route-wiring` spec, Requirement 16.8);
+  operational monitoring in the deployment phase.
+
+### R-10 — Residual account-existence timing from mail delivery latency (Rank 11)
+
+- **Statement:** The `api-route-wiring` changes make the work equal across email classes (decoy
+  calls on the unknown-email paths), but they do not cover the latency of the mail delivery itself.
+  Mail is sent synchronously, so a request for a registered address can take measurably longer than
+  a request for an unknown one, and a caller who measures response time could infer whether an
+  account exists.
+- **Likelihood / Impact:** Medium / Low-Medium.
+- **Recommendation (accepted risk, then mitigate):** Accept the residual leak for this spec; the
+  response bodies and status codes stay identical across classes. The full fix is asynchronous mail
+  delivery through the `TaskQueue` port, so the response no longer waits on the mail provider.
+  Until then, keep the provider timeout bounded.
+- **Owner / Resolution path:** A later change that makes mail delivery asynchronous (listed as a
+  Non-goal of the `api-route-wiring` spec, Requirement 16.8); depends on the task-queue backing
+  of ADR A3.
+
+### R-11 — Account deletion without fresh authentication (Rank 10)
+
+- **Statement:** `POST /account/deletion` needs `confirm: true` and a valid Session only. It does
+  not ask for the current password or a recent sign-in. Anyone holding a live Session (a stolen
+  cookie or an unattended device) can start deletion of the account. This is open decision 9 of the
+  `api-route-wiring` design; its options are (a) require the current password, (b) require a
+  sign-in newer than a configured age, and (c) keep the existing behavior. The spec defaults to
+  (c), because (a) and (b) are new business rules that no steering or Foundations requirement asks
+  for.
+- **Decision:** accepted by the user at the Milestone 2 review. Option (c) stays the default; option (a) or (b) is a separate product and security change.
+- **Likelihood / Impact:** Low-Medium / High.
+- **Recommendation (accepted risk, then decide):** Accept option (c) for this spec. Decide between
+  (a) and (b) as a product and security review; either needs its own change to Foundations 14, and
+  (b) needs a configured age in `domain/config.py`. Until then, rely on the `confirm: true`
+  requirement and on the Session protections in
+  #[[file:.kiro/steering/auth-privacy.md]].
+- **Owner / Resolution path:** A follow-up change to Foundations 14 that records the chosen option
+  (design decision 9 of the `api-route-wiring` spec, Requirement 16.8).
 
 ---
 

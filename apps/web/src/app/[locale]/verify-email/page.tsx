@@ -14,17 +14,20 @@ import { VerifyEmailResend } from './verify-email-resend.js';
 
 interface VerifyEmailPageProps {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ token?: string | string[] }>;
 }
 
 export function generateMetadata({ params }: VerifyEmailPageProps): Promise<Metadata> {
   return pageMetadata(params, 'verifyEmail');
 }
 
-export default async function VerifyEmailPage({ params }: VerifyEmailPageProps) {
+export default async function VerifyEmailPage({ params, searchParams }: VerifyEmailPageProps) {
   const { locale } = await params;
+  const rawToken = (await searchParams)?.token;
+  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
   if (!isLocale(locale)) {
     notFound();
   }
   setRequestLocale(locale);
-  return <VerifyEmailResend locale={locale} />;
+  return <VerifyEmailResend locale={locale} token={token} />;
 }

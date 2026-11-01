@@ -33,7 +33,7 @@ from edu_it_infrastructure.fakes import (
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-_LEARNER_WRITABLE = ("/home", "/tmp", "/var/tmp", "/dev/shm", "/run/user")  # noqa: S108
+_LEARNER_WRITABLE = ("/home", "/tmp", "/var/tmp", "/dev/shm", "/run/user")
 _CLEAN_ENV = {"PATH": "/usr/bin:/bin", "LANG": "C", "HOME": "/grader/run"}
 _CHECK_IDS = ("c1", "c2")
 
@@ -46,7 +46,7 @@ _dirs = st.sampled_from(
     [
         "/home/learner",
         "/home/learner/bin",
-        "/tmp",  # noqa: S108
+        "/tmp",
         "/usr/local/bin",
         "/bin",
         "/usr/bin",

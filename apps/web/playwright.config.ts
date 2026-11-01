@@ -26,7 +26,11 @@ export default defineConfig({
       url: `http://localhost:${WEB_PORT}/en`,
       reuseExistingServer: true,
       timeout: 180_000,
-      env: { NEXT_PUBLIC_API_BASE_URL: `http://localhost:${API_PORT}/v1` },
+      env: {
+        NEXT_PUBLIC_API_BASE_URL: `http://localhost:${API_PORT}/v1`,
+        // Show the GitHub sign-in link so the axe scan covers it (Req 14.12).
+        NEXT_PUBLIC_GITHUB_SIGN_IN_ENABLED: 'true',
+      },
     },
   ],
 });

@@ -28,23 +28,29 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import ClassVar
+from urllib.parse import urlsplit
 
+from edu_it_domain.config import LAB_ALLOWED_WEB_ORIGINS
 from edu_it_domain.ports.clock import Clock
 from edu_it_domain.ports.mailer import Mailer
+from edu_it_domain.ports.object_storage import ObjectStorage
 from edu_it_domain.ports.rate_limiter import SignInRateLimiter
 from edu_it_domain.ports.repository import SessionRepository, UserRepository
 from edu_it_domain.ports.role_assignment import RoleAssignmentRepository
 from edu_it_domain.ports.sandbox import SandboxProvider
 from edu_it_domain.ports.session_store import SessionStore
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
+from edu_it_infrastructure.adapters.object_storage import FileSystem_ObjectStorage
 from edu_it_infrastructure.adapters.rate_limiter import Redis_SignInRateLimiter
 from edu_it_infrastructure.adapters.redis_support import redis_from_url
 from edu_it_infrastructure.adapters.session_store import Redis_SessionStore
 from edu_it_infrastructure.clock import System_Clock
 from edu_it_infrastructure.fakes.clock import Test_Clock
 from edu_it_infrastructure.fakes.mailer import Console_Mailer
+from edu_it_infrastructure.fakes.object_storage import In_Memory_ObjectStorage
 from edu_it_infrastructure.fakes.sandbox_provider import Fake_SandboxProvider
 from edu_it_infrastructure.mailer import SMTP_Mailer, SMTPConfig
 from edu_it_infrastructure.persistence.repositories import (
@@ -60,6 +66,9 @@ __all__ = [
     "Ports",
     "ProviderSelectionError",
     "SandboxBackend",
+    "build_fake_clock",
+    "build_mailer",
+    "build_object_storage",
     "build_ports",
     "build_sandbox_provider",
 ]
@@ -135,6 +144,49 @@ class CompositionSettings(BaseModel):
     database_url: str = "postgresql://edu_it:change-me@localhost:5432/edu_it"
     redis_url: str = "redis://localhost:6379/0"
 
+    #: Public base URL of the Web_App (``WEB_BASE_URL``); an absolute http(s) URL.
+    web_base_url: str = "http://localhost:3000"
+    #: ``Domain`` attribute of the session and ``csrf_token`` cookies
+    #: (``COOKIE_DOMAIN``). ``None`` (unset or empty) gives host-only cookies.
+    cookie_domain: str | None = None
+    #: Origins allowed to call the API from a browser (CORS and terminal Origin check).
+    allowed_web_origins: tuple[str, ...] = LAB_ALLOWED_WEB_ORIGINS
+
+    #: GitHub OAuth application credentials and callback (``GITHUB_OAUTH_*``).
+    #: ``None`` (unset or empty) means the variable is not configured.
+    github_client_id: str | None = None
+    github_client_secret: str | None = None
+    github_callback_url: str | None = None
+
+    #: ``ObjectStorage`` adapter (``OBJECT_STORAGE_BACKEND``): ``memory`` or ``filesystem``.
+    #: Any other value is rejected by :func:`build_object_storage`, naming the adapter.
+    object_storage_backend: str = "memory"
+    #: Root directory of the ``filesystem`` backend (``OBJECT_STORAGE_ROOT``).
+    object_storage_root: str | None = None
+
+    @field_validator("github_client_id", "github_client_secret", "github_callback_url")
+    @classmethod
+    def _empty_github_setting_is_none(cls, value: str | None) -> str | None:
+        return value or None
+
+    @field_validator("object_storage_root")
+    @classmethod
+    def _empty_object_storage_root_is_none(cls, value: str | None) -> str | None:
+        return value or None
+
+    @field_validator("web_base_url")
+    @classmethod
+    def _web_base_url_is_absolute_http(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if parsed.scheme not in ("http", "https") or not parsed.hostname:
+            raise ValueError("web_base_url must be an absolute http or https URL")
+        return value
+
+    @field_validator("cookie_domain")
+    @classmethod
+    def _empty_cookie_domain_is_none(cls, value: str | None) -> str | None:
+        return value or None
+
     # Maps each setting to its ``.env.example`` environment-variable name.
     _ENV_ALIASES: ClassVar[Mapping[str, str]] = {
         "environment": "EDU_IT_ENV",
@@ -150,6 +202,13 @@ class CompositionSettings(BaseModel):
         "default_locale": "DEFAULT_LOCALE",
         "database_url": "DATABASE_URL",
         "redis_url": "REDIS_URL",
+        "web_base_url": "WEB_BASE_URL",
+        "cookie_domain": "COOKIE_DOMAIN",
+        "github_client_id": "GITHUB_OAUTH_CLIENT_ID",
+        "github_client_secret": "GITHUB_OAUTH_CLIENT_SECRET",
+        "github_callback_url": "GITHUB_OAUTH_CALLBACK_URL",
+        "object_storage_backend": "OBJECT_STORAGE_BACKEND",
+        "object_storage_root": "OBJECT_STORAGE_ROOT",
     }
 
     @classmethod
@@ -224,7 +283,7 @@ def build_ports(settings: CompositionSettings | None = None) -> Ports:
     redis_client = redis_from_url(settings.redis_url)
     return Ports(
         clock=clock,
-        mailer=_build_mailer(settings),
+        mailer=build_mailer(settings),
         # Pass the URL (not a built engine): the repositories create the engine —
         # and import the psycopg driver — only on first database use, so building
         # the ports needs no reachable PostgreSQL and no native libpq present.
@@ -265,6 +324,16 @@ def build_sandbox_provider(
     return Fake_SandboxProvider(clock if clock is not None else Test_Clock())
 
 
+def build_fake_clock() -> Clock:
+    """Return a controllable ``Test_Clock`` typed as the read-only ``Clock`` port.
+
+    For the in-memory fakes composition only (``build_adapters(fakes=True)``). It lives here,
+    beside the other clock wiring, so production app modules never import ``Test_Clock``
+    (Req 6.3); a test that needs ``advance`` reaches it on the returned object at run time.
+    """
+    return Test_Clock()
+
+
 def _build_clock(settings: CompositionSettings) -> Clock:
     """Wire the ``Clock``: ``System_Clock`` in production, ``Test_Clock`` otherwise.
 
@@ -277,7 +346,7 @@ def _build_clock(settings: CompositionSettings) -> Clock:
     return Test_Clock()
 
 
-def _build_mailer(settings: CompositionSettings) -> Mailer:
+def build_mailer(settings: CompositionSettings) -> Mailer:
     """Wire the ``Mailer``: ``SMTP_Mailer`` for the smtp backend, else ``Console_Mailer``.
 
     The console fake is the default dev/test backend (it retains sent mail for
@@ -297,3 +366,23 @@ def _build_mailer(settings: CompositionSettings) -> Mailer:
             )
         )
     return Console_Mailer()
+
+
+def build_object_storage(settings: CompositionSettings) -> ObjectStorage:
+    """Wire ``ObjectStorage`` from ``OBJECT_STORAGE_BACKEND`` (api-route-wiring Req 13.6).
+
+    ``memory`` builds ``In_Memory_ObjectStorage``; ``filesystem`` builds
+    ``FileSystem_ObjectStorage`` rooted at ``OBJECT_STORAGE_ROOT``. Any other value has no
+    adapter and raises :class:`ProviderSelectionError` (the API stops the start, naming
+    the adapter). The backend name in the message is a configuration value, never a secret.
+    """
+    backend = settings.object_storage_backend
+    if backend == "memory":
+        return In_Memory_ObjectStorage()
+    if backend == "filesystem":
+        if settings.object_storage_root is None:
+            raise ProviderSelectionError(
+                "OBJECT_STORAGE_BACKEND=filesystem needs OBJECT_STORAGE_ROOT"
+            )
+        return FileSystem_ObjectStorage(Path(settings.object_storage_root))
+    raise ProviderSelectionError(f"no ObjectStorage adapter for OBJECT_STORAGE_BACKEND={backend!r}")

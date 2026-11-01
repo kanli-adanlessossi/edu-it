@@ -27,13 +27,37 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from edu_it_domain import config as _domain_config
+from edu_it_infrastructure.composition import CompositionSettings
+from fastapi import APIRouter
+
 from edu_it_api.app import create_app
+from edu_it_api.composition import build_adapters, build_api_routers
 from edu_it_api.versioning import (
     SUPPORTED_MAJOR_VERSIONS,
     version_path_prefix,
 )
 
 __all__ = ["main", "openapi_document_for_major"]
+
+
+def _default_content_root() -> Path:
+    """The repository ``content`` directory (the export reads it from disk only)."""
+    return Path(__file__).resolve().parents[3] / "content"
+
+
+def _export_routers() -> tuple[APIRouter, ...]:
+    """Build the router set from the in-memory fakes, so no datastore is contacted.
+
+    Conditional routes (GitHub OAuth, Milestone 2) are forced on here once they exist, so
+    the exported document lists every Route_Table entry whatever the environment holds.
+    The settings are the model defaults, never the process environment.
+    """
+    adapters = build_adapters(CompositionSettings(), fakes=True, force_oauth=True)
+    routers = build_api_routers(
+        adapters, content_root=_default_content_root(), config=_domain_config
+    )
+    return routers.v1_routers
 
 
 def openapi_document_for_major(major: int) -> dict[str, Any]:
@@ -50,7 +74,7 @@ def openapi_document_for_major(major: int) -> dict[str, Any]:
             f"supported major versions are: {supported}."
         )
 
-    app = create_app()
+    app = create_app(v1_routers=_export_routers())
     prefix = version_path_prefix(major)
     # The versioned sub-app is mounted at /v{major}; find it and ask it for its
     # single OpenAPI schema (the document published for this major version).

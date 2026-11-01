@@ -10,7 +10,6 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-
 from edu_it_domain import config
 from edu_it_domain.labs.models import CheckOutcome, RunStatus
 

@@ -1,0 +1,43 @@
+"""Account reset and OAuth tables: ``reset_link`` and ``pending_oauth_link``.
+
+Revision ID: 0004_accounts_oauth_reset
+Revises: 0003_accounts_runtime
+Create Date: 2024-01-04 00:00:00
+
+Creates exactly two tables (api-route-wiring design, "Migration
+``0004_accounts_oauth_reset``"; Req 7.9, 7.11): ``reset_link`` and
+``pending_oauth_link``, each with a unique ``token_digest``. No other table is
+created. ``0001`` skips these two tables, so ``downgrade`` drops only them and
+leaves every earlier table intact.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+from alembic import op
+
+from edu_it_infrastructure.persistence.metadata import metadata
+
+# revision identifiers, used by Alembic.
+revision: str = "0004_accounts_oauth_reset"
+down_revision: str | None = "0003_accounts_runtime"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+# Both tables only reference ``user``.
+_TABLE_NAMES = ("reset_link", "pending_oauth_link")
+
+
+def upgrade() -> None:
+    """Create ``reset_link`` and ``pending_oauth_link`` with their constraints."""
+    bind = op.get_bind()
+    tables = [metadata.tables[name] for name in _TABLE_NAMES]
+    metadata.create_all(bind=bind, tables=tables, checkfirst=False)
+
+
+def downgrade() -> None:
+    """Drop only ``pending_oauth_link`` and ``reset_link``."""
+    bind = op.get_bind()
+    tables = [metadata.tables[name] for name in reversed(_TABLE_NAMES)]
+    metadata.drop_all(bind=bind, tables=tables, checkfirst=False)

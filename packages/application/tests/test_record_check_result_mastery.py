@@ -1,4 +1,4 @@
-"""RecordCheckResult applies lab mastery per Check (hands-on-labs task 15.4; Req 19.1-19.6, 19.8)."""
+"""RecordCheckResult applies lab mastery per Check (hands-on-labs 15.4; Req 19.1-19.6, 19.8)."""
 
 from __future__ import annotations
 

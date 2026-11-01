@@ -15,15 +15,30 @@ from __future__ import annotations
 import asyncio
 import os
 import socket
+from dataclasses import dataclass
+from pathlib import Path
 from types import FrameType
 
 import uvicorn
 from edu_it_application.labs.terminal import TerminalRegistry
+from edu_it_domain import config as _domain_config
+from edu_it_infrastructure.composition import CompositionSettings
 from fastapi import FastAPI
+from pydantic import ValidationError
 
 from edu_it_api.app import create_app
+from edu_it_api.composition import ApiAdapters, ApiRouters, build_adapters, build_api_routers
+from edu_it_api.health import ProbesProvider
+from edu_it_api.startup import WEB_BASE_URL_VARIABLE, refuse_start
 
-__all__ = ["DrainingServer", "main"]
+__all__ = [
+    "DrainingServer",
+    "ServedApp",
+    "build_served_app",
+    "compose_served_app",
+    "load_settings",
+    "main",
+]
 
 
 class DrainingServer(uvicorn.Server):
@@ -60,17 +75,60 @@ class DrainingServer(uvicorn.Server):
             super().handle_exit(sig, frame)
 
 
+@dataclass(frozen=True, slots=True)
+class ServedApp:
+    """The composed Served_App with the adapters and routers it was built from."""
+
+    app: FastAPI
+    registry: TerminalRegistry
+    adapters: ApiAdapters
+    routers: ApiRouters
+
+
+def compose_served_app(
+    settings: CompositionSettings,
+    *,
+    fakes: bool,
+    content_root: str | Path,
+    probes_provider: ProbesProvider | None = None,
+) -> ServedApp:
+    """Build the Served_App from ``settings`` with real adapters or in-memory fakes."""
+    adapters = build_adapters(settings, fakes=fakes)
+    routers = build_api_routers(adapters, content_root=content_root, config=_domain_config)
+    app = create_app(
+        probes_provider,
+        v1_routers=routers.v1_routers,
+        web_base_url=settings.web_base_url,
+        allowed_web_origins=settings.allowed_web_origins,
+    )
+    return ServedApp(app=app, registry=routers.registry, adapters=adapters, routers=routers)
+
+
+def load_settings() -> CompositionSettings:
+    """Read the settings from the environment; an invalid ``WEB_BASE_URL`` refuses the start."""
+    try:
+        return CompositionSettings.from_env()
+    except ValidationError as exc:
+        names = sorted({str(e["loc"][0]).upper() for e in exc.errors() if e["loc"]})
+        # Name the failing variable only: a pydantic message echoes the offending value.
+        if any(name == "WEB_BASE_URL" for name in names):
+            raise refuse_start(WEB_BASE_URL_VARIABLE, exc) from exc
+        raise refuse_start("settings", exc) from exc
+
+
 def build_served_app() -> tuple[FastAPI, TerminalRegistry]:
-    """Compose the served app: the real labs router (PostgreSQL, Redis, sandbox provider).
+    """Compose the served app: every ``/v1`` router over the real adapters.
 
     The content root is read from ``EDU_IT_CONTENT_ROOT`` (default ``content``). The
     returned registry is the one the terminal gateway uses, so draining it reaches every
     open terminal.
     """
-    from edu_it_api.composition import build_lab_router
-
-    labs = build_lab_router(content_root=os.environ.get("EDU_IT_CONTENT_ROOT", "content"))
-    return create_app(lab_router=labs.router), labs.registry
+    served = compose_served_app(
+        load_settings(),
+        fakes=False,
+        content_root=os.environ.get("EDU_IT_CONTENT_ROOT", "content"),
+    )
+    return served.app, served.registry
 
 
 def main() -> None:

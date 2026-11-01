@@ -73,7 +73,7 @@ def _columns(table: str) -> dict[str, dict]:  # type: ignore[type-arg]
     return {c["name"]: c for c in sa.inspect(op.get_bind()).get_columns(table)}
 
 
-def _batch(table: str):  # noqa: ANN202
+def _batch(table: str):
     return op.batch_alter_table(table, naming_convention=metadata.naming_convention)
 
 

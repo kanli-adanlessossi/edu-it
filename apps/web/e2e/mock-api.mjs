@@ -251,6 +251,57 @@ function labRoute(method, url, acceptLocale) {
   }
   return undefined;
 }
+// ---- Auth routes in the real API shapes (api-route-wiring) -----------------
+// GET /auth/csrf sets the readable `csrf_token` cookie; unsafe calls must echo it
+// in `X-CSRF-Token` (double submit). Sign-in answers with the snake_case wire
+// member `redirect_to`; verify-email answers 204 for the token `valid-token` and a
+// 400 Problem_Details otherwise.
+const csrfOk = (req) => {
+  const cookie = /(?:^|;\s*)csrf_token=([^;]+)/.exec(req.headers.cookie ?? '');
+  const header = req.headers['x-csrf-token'];
+  return cookie !== null && typeof header === 'string' && decodeURIComponent(cookie[1]) === header;
+};
+const problem = (status, detail) => ({
+  status,
+  body: { type: 'about:blank', title: detail, status, detail },
+});
+
+function authRoute(req, url, raw) {
+  const path = url.pathname.replace(/^\/v1/, '');
+  if (!path.startsWith('/auth/')) return undefined;
+  if (path === '/auth/csrf' && req.method === 'GET') {
+    return {
+      status: 204,
+      headers: { 'set-cookie': 'csrf_token=mock-csrf-token; Path=/; SameSite=Lax' },
+    };
+  }
+  if (req.method !== 'POST') return undefined;
+  if (!csrfOk(req)) return problem(403, 'CSRF check failed');
+  let json;
+  try {
+    json = JSON.parse(raw || '{}');
+  } catch {
+    return problem(422, 'Invalid body');
+  }
+  if (path === '/auth/sign-up') return { status: 202, body: {} };
+  if (path === '/auth/verify-email/resend') return { status: 202, body: {} };
+  if (path === '/auth/sign-in') return { status: 200, body: { redirect_to: '/dashboard' } };
+  // Milestone 2: reset request (202), reset completion (token `valid-token` signs in,
+  // anything else is the 400 invalid-or-expired link), and the GitHub link step.
+  if (path === '/auth/password-reset') return { status: 202, body: {} };
+  if (path === '/auth/password-reset/complete') {
+    return json.token === 'valid-token'
+      ? { status: 200, body: { redirect_to: '/dashboard' } }
+      : problem(400, 'Invalid or expired link');
+  }
+  if (path === '/auth/github/confirm') return { status: 200, body: { redirect_to: '/dashboard' } };
+  if (path === '/auth/github/decline') return { status: 204 };
+  if (path === '/auth/verify-email') {
+    return json.token === 'valid-token' ? { status: 204 } : problem(400, 'Invalid or expired link');
+  }
+  return undefined;
+}
+
 function route(method, url) {
   if (method !== 'GET') return undefined;
   const { pathname } = url;
@@ -278,13 +329,32 @@ createServer((req, res) => {
     res.setHeader('access-control-allow-credentials', 'true');
     res.setHeader(
       'access-control-allow-headers',
-      'content-type, accept, accept-language, idempotency-key, last-event-id',
+      'content-type, accept, accept-language, idempotency-key, last-event-id, x-csrf-token',
     );
     res.setHeader('access-control-allow-methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('vary', 'origin');
   }
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
+    res.end();
+    return;
+  }
+  if (url.pathname.replace(/^\/v1/, '').startsWith('/auth/') && req.method !== 'GET') {
+    let raw = '';
+    req.on('data', (chunk) => (raw += chunk));
+    req.on('end', () => {
+      const auth = authRoute(req, url, raw);
+      res.setHeader('content-type', 'application/json');
+      res.statusCode = auth?.status ?? 404;
+      for (const [k, v] of Object.entries(auth?.headers ?? {})) res.setHeader(k, v);
+      res.end(auth?.body === undefined ? undefined : JSON.stringify(auth.body));
+    });
+    return;
+  }
+  const authGet = req.method === 'GET' ? authRoute(req, url, '') : undefined;
+  if (authGet && url.pathname.endsWith('/auth/csrf')) {
+    res.statusCode = authGet.status;
+    for (const [k, v] of Object.entries(authGet.headers ?? {})) res.setHeader(k, v);
     res.end();
     return;
   }

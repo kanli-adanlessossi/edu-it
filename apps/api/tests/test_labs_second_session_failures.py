@@ -51,7 +51,9 @@ def _lab(lab_id: str) -> LabDefinition:
         kind="code",
         image="img",
         concept_ids=("con-1",),
-        tasks=(LabTaskDefinition("t1", required=True, text={"en": "Do", "fr": "Faire"}, hint_count=1),),
+        tasks=(
+            LabTaskDefinition("t1", required=True, text={"en": "Do", "fr": "Faire"}, hint_count=1),
+        ),
         checks=(),
         text={"en": lab_id, "fr": lab_id},
         learner_files=("main.py",),
@@ -142,7 +144,9 @@ class _Env:
         return self.call("POST", "/lab-sessions", user=user, body={"lab_id": lab})
 
     def make_ready(self, session_id: str) -> None:
-        spec = SandboxSpec(session_id, "img", "learner", False, 1, 1, 1, 1, True, True, True, (), ())
+        spec = SandboxSpec(
+            session_id, "img", "learner", False, 1, 1, 1, 1, True, True, True, (), ()
+        )
         handle = self.sandbox.provision(spec)
         assert self.sessions.transition(
             session_id,

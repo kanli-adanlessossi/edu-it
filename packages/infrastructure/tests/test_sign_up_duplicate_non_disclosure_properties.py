@@ -53,10 +53,12 @@ from edu_it_application.sign_up import (
 )
 from edu_it_infrastructure.fakes import (
     Console_Mailer,
+    In_Memory_CredentialStore,
     In_Memory_UserRepository,
     In_Memory_VerificationLinkRepository,
     Test_Clock,
 )
+from edu_it_infrastructure.link_builder import Web_LinkBuilder
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -107,7 +109,9 @@ def _build_use_case() -> tuple[
     ids = (f"user-{n}" for n in count())
     use_case = SignUpUseCase(
         users=users,
+        credentials=In_Memory_CredentialStore(),
         verification_links=links,
+        link_builder=Web_LinkBuilder("https://web.test"),
         mailer=mailer,
         clock=clock,
         token_factory=lambda: next(tokens),

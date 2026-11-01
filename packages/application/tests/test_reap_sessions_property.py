@@ -60,7 +60,7 @@ class ReaperMachine(RuleBasedStateMachine):
 
     # -- world building ------------------------------------------------------
 
-    def _provision(self, sid: str):  # noqa: ANN202
+    def _provision(self, sid: str):
         handle = self.sandbox.provision(build_sandbox_spec(_LAB, sid))
         self.sandbox_ids.add(handle.sandbox_id)
         return handle

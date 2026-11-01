@@ -31,10 +31,12 @@ from edu_it_domain.ports.verification_link import (
 )
 from edu_it_infrastructure.fakes import (
     Console_Mailer,
+    In_Memory_CredentialStore,
     In_Memory_UserRepository,
     In_Memory_VerificationLinkRepository,
     Test_Clock,
 )
+from edu_it_infrastructure.link_builder import Web_LinkBuilder
 
 _T0 = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
 
@@ -108,7 +110,9 @@ def test_sign_up_runs_against_the_infrastructure_fakes() -> None:
 
     use_case = SignUpUseCase(
         users=users,
+        credentials=In_Memory_CredentialStore(),
         verification_links=links,
+        link_builder=Web_LinkBuilder("https://web.test"),
         mailer=mailer,
         clock=clock,
         token_factory=lambda: next(tokens),
@@ -143,7 +147,9 @@ def test_sign_up_then_verify_runs_against_the_infrastructure_fakes() -> None:
 
     sign_up = SignUpUseCase(
         users=users,
+        credentials=In_Memory_CredentialStore(),
         verification_links=links,
+        link_builder=Web_LinkBuilder("https://web.test"),
         mailer=mailer,
         clock=clock,
         token_factory=lambda: next(tokens),

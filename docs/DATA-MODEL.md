@@ -76,7 +76,7 @@ derived from the injected `Clock`; the domain never reads the wall clock directl
 
 | Group | Entities |
 |-------|----------|
-| Identity | `user`, `session`, `oauth_link`, `role_assignment` |
+| Identity | `user`, `session`, `oauth_link`, `role_assignment`, `credential`, `verification_link`, `reset_link`, `pending_oauth_link` |
 | Catalog | `track`, `module`, `lesson`, `lab`, `lab_task`, `lab_check`, `project`, `rubric`, `rubric_criterion`, `quiz`, `question`, `question_option`, `concept`, `prerequisite` |
 | Provenance | `content_provenance` (shared `origin`/`model`/`prompt_id`/`prompt_version`/`generation_date`/`reviewed_by`/`reviewed_at` + `content_version` + `stable_id`) |
 | Progress | `enrollment`, `module_progress` (incl. `tested_out`), `lesson_completion`, `lab_session`, `lab_run`, `lab_task_completion`, `quiz_attempt`, `answer`, `project_submission` |
@@ -98,6 +98,8 @@ erDiagram
     user ||--o{ session : has
     user ||--o{ oauth_link : links
     user ||--o{ role_assignment : granted
+    user ||--o| credential : authenticates
+    user ||--o{ verification_link : verifies
     user ||--o{ enrollment : enrolls
     user ||--o{ mastery : holds
     user ||--o{ mastery_event : generates
@@ -188,6 +190,20 @@ erDiagram
         int user_id FK
         string role
         string track_scope
+    }
+    credential {
+        int id PK
+        int user_id FK "unique"
+        string secret "password hash"
+        datetime updated_at
+    }
+    verification_link {
+        int id PK
+        string token_digest UK "SHA-256 hex"
+        int user_id FK
+        datetime issued_at
+        datetime expires_at
+        datetime consumed_at
     }
 
     content_provenance {
@@ -451,6 +467,8 @@ erDiagram
 | `session` | Server-side session backing (`server_side_ref`, `expires_at`, `revoked_at`). The concrete backing is recorded as an ADR (session storage). | Yes |
 | `oauth_link` | Links a `user` to an external identity provider (`provider`, `subject`). | Yes |
 | `role_assignment` | Grants a role: learner, reviewer (with per-track expertise via `track_scope`), author, admin. | Yes |
+| `credential` | One password hash per user (`secret`, `updated_at`); not API-addressable, no `stable_id`. Added by revision `0003`. | Yes |
+| `verification_link` | Single-use email verification link (`token_digest` = SHA-256 of the raw token, `issued_at`, `expires_at`, `consumed_at`); no `stable_id`. Added by revision `0003`. | Yes |
 
 Roles are exactly learner, reviewer with per-track expertise, author, and admin, matching the
 identity model in #[[file:.kiro/steering/auth-privacy.md]].
@@ -646,6 +664,8 @@ personal data are out of scope for export/deletion/retention and are listed as "
 | `session` | Yes (session backing) | ✓ | ✓ | ✓ |
 | `oauth_link` | Yes (external identity) | ✓ | ✓ | ✓ |
 | `role_assignment` | Yes (per-user role) | ✓ | ✓ | ✓ |
+| `credential` | Yes (password hash) | ✓ (row only; `secret` is never exported) | ✓ | ✓ (kept while the account exists; deleted with the user) |
+| `verification_link` | Yes (email verification link for the user) | ✓ (row only; `token_digest` is never exported) | ✓ | ✓ (link expires after 24 h; row deleted with the user) |
 | `enrollment` | Yes | ✓ | ✓ | ✓ |
 | `module_progress` | Yes | ✓ | ✓ | ✓ |
 | `lesson_completion` | Yes | ✓ | ✓ | ✓ |

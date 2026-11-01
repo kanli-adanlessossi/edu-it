@@ -26,11 +26,11 @@ import shlex
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import protocol  # noqa: E402
+import protocol
 
 
 def _run(cmd: str, args: list[str] | None = None) -> str:
@@ -38,7 +38,7 @@ def _run(cmd: str, args: list[str] | None = None) -> str:
         out = subprocess.run(args or shlex.split(cmd), capture_output=True,
                              text=True, timeout=30)
         return (out.stdout or out.stderr).strip()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return f"unavailable ({exc.__class__.__name__})"
 
 
@@ -54,7 +54,8 @@ def _memory() -> dict:
     if os.name == "nt":
         raw = _run("", ["powershell", "-NoProfile", "-Command",
                         "(Get-CimInstance Win32_OperatingSystem | "
-                        "ForEach-Object { \"$($_.TotalVisibleMemorySize) $($_.FreePhysicalMemory)\" })"
+                        "ForEach-Object { \"$($_.TotalVisibleMemorySize) "
+                        "$($_.FreePhysicalMemory)\" })"
                         ])
         try:
             total, free = (int(x) * 1024 for x in raw.split())
@@ -74,7 +75,7 @@ def machine_setup() -> dict:
         "docker_version": _run("docker version --format {{.Server.Version}}"),
         "python": sys.version.split()[0],
         "pre_run_snapshot": {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "cpu_percent": mem["cpu_percent"],
             "memory_available_bytes": mem["available_bytes"],
             "memory_total_bytes": mem["total_bytes"],

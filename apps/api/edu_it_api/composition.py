@@ -1,24 +1,38 @@
-"""Real composition of the labs router for the served API (hands-on-labs design, Req 6, 12).
+"""Composition root for the served API (api-route-wiring design, "Composition").
 
-:func:`build_lab_router` wires the lab use cases, the labs router (start, session, grading,
-hints, files) and the terminal WebSocket over the real adapters: PostgreSQL repositories,
-the Redis task queue / session store / idempotency store, and the sandbox provider chosen
-by ``SANDBOX_PROVIDER`` (``docker`` is development only and refused in production by
-``build_sandbox_provider``). The lab Config is validated by ``create_app`` before this
-router is mounted, so a bad Config creates no Sandbox.
+Three functions share one wiring path for the served app, the OpenAPI export, and tests:
 
-Authentication here is only the resolution of the opaque ``edu_it_session`` cookie through
-the :class:`~edu_it_domain.ports.session_store.SessionStore` (ADR 0004); this module adds no
-sign-up or sign-in route.
+* :func:`build_adapters` returns one frozen :class:`ApiAdapters` with every port
+  implementation. ``fakes=False`` builds PostgreSQL, Redis, the configured Mailer and the
+  sandbox provider chosen by ``SANDBOX_PROVIDER``; ``fakes=True`` builds only in-memory
+  fakes and creates no Redis or PostgreSQL client.
+* :func:`build_api_routers` builds the Account, Learning, List, Content and Lab routers and
+  hands the *same* :class:`~edu_it_api.identity.SessionUserResolver` to each. It reads no
+  environment variable: every input arrives through its arguments.
+* ``serve.build_served_app`` calls both and passes ``v1_routers`` to ``create_app``.
+
+Real clients and engines are created lazily, so building the real adapters contacts no
+datastore. A required adapter that cannot be built stops the start, logging its name only
+(:func:`edu_it_api.startup.refuse_start`). Time comes from ``System_Clock`` and ids from
+``Uuid_IdGenerator`` in the real composition; ``Test_Clock`` is wired only with fakes.
 """
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+import secrets
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
+from edu_it_application.authenticate import (
+    AuthenticateSessionUseCase,
+    AuthenticateUseCase,
+    SignOutUseCase,
+)
+from edu_it_application.gdpr import DeleteAccountUseCase, ExportUserDataUseCase
 from edu_it_application.labs import (
     AuthorizeTerminal,
     EndSessionUseCase,
@@ -34,8 +48,38 @@ from edu_it_application.labs import (
     TerminalGatewayCore,
     TerminalRegistry,
 )
-from edu_it_application.learning.pagination import CursorCodec
+from edu_it_application.learning import (
+    AttemptQuizUseCase,
+    EnrollUseCase,
+    GetLessonUseCase,
+    GetProgressUseCase,
+    GetProjectUseCase,
+    GetQuizUseCase,
+    RevealHintUseCase,
+    StartReviewUseCase,
+    SubmitProjectUseCase,
+    SubmitReviewUseCase,
+)
+from edu_it_application.learning.attempt_codec import decode_attempt_result, encode_attempt_result
+from edu_it_application.learning.pagination import (
+    CursorCodec,
+    ListEnrollmentsUseCase,
+    ListQuizAttemptsUseCase,
+)
+from edu_it_application.oauth_sign_in import (
+    CompleteOAuthCallbackUseCase,
+    ConfirmOAuthLinkUseCase,
+    DeclineOAuthLinkUseCase,
+)
+from edu_it_application.resend_verification import ResendVerificationUseCase
+from edu_it_application.reset_password import (
+    CompletePasswordResetUseCase,
+    RequestPasswordResetUseCase,
+)
+from edu_it_application.sign_up import SignUpUseCase
+from edu_it_application.verify_email import VerifyEmailUseCase
 from edu_it_content.lab_runtime import feedback_messages_for, hint_text_for, load_synced_store
+from edu_it_domain import config as domain_config
 from edu_it_domain.labs.models import (
     CheckOutcome,
     CheckResult,
@@ -44,25 +88,129 @@ from edu_it_domain.labs.models import (
     RunStatus,
     SessionStatus,
 )
+from edu_it_domain.ports.attempts import AttemptRepository
+from edu_it_domain.ports.catalog import CatalogRepository
+from edu_it_domain.ports.clock import Clock
+from edu_it_domain.ports.credential_store import CredentialStore
+from edu_it_domain.ports.enrollment import EnrollmentRepository
+from edu_it_domain.ports.github_oauth import GitHubOAuthClient
+from edu_it_domain.ports.id_generator import IdGenerator
+from edu_it_domain.ports.idempotency import IdempotencyStore
+from edu_it_domain.ports.lab_catalog import LabCatalog
+from edu_it_domain.ports.lab_sessions import GradingRunRepository, LabSessionRepository
+from edu_it_domain.ports.lessons import LessonRepository
+from edu_it_domain.ports.link_builder import LinkBuilder
+from edu_it_domain.ports.mailer import Mailer
+from edu_it_domain.ports.mastery import MasteryRepository
+from edu_it_domain.ports.oauth_link import OAuthLinkRepository
+from edu_it_domain.ports.object_storage import ObjectStorage
+from edu_it_domain.ports.pending_oauth_link import PendingOAuthLinkRepository
+from edu_it_domain.ports.personal_data import PersonalDataGateway
+from edu_it_domain.ports.progress import ProgressRepository
+from edu_it_domain.ports.project_reviewer import ProjectReviewer
+from edu_it_domain.ports.rate_limiter import SignInRateLimiter
+from edu_it_domain.ports.repository import SessionRepository, UserRepository
+from edu_it_domain.ports.reset_link import ResetLinkRepository
+from edu_it_domain.ports.review import ReviewRepository
+from edu_it_domain.ports.sandbox import SandboxProvider
+from edu_it_domain.ports.session_store import SessionStore
+from edu_it_domain.ports.task_queue import TaskQueue
+from edu_it_domain.ports.verification_link import VerificationLinkRepository
+from edu_it_infrastructure.adapters.content_text import Content_StoreTextSource
 from edu_it_infrastructure.adapters.idempotency_store import Redis_IdempotencyStore
 from edu_it_infrastructure.adapters.lab_catalog import Content_LabCatalog
-from edu_it_infrastructure.composition import CompositionSettings, build_sandbox_provider
-from edu_it_infrastructure.lab_composition import build_lab_ports
-from fastapi import APIRouter, HTTPException, Request
+from edu_it_infrastructure.adapters.rate_limiter import Redis_SignInRateLimiter
+from edu_it_infrastructure.adapters.redis_support import redis_from_url
+from edu_it_infrastructure.adapters.session_store import Redis_SessionStore
+from edu_it_infrastructure.adapters.task_queue import Redis_TaskQueue
+from edu_it_infrastructure.clock import System_Clock
+from edu_it_infrastructure.composition import (
+    CompositionSettings,
+    SandboxBackend,
+    build_fake_clock,
+    build_mailer,
+    build_object_storage,
+    build_sandbox_provider,
+)
+from edu_it_infrastructure.fakes import (
+    Console_Mailer,
+    Fake_ProjectReviewer,
+    In_Memory_AttemptRepository,
+    In_Memory_CatalogRepository,
+    In_Memory_CredentialStore,
+    In_Memory_EnrollmentRepository,
+    In_Memory_GradingRunRepository,
+    In_Memory_IdempotencyStore,
+    In_Memory_LabSessionRepository,
+    In_Memory_LessonRepository,
+    In_Memory_MasteryRepository,
+    In_Memory_OAuthLinkRepository,
+    In_Memory_ObjectStorage,
+    In_Memory_PendingOAuthLinkRepository,
+    In_Memory_PersonalDataGateway,
+    In_Memory_ProgressRepository,
+    In_Memory_ResetLinkRepository,
+    In_Memory_ReviewRepository,
+    In_Memory_SessionRepository,
+    In_Memory_SessionStore,
+    In_Memory_SignInRateLimiter,
+    In_Memory_TaskQueue,
+    In_Memory_UserRepository,
+    In_Memory_VerificationLinkRepository,
+    Sequential_IdGenerator,
+)
+from edu_it_infrastructure.fakes.github_oauth import Fake_GitHubOAuthClient
+from edu_it_infrastructure.github_oauth import Urllib_GitHubOAuthClient
+from edu_it_infrastructure.id_generator import Uuid_IdGenerator
+from edu_it_infrastructure.link_builder import Web_LinkBuilder
+from edu_it_infrastructure.password_hasher import Scrypt_PasswordHasher
+from edu_it_infrastructure.persistence.account_repositories import (
+    Postgres_CredentialStore,
+    Postgres_OAuthLinkRepository,
+    Postgres_PendingOAuthLinkRepository,
+    Postgres_ResetLinkRepository,
+    Postgres_VerificationLinkRepository,
+)
+from edu_it_infrastructure.persistence.lab_repositories import (
+    Postgres_GradingRunRepository,
+    Postgres_LabSessionRepository,
+)
+from edu_it_infrastructure.persistence.learning_repositories import (
+    LessonContentSource,
+    Postgres_AttemptRepository,
+    Postgres_CatalogRepository,
+    Postgres_EnrollmentRepository,
+    Postgres_LessonRepository,
+    Postgres_MasteryRepository,
+    Postgres_ProgressRepository,
+    Postgres_ReviewRepository,
+)
+from edu_it_infrastructure.persistence.personal_data import Postgres_PersonalDataGateway
+from edu_it_infrastructure.persistence.repositories import (
+    Postgres_SessionRepository,
+    Postgres_UserRepository,
+)
+from edu_it_infrastructure.project_reviewer import Pending_ProjectReviewer
+from fastapi import APIRouter
 
+from edu_it_api.accounts import AccountServices, build_account_router, export_key
+from edu_it_api.content_routes import ContentServices, build_content_router
+from edu_it_api.identity import SessionUserResolver
 from edu_it_api.labs import LabServices, build_labs_router
-from edu_it_api.terminal import SESSION_COOKIE_NAME
+from edu_it_api.learning import LearningServices, build_learning_router
+from edu_it_api.learning_lists import ListServices, build_list_router
+from edu_it_api.oauth import OAuthServices, build_oauth_router
+from edu_it_api.session_cookie import CookieSettings
+from edu_it_api.startup import check_github_oauth_settings, refuse_start
 
-__all__ = ["LabComposition", "build_lab_router", "decode_result", "encode_result"]
-
-
-@dataclass(frozen=True, slots=True)
-class LabComposition:
-    """The labs router and the terminal registry the server drains on shutdown."""
-
-    router: APIRouter
-    registry: TerminalRegistry
-
+__all__ = [
+    "ApiAdapters",
+    "ApiRouters",
+    "build_adapters",
+    "build_api_routers",
+    "decode_result",
+    "encode_result",
+]
 
 # -- Idempotency result codec ------------------------------------------------------------
 
@@ -170,88 +318,498 @@ def decode_result(text: str) -> object:
     raise ValueError(f"unknown stored result kind {data['kind']!r}")
 
 
-# -- Composition --------------------------------------------------------------------------
+# -- Adapters -------------------------------------------------------------------------------
 
 
-def build_lab_router(
+@dataclass(frozen=True, slots=True)
+class ApiAdapters:
+    """Every port implementation the API routers are built from."""
+
+    settings: CompositionSettings
+    fakes: bool
+    provider_name: str
+    clock: Clock
+    ids: IdGenerator
+    mailer: Mailer
+    users: UserRepository
+    sessions: SessionRepository
+    session_store: SessionStore
+    rate_limiter: SignInRateLimiter
+    credentials: CredentialStore
+    verification_links: VerificationLinkRepository
+    reset_links: ResetLinkRepository
+    password_hasher: Callable[[str], str]
+    link_builder: LinkBuilder
+    catalog: CatalogRepository
+    enrollments: EnrollmentRepository
+    progress: ProgressRepository
+    mastery: MasteryRepository
+    reviews: ReviewRepository
+    attempts: AttemptRepository
+    lessons_factory: Callable[[LessonContentSource], LessonRepository]
+    attempt_idempotency: IdempotencyStore
+    lab_idempotency: IdempotencyStore
+    project_reviewer: ProjectReviewer
+    lab_sessions: LabSessionRepository
+    grading_runs: GradingRunRepository
+    task_queue: TaskQueue
+    sandbox: SandboxProvider
+    redis: object | None
+    """The shared Redis client; ``None`` with fakes (typed ``object`` to keep ``redis`` out)."""
+    oauth_links: OAuthLinkRepository
+    pending_oauth_links: PendingOAuthLinkRepository
+    object_storage: ObjectStorage
+    personal_data: PersonalDataGateway
+    oauth_client: GitHubOAuthClient | None = None
+    """The GitHub OAuth client; ``None`` when OAuth is not configured (routes not mounted)."""
+
+
+def _built[T](name: str, factory: Callable[[], T]) -> T:
+    """Build one adapter; on failure log its ``name`` (never a secret) and stop the start."""
+    try:
+        return factory()
+    except Exception as exc:
+        raise refuse_start(name, exc) from exc
+
+
+def build_adapters(
+    settings: CompositionSettings, *, fakes: bool, force_oauth: bool = False
+) -> ApiAdapters:
+    """Build the adapters for ``settings``; ``fakes=True`` uses in-memory fakes only.
+
+    GitHub OAuth is on when all three ``GITHUB_OAUTH_*`` settings are set and off when none
+    is; a partial configuration refuses to start (Req 1.9, 1.10). ``force_oauth`` (the
+    OpenAPI export) turns it on with ``Fake_GitHubOAuthClient`` whatever the settings.
+    """
+    configured = check_github_oauth_settings(
+        settings.github_client_id, settings.github_client_secret, settings.github_callback_url
+    )
+    oauth_client: GitHubOAuthClient | None = None
+    if force_oauth or (fakes and configured):
+        oauth_client = Fake_GitHubOAuthClient()
+    elif configured:
+        oauth_client = _built("github_oauth", lambda: _urllib_oauth_client(settings))
+    adapters = _fake_adapters(settings) if fakes else _real_adapters(settings)
+    return replace(adapters, oauth_client=oauth_client)
+
+
+def _urllib_oauth_client(settings: CompositionSettings) -> GitHubOAuthClient:
+    assert settings.github_client_id and settings.github_client_secret
+    assert settings.github_callback_url
+    return Urllib_GitHubOAuthClient(
+        settings.github_client_id, settings.github_client_secret, settings.github_callback_url
+    )
+
+
+def _fake_adapters(settings: CompositionSettings) -> ApiAdapters:
+    clock = build_fake_clock()
+    lessons = In_Memory_LessonRepository()
+    runs = In_Memory_GradingRunRepository()
+    return ApiAdapters(
+        settings=settings,
+        fakes=True,
+        provider_name="fake",
+        clock=clock,
+        ids=Sequential_IdGenerator("id"),
+        mailer=Console_Mailer(),
+        users=In_Memory_UserRepository(),
+        sessions=In_Memory_SessionRepository(),
+        session_store=In_Memory_SessionStore(clock),
+        rate_limiter=In_Memory_SignInRateLimiter(clock),
+        credentials=In_Memory_CredentialStore(),
+        verification_links=In_Memory_VerificationLinkRepository(),
+        reset_links=In_Memory_ResetLinkRepository(),
+        # The in-memory credential store compares the stored secret with the raw
+        # password, so the fake composition stores it unchanged; never used with real data.
+        password_hasher=lambda raw: raw,
+        link_builder=Web_LinkBuilder(settings.web_base_url),
+        catalog=In_Memory_CatalogRepository(),
+        enrollments=In_Memory_EnrollmentRepository(),
+        progress=In_Memory_ProgressRepository(),
+        mastery=In_Memory_MasteryRepository(),
+        reviews=In_Memory_ReviewRepository(),
+        attempts=In_Memory_AttemptRepository(),
+        lessons_factory=lambda _source: lessons,
+        attempt_idempotency=In_Memory_IdempotencyStore(),
+        lab_idempotency=In_Memory_IdempotencyStore(),
+        project_reviewer=Fake_ProjectReviewer(pending=True),
+        lab_sessions=In_Memory_LabSessionRepository(runs),
+        grading_runs=runs,
+        task_queue=In_Memory_TaskQueue(),
+        sandbox=build_sandbox_provider(
+            settings.model_copy(update={"sandbox_provider": SandboxBackend.FAKE}), clock=clock
+        ),
+        redis=None,
+        oauth_links=In_Memory_OAuthLinkRepository(),
+        pending_oauth_links=In_Memory_PendingOAuthLinkRepository(),
+        object_storage=In_Memory_ObjectStorage(),
+        personal_data=In_Memory_PersonalDataGateway(),
+    )
+
+
+def _real_adapters(settings: CompositionSettings) -> ApiAdapters:
+    url = settings.database_url
+    clock = System_Clock()
+    redis = _built("redis", lambda: redis_from_url(settings.redis_url))
+    hasher = _built("password_hasher", Scrypt_PasswordHasher)
+    return ApiAdapters(
+        settings=settings,
+        fakes=False,
+        provider_name=settings.sandbox_provider.value,
+        clock=clock,
+        ids=Uuid_IdGenerator(),
+        mailer=_built("mailer", lambda: build_mailer(settings)),
+        users=Postgres_UserRepository(url),
+        sessions=Postgres_SessionRepository(url),
+        session_store=Redis_SessionStore(redis, clock),
+        rate_limiter=Redis_SignInRateLimiter(redis, clock),
+        credentials=Postgres_CredentialStore(url, hasher),
+        verification_links=Postgres_VerificationLinkRepository(url),
+        reset_links=Postgres_ResetLinkRepository(url),
+        password_hasher=hasher,
+        link_builder=_built("link_builder", lambda: Web_LinkBuilder(settings.web_base_url)),
+        catalog=Postgres_CatalogRepository(url),
+        enrollments=Postgres_EnrollmentRepository(url),
+        progress=Postgres_ProgressRepository(url),
+        mastery=Postgres_MasteryRepository(url),
+        reviews=Postgres_ReviewRepository(url),
+        attempts=Postgres_AttemptRepository(url),
+        lessons_factory=lambda source: Postgres_LessonRepository(url, source),
+        attempt_idempotency=Redis_IdempotencyStore(
+            redis,
+            encode=encode_attempt_result,
+            decode=decode_attempt_result,
+            namespace="edu_it:attempt-idempotency",
+        ),
+        lab_idempotency=Redis_IdempotencyStore(redis, encode=encode_result, decode=decode_result),
+        project_reviewer=Pending_ProjectReviewer(),
+        lab_sessions=Postgres_LabSessionRepository(url),
+        grading_runs=Postgres_GradingRunRepository(url),
+        task_queue=Redis_TaskQueue(redis),
+        sandbox=_built("sandbox_provider", lambda: build_sandbox_provider(settings, clock=clock)),
+        redis=redis,
+        oauth_links=Postgres_OAuthLinkRepository(url),
+        pending_oauth_links=Postgres_PendingOAuthLinkRepository(url),
+        object_storage=_built("object_storage", lambda: build_object_storage(settings)),
+        personal_data=Postgres_PersonalDataGateway(url),
+    )
+
+
+# -- Routers --------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class ApiRouters:
+    """The routers for the ``/v1`` sub-application and what the server drains on shutdown."""
+
+    v1_routers: tuple[APIRouter, ...]
+    resolver: SessionUserResolver
+    registry: TerminalRegistry
+    lab_router: APIRouter
+    oauth_router: APIRouter | None = None
+    """The GitHub OAuth router; ``None`` (not mounted) when OAuth is not configured."""
+
+
+def _lesson_source(store: Any, content_root: Path) -> LessonContentSource:
+    """Lesson titles from the synced store; bodies from ``mdx/{id}.{locale}.mdx`` if present."""
+    titles: dict[str, dict[str, str]] = {}
+    for item in store.list_items("lesson"):
+        payload = json.loads(item.payload)
+        raw = payload.get("title")
+        if isinstance(raw, Mapping):
+            titles[item.stable_id] = {str(k): str(v) for k, v in raw.items()}
+
+    def source(stable_id: str) -> tuple[Mapping[str, str], Mapping[str, str]]:
+        lesson_titles = titles.get(stable_id, {})
+        bodies: dict[str, str] = {}
+        for locale, title in lesson_titles.items():
+            path = content_root / "mdx" / f"{stable_id}.{locale}.mdx"
+            bodies[locale] = path.read_text(encoding="utf-8") if path.is_file() else f"# {title}"
+        return lesson_titles, bodies
+
+    return source
+
+
+def build_api_routers(
+    adapters: ApiAdapters,
     *,
     content_root: str | Path,
-    settings: CompositionSettings | None = None,
-    cookie_name: str = SESSION_COOKIE_NAME,
-) -> LabComposition:
-    """Build the labs router over the real adapters; contacts no datastore until used."""
-    settings = settings if settings is not None else CompositionSettings.from_env()
-    ports = build_lab_ports(settings)
-    sandbox = build_sandbox_provider(settings, clock=ports.clock)
-    provider_name = settings.sandbox_provider.value
-    store, _report = load_synced_store(content_root)
-    catalog = Content_LabCatalog(store)
-    idempotency = Redis_IdempotencyStore(
-        ports.redis,  # type: ignore[arg-type]
-        encode=encode_result,
-        decode=decode_result,
+    config: object = domain_config,
+) -> ApiRouters:
+    """Build every ``/v1`` router from ``adapters``; reads no environment variable."""
+    root = Path(content_root)
+    store, _report = load_synced_store(root)
+    clock, ids = adapters.clock, adapters.ids
+    labs: LabCatalog = Content_LabCatalog(store)
+    text = Content_StoreTextSource(store)
+    resolver = SessionUserResolver(adapters.session_store)
+
+    def new_token() -> str:
+        return secrets.token_urlsafe(32)
+
+    cookies = CookieSettings(
+        environment=adapters.settings.environment,
+        domain=adapters.settings.cookie_domain,
+        max_age=domain_config.SESSION_DURATION,
+    )
+    account = build_account_router(
+        AccountServices(
+            resolver=resolver,
+            cookies=cookies,
+            sign_up=SignUpUseCase(
+                users=adapters.users,
+                credentials=adapters.credentials,
+                verification_links=adapters.verification_links,
+                link_builder=adapters.link_builder,
+                mailer=adapters.mailer,
+                clock=clock,
+                token_factory=new_token,
+                stable_id_factory=ids.new_id,
+                password_hasher=adapters.password_hasher,
+            ),
+            verify_email=VerifyEmailUseCase(
+                users=adapters.users, verification_links=adapters.verification_links, clock=clock
+            ),
+            resend=ResendVerificationUseCase(
+                users=adapters.users,
+                verification_links=adapters.verification_links,
+                link_builder=adapters.link_builder,
+                mailer=adapters.mailer,
+                clock=clock,
+                token_factory=new_token,
+            ),
+            sign_in=AuthenticateUseCase(
+                users=adapters.users,
+                credentials=adapters.credentials,
+                sessions=adapters.sessions,
+                session_store=adapters.session_store,
+                rate_limiter=adapters.rate_limiter,
+                clock=clock,
+                session_ref_factory=new_token,
+            ),
+            sign_out=SignOutUseCase(
+                sessions=adapters.sessions, session_store=adapters.session_store, clock=clock
+            ),
+            authenticate_session=AuthenticateSessionUseCase(session_store=adapters.session_store),
+            request_reset=RequestPasswordResetUseCase(
+                users=adapters.users,
+                reset_links=adapters.reset_links,
+                link_builder=adapters.link_builder,
+                mailer=adapters.mailer,
+                clock=clock,
+                token_factory=new_token,
+            ),
+            complete_reset=CompletePasswordResetUseCase(
+                reset_links=adapters.reset_links,
+                credentials=adapters.credentials,
+                sessions=adapters.sessions,
+                session_store=adapters.session_store,
+                clock=clock,
+                password_hasher=adapters.password_hasher,
+                session_ref_factory=new_token,
+            ),
+            export_data=ExportUserDataUseCase(
+                personal_data=adapters.personal_data,
+                object_storage=adapters.object_storage,
+                key_factory=export_key,
+            ),
+            object_storage=adapters.object_storage,
+            delete_account=DeleteAccountUseCase(
+                personal_data=adapters.personal_data,
+                sessions=adapters.sessions,
+                session_store=adapters.session_store,
+                clock=clock,
+                lab_sessions=adapters.lab_sessions,
+                sandbox=adapters.sandbox,
+                sandbox_provider_name=adapters.provider_name,
+            ),
+        )
     )
 
-    def current_user(request: Request) -> str:
-        ref = request.cookies.get(cookie_name)
-        resolved = None if ref is None else ports.session_store.resolve(ref)
-        if resolved is None:
-            raise HTTPException(status_code=401)
-        return resolved.user_stable_id
+    lessons = adapters.lessons_factory(_lesson_source(store, root))
+    learning = build_learning_router(
+        LearningServices(
+            current_user=resolver,
+            enroll=EnrollUseCase(
+                catalog=adapters.catalog,
+                enrollments=adapters.enrollments,
+                progress=adapters.progress,
+                mastery=adapters.mastery,
+                clock=clock,
+                ids=ids,
+            ),
+            progress=GetProgressUseCase(
+                catalog=adapters.catalog,
+                enrollments=adapters.enrollments,
+                progress=adapters.progress,
+                mastery=adapters.mastery,
+                labs=labs,
+                lab_completions=adapters.grading_runs,  # type: ignore[arg-type]
+            ),
+            lessons=GetLessonUseCase(lessons=lessons),
+            attempt_quiz=AttemptQuizUseCase(
+                catalog=adapters.catalog,
+                attempts=adapters.attempts,
+                mastery=adapters.mastery,
+                reviews=adapters.reviews,
+                idempotency=adapters.attempt_idempotency,
+                clock=clock,
+                ids=ids,
+            ),
+            reveal_hint=RevealHintUseCase(
+                catalog=adapters.catalog, mastery=adapters.mastery, clock=clock
+            ),
+            start_review=StartReviewUseCase(
+                catalog=adapters.catalog, reviews=adapters.reviews, clock=clock
+            ),
+            submit_review=SubmitReviewUseCase(
+                catalog=adapters.catalog,
+                reviews=adapters.reviews,
+                mastery=adapters.mastery,
+                clock=clock,
+            ),
+            submit_project=SubmitProjectUseCase(
+                catalog=adapters.catalog,
+                attempts=adapters.attempts,
+                reviewer=adapters.project_reviewer,
+                ids=ids,
+            ),
+        )
+    )
+    codec = CursorCodec(clock)
+    lists = build_list_router(
+        ListServices(
+            current_user=resolver,
+            list_enrollments=ListEnrollmentsUseCase(
+                enrollments=adapters.enrollments,  # type: ignore[arg-type]
+                codec=codec,
+            ),
+            list_quiz_attempts=ListQuizAttemptsUseCase(
+                attempts=adapters.attempts,  # type: ignore[arg-type]
+                codec=codec,
+            ),
+        )
+    )
+    content = build_content_router(
+        ContentServices(
+            current_user=resolver,
+            get_quiz=GetQuizUseCase(catalog=adapters.catalog, text=text),
+            get_project=GetProjectUseCase(catalog=adapters.catalog, text=text),
+        )
+    )
 
-    end = EndSessionUseCase(sessions=ports.sessions, queue=ports.queue, clock=ports.clock)
+    end = EndSessionUseCase(sessions=adapters.lab_sessions, queue=adapters.task_queue, clock=clock)
     start = StartLabUseCase(
-        sessions=ports.sessions,
-        catalog=catalog,
-        queue=ports.queue,
-        idempotency=idempotency,
-        clock=ports.clock,
-        ids=ports.ids,
+        sessions=adapters.lab_sessions,
+        catalog=labs,
+        queue=adapters.task_queue,
+        idempotency=adapters.lab_idempotency,
+        clock=clock,
+        ids=ids,
     )
     gateway = TerminalGatewayCore(
-        sessions=ports.sessions,
-        sandbox=sandbox,
-        clock=ports.clock,
-        provider_name=provider_name,
+        sessions=adapters.lab_sessions,
+        sandbox=adapters.sandbox,
+        clock=clock,
+        provider_name=adapters.provider_name,
     )
-    services = LabServices(
-        current_user=current_user,
-        catalog=catalog,
-        start=start,
-        reset=ResetLabUseCase(sessions=ports.sessions, end=end, start=start),
-        end=end,
-        get_session=GetSessionUseCase(sessions=ports.sessions),
-        list_sessions=ListSessionsUseCase(sessions=ports.sessions),
-        save_files=SaveFilesUseCase(
-            sessions=ports.sessions,
-            catalog=catalog,
-            sandbox=sandbox,
-            clock=ports.clock,
-            provider_name=provider_name,
-        ),
-        reveal_hint=RevealLabHintUseCase(
-            sessions=ports.sessions,
-            catalog=catalog,
-            mastery=ports.mastery,
-            clock=ports.clock,
-        ),
-        hint_text=hint_text_for(store),
-        cursor_codec=CursorCodec(ports.clock),
-        clock=ports.clock,
-        request_grading=RequestGradingUseCase(
-            sessions=ports.sessions,
-            runs=ports.runs,
-            queue=ports.queue,
-            idempotency=idempotency,
-            clock=ports.clock,
-            ids=ports.ids,
-        ),
-        runs=ports.runs,
-        feedback_messages=feedback_messages_for(store),
-        authorize_terminal=AuthorizeTerminal(
-            sessions=ports.sessions, session_store=ports.session_store
-        ),
-        terminal_gateway=gateway,
-        session_cookie_name=cookie_name,
+    lab_router = build_labs_router(
+        LabServices(
+            current_user=resolver,
+            catalog=labs,
+            start=start,
+            reset=ResetLabUseCase(sessions=adapters.lab_sessions, end=end, start=start),
+            end=end,
+            get_session=GetSessionUseCase(sessions=adapters.lab_sessions),
+            list_sessions=ListSessionsUseCase(sessions=adapters.lab_sessions),
+            save_files=SaveFilesUseCase(
+                sessions=adapters.lab_sessions,
+                catalog=labs,
+                sandbox=adapters.sandbox,
+                clock=clock,
+                provider_name=adapters.provider_name,
+            ),
+            reveal_hint=RevealLabHintUseCase(
+                sessions=adapters.lab_sessions,
+                catalog=labs,
+                mastery=adapters.mastery,
+                clock=clock,
+            ),
+            hint_text=hint_text_for(store),
+            cursor_codec=codec,
+            clock=clock,
+            config=config,
+            request_grading=RequestGradingUseCase(
+                sessions=adapters.lab_sessions,
+                runs=adapters.grading_runs,
+                queue=adapters.task_queue,
+                idempotency=adapters.lab_idempotency,
+                clock=clock,
+                ids=ids,
+            ),
+            runs=adapters.grading_runs,
+            feedback_messages=feedback_messages_for(store),
+            authorize_terminal=AuthorizeTerminal(
+                sessions=adapters.lab_sessions, session_store=adapters.session_store
+            ),
+            terminal_gateway=gateway,
+            session_cookie_name=resolver.cookie_name,
+        )
     )
-    return LabComposition(router=build_labs_router(services), registry=gateway.registry)
+    oauth_router = _build_oauth_router(adapters, cookies, new_token)
+    return ApiRouters(
+        v1_routers=(
+            account,
+            learning,
+            lists,
+            content,
+            lab_router,
+            *(() if oauth_router is None else (oauth_router,)),
+        ),
+        resolver=resolver,
+        registry=gateway.registry,
+        lab_router=lab_router,
+        oauth_router=oauth_router,
+    )
+
+
+def _build_oauth_router(
+    adapters: ApiAdapters, cookies: CookieSettings, new_token: Callable[[], str]
+) -> APIRouter | None:
+    """Build the GitHub OAuth router (Req 1.9, 6); ``None`` leaves it unmounted.
+
+    Without an ``oauth_client`` nothing is mounted, so a request under ``/v1/auth/github``
+    gets the generic 404 Problem_Details.
+    """
+    if adapters.oauth_client is None:
+        return None
+    clock = adapters.clock
+    return build_oauth_router(
+        OAuthServices(
+            client=adapters.oauth_client,
+            cookies=cookies,
+            web_base_url=adapters.settings.web_base_url,
+            complete=CompleteOAuthCallbackUseCase(
+                users=adapters.users,
+                oauth_links=adapters.oauth_links,
+                pending_links=adapters.pending_oauth_links,
+                sessions=adapters.sessions,
+                session_store=adapters.session_store,
+                clock=clock,
+                stable_id_factory=adapters.ids.new_id,
+                pending_token_factory=new_token,
+                session_ref_factory=new_token,
+            ),
+            confirm=ConfirmOAuthLinkUseCase(
+                pending_links=adapters.pending_oauth_links,
+                oauth_links=adapters.oauth_links,
+                sessions=adapters.sessions,
+                session_store=adapters.session_store,
+                clock=clock,
+                session_ref_factory=new_token,
+            ),
+            decline=DeclineOAuthLinkUseCase(
+                pending_links=adapters.pending_oauth_links, clock=clock
+            ),
+        )
+    )

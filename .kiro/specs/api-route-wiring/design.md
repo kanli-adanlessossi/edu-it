@@ -81,6 +81,8 @@ starts only after that gate has passed.
    Journey_Test only requires the "Submitted" state, and "Processes" unlocks from the quiz and lab
    mastery that the Journey_Test already earns.
 7. **`GET /reviews/schedule` stays out of scope.** The dashboard already tolerates its absence.
+   Task 13.2 decision: no review-listing use case or router exists (only the `ReviewRepository.list_for_user`
+   port), so the web client no longer calls the route; `getReviewSchedule()` returns an empty list.
 8. **The `ContentStore` adapter lives in `packages/content`** (see "Package dependency direction").
    Confirm that adding `sqlalchemy` to that package is acceptable.
 9. **Open decision: fresh authentication for account deletion.** Options: (a) require the current

@@ -51,10 +51,19 @@ from sqlalchemy import (
 )
 
 __all__ = [
+    "ACCOUNTS_OAUTH_RESET_TABLE_NAMES",
+    "ACCOUNTS_RUNTIME_TABLE_NAMES",
     "DATA_MODEL_TABLE_NAMES",
     "STABLE_ID_TABLE_NAMES",
     "metadata",
 ]
+
+# Tables created by revision 0003_accounts_runtime rather than 0001. Revision
+# 0001 skips them so each revision owns exactly what it created.
+ACCOUNTS_RUNTIME_TABLE_NAMES: frozenset[str] = frozenset({"credential", "verification_link"})
+
+# Tables created by revision 0004_accounts_oauth_reset. Revision 0001 skips them too.
+ACCOUNTS_OAUTH_RESET_TABLE_NAMES: frozenset[str] = frozenset({"reset_link", "pending_oauth_link"})
 
 # A single MetaData collecting every Data_Model table. A stable naming
 # convention keeps constraint/index names deterministic across apply and
@@ -131,6 +140,60 @@ role_assignment = Table(
     Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
     Column("role", String(32), nullable=False),
     Column("track_scope", String(64)),
+)
+
+# Account runtime tables (revision 0003_accounts_runtime). Neither is
+# API-addressable, so neither carries a stable_id. ``token_digest`` is the hex
+# SHA-256 of the raw link token; the raw token is never stored.
+
+credential = Table(
+    "credential",
+    metadata,
+    _internal_pk(),
+    # One credential per user, enforced by the database.
+    Column("user_id", Integer, ForeignKey("user.id"), nullable=False, unique=True),
+    Column("secret", String(255), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
+verification_link = Table(
+    "verification_link",
+    metadata,
+    _internal_pk(),
+    Column("token_digest", String(64), nullable=False, unique=True),
+    Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
+    Column("issued_at", DateTime(timezone=True), nullable=False),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("consumed_at", DateTime(timezone=True)),
+)
+
+# Account reset/OAuth tables (revision 0004_accounts_oauth_reset). Not
+# API-addressable, so no stable_id. ``token_digest`` is the hex SHA-256 of the
+# raw token; the raw token is never stored.
+
+reset_link = Table(
+    "reset_link",
+    metadata,
+    _internal_pk(),
+    Column("token_digest", String(64), nullable=False, unique=True),
+    Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
+    Column("issued_at", DateTime(timezone=True), nullable=False),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("consumed_at", DateTime(timezone=True)),
+)
+
+pending_oauth_link = Table(
+    "pending_oauth_link",
+    metadata,
+    _internal_pk(),
+    Column("token_digest", String(64), nullable=False, unique=True),
+    Column("provider", String(32), nullable=False),
+    Column("subject", String(255), nullable=False),
+    Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
+    Column("email", String(254), nullable=False),
+    Column("issued_at", DateTime(timezone=True), nullable=False),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("consumed_at", DateTime(timezone=True)),
 )
 
 # ---------------------------------------------------------------------------

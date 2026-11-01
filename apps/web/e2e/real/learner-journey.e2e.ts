@@ -106,6 +106,9 @@ test('learner journey: sign up to Processes unlocked', async ({ page }) => {
   // Enroll; "Processes" starts locked.
   await page.getByLabel('Track identifier').fill(TRACK_ID);
   await page.getByRole('button', { name: 'Enroll', exact: true }).click();
+  // The enroll action redirects to the track page once enrolled; navigating before that would
+  // cancel it and race the enrollment (the track read answers 409 -> 404 page).
+  await page.waitForURL(/\/en\/tracks\//);
   await page.goto(`/en/tracks/${encodeURIComponent(TRACK_ID)}`);
   const processes = page.locator('li[data-lock-state]').filter({ hasText: /processes/i });
   await expect(processes).toHaveAttribute('data-lock-state', 'locked');
@@ -126,7 +129,12 @@ test('learner journey: sign up to Processes unlocked', async ({ page }) => {
   await page.getByRole('button', { name: 'Start lab' }).click();
   const check = page.getByRole('button', { name: 'Check my work' });
   await expect(check).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByTestId('terminal-connection')).not.toHaveText('', { timeout: 60_000 });
+  // A connected terminal shows the shell prompt; the connection live region is empty unless the
+  // socket is down (Req 15.10), so "connected" is a prompt with no reconnect indication.
+  await expect(page.getByTestId('terminal-container')).toContainText('/workspace$', {
+    timeout: 60_000,
+  });
+  await expect(page.getByTestId('terminal-connection')).toHaveText('');
 
   await typeInTerminal(page, 'echo e2e-marker-$((6*7))');
   await expect(page.getByTestId('terminal-container')).toContainText('e2e-marker-42', {

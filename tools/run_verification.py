@@ -26,16 +26,39 @@ Requirement 33 test group. ``--phase-report`` then asks ``tools/phase_report.py`
 ``docs/reports/phase-3.md``; the writer refuses (exit 1, nothing written) when any check
 failed or could not be run, or when the final performance attempt missed a target.
 A tool that is not installed makes its check ``not-run``, never ``passed``.
+
+Two-phase gate procedure (api-route-wiring 14.2, 14.5). ``labs-docker`` (and any Requirement 33
+group file marked ``docker``) reports ``blocked`` without running while a Worker_Service listens
+on port 8001, because the Real_Stack worker's ``ReapSessions`` orphan sweep destroys the
+``edu-it.managed`` harness containers. ``labs-playwright-real`` and ``labs-performance`` need
+the stack (the performance drivers call the API on 127.0.0.1:8000), so run the suite in two
+phases, in this order::
+
+    # phase 1: Real_Stack down; the full suite (or every id except the two real-stack ones)
+    python tools/run_verification.py --suite labs
+    # phase 2: stack up, E2E_MAIL_LOG set
+    python tools/e2e_stack.py up
+    python tools/run_verification.py --suite labs --only labs-playwright-real labs-performance
+    python tools/e2e_stack.py down
+
+Phase 1 runs with the stack down so the Requirement 33 groups run (a full run, without
+``--only``, runs them); ``labs-playwright-real`` and ``labs-performance`` are expected to fail
+there and count only from phase 2. The ``performance attempt`` lines are printed only when
+``labs-performance`` ran in this invocation and wrote the log; a stale log is reported as such.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import shutil
+import socket
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -62,6 +85,9 @@ class Check:
     detail: str = ""
     seconds: float = 0.0
     cwd: str = ""  # relative to the repository root; empty means the root
+    # True: the check must not run while a Worker_Service is listening (its ReapSessions orphan
+    # sweep destroys the check's own ``edu-it.managed`` containers). It reports "blocked" then.
+    exclusive_of_worker: bool = False
 
     def command_text(self) -> str:
         if not self.command:
@@ -275,6 +301,7 @@ def build_labs_checks(*, skip_perf: bool = False) -> list[Check]:
             "3, 10, 14, 28, 29",
             "Docker-marked tests against the Docker_Provider and the lab images",
             _pytest("-m", "docker"),
+            exclusive_of_worker=True,
         ),
         Check(
             "labs-web",
@@ -396,9 +423,47 @@ def _inspect_seed_approval(seed_dir: Path) -> tuple[bool, str]:
     return True, f"all {total} seed items record a reviewer"
 
 
-def run_check(check: Check) -> None:
+WORKER_HEALTH_PORT = 8001  # Worker_Service health port (tools/e2e_stack.py, docker compose)
+
+
+def _worker_listening(port: int) -> bool:
+    """True when something accepts TCP connections on ``port`` (IPv4 or IPv6 loopback)."""
+    for family, host in ((socket.AF_INET, "127.0.0.1"), (socket.AF_INET6, "::1")):
+        try:
+            with socket.socket(family, socket.SOCK_STREAM) as sock:
+                sock.settimeout(0.5)
+                if sock.connect_ex((host, port)) == 0:
+                    return True
+        except OSError:
+            continue
+    return False
+
+
+def is_docker_test_file(path: Path) -> bool:
+    """A test file that carries the ``docker`` marker (module-level or per test)."""
+    try:
+        return re.search(r"mark\.docker\b", path.read_text(encoding="utf-8")) is not None
+    except OSError:
+        return False
+
+
+def _blocked_by_worker_detail() -> str:
+    return (
+        f"BLOCKED: a Worker_Service is listening on port {WORKER_HEALTH_PORT} (the Real_Stack). "
+        "Its ReapSessions orphan sweep destroys every edu-it.managed container without a known "
+        "session, including these tests' harness containers, so the Docker tests cannot give a "
+        "valid result. The Docker tests were not run. Run them apart from the stack: "
+        r".venv\Scripts\python.exe tools/e2e_stack.py down, then "
+        r".venv\Scripts\python.exe tools/run_verification.py --suite labs --only labs-docker"
+    )
+
+
+def run_check(check: Check, worker_probe: Callable[[int], bool] | None = None) -> None:
     if check.command is None:
         check.status, check.detail = "not-run", "no command wired for this check"
+        return
+    if check.exclusive_of_worker and (worker_probe or _worker_listening)(WORKER_HEALTH_PORT):
+        check.status, check.detail = "blocked", _blocked_by_worker_detail()
         return
     started = time.monotonic()
     if check.command[0] == "inspect":
@@ -414,10 +479,16 @@ def run_check(check: Check) -> None:
                 check.detail = f"tool not found on PATH: {check.command[0]}"
                 return
             command = [tool, *check.command[1:]]
+        # Same rule as tools/e2e_stack.py: ALPINE_MIRROR reaches the bake build only when
+        # non-empty (an empty value would build a broken apk repository URL).
+        child_env = dict(os.environ)
+        if not child_env.get("ALPINE_MIRROR"):
+            child_env.pop("ALPINE_MIRROR", None)
         try:
             result = subprocess.run(
                 command,
                 cwd=REPO / check.cwd,
+                env=child_env,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
@@ -446,7 +517,13 @@ def _run_groups(checks: list[Check]) -> tuple[dict[str, phase_report.GroupRecord
             if not (REPO / path).is_file():
                 group.status, group.detail = "failed", "test file does not exist"
                 continue
-            probe = Check(f"group:{path}", "33", path, _pytest(path))
+            probe = Check(
+                f"group:{path}",
+                "33",
+                path,
+                _pytest(path),
+                exclusive_of_worker=is_docker_test_file(REPO / path),
+            )
             run_check(probe)
             group.status, group.detail = probe.status, probe.detail
             continue
@@ -483,6 +560,25 @@ def _to_record(check: Check) -> phase_report.CheckRecord:
     )
 
 
+def perf_output_lines(
+    ran: bool, perf_log: Path, started: float, perf: dict | None
+) -> list[str]:
+    """Attempt lines to print: only those from a log written by this run (api-route-wiring 14.5).
+
+    ``labs-performance`` not run in this invocation: nothing. Run, but the log is missing or older
+    than the check's start (the check failed before writing it): one line saying so, never the
+    earlier run's attempts, which would look like a pass.
+    """
+    if not ran:
+        return []
+    if perf is None or not perf_log.is_file() or perf_log.stat().st_mtime < started:
+        return [
+            "performance attempts: not written by this run (log missing or stale); "
+            "the attempts in the file are from an earlier run and are not shown"
+        ]
+    return phase_report.format_perf_attempts(perf)
+
+
 def _main_labs(args: argparse.Namespace) -> int:
     checks = build_labs_checks(skip_perf=args.skip_perf)
     required = [c.check_id for c in checks]
@@ -499,7 +595,9 @@ def _main_labs(args: argparse.Namespace) -> int:
 
     perf_log = args.perf_log
     perf = phase_report.load_perf_log(perf_log)
-    for line in phase_report.format_perf_attempts(perf):  # every attempt, failed ones included
+    perf_ran = any(c.check_id == "labs-performance" for c in checks)
+    perf_lines = perf_output_lines(perf_ran, perf_log, perf_started, perf)
+    for line in perf_lines:  # every attempt of this run, failed ones included
         print(f"          {line}")
 
     groups: dict[str, phase_report.GroupRecord] = {}
@@ -515,7 +613,7 @@ def _main_labs(args: argparse.Namespace) -> int:
         payload = {
             "checks": [asdict(c) for c in checks],
             "groups": [asdict(g) for g in groups.values()],
-            "performance_attempts": phase_report.format_perf_attempts(perf),
+            "performance_attempts": perf_lines,
         }
         args.json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 

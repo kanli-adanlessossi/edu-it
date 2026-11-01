@@ -58,6 +58,8 @@ from typing import Final
 
 from edu_it_domain.config import PASSWORD_POLICY, VERIFICATION_LINK_TTL, PasswordPolicy
 from edu_it_domain.ports.clock import Clock
+from edu_it_domain.ports.credential_store import CredentialStore
+from edu_it_domain.ports.link_builder import LinkBuilder
 from edu_it_domain.ports.mailer import Mailer, OutboundMail
 from edu_it_domain.ports.repository import (
     USER_STATUS_UNVERIFIED,
@@ -208,7 +210,9 @@ class SignUpUseCase:
         self,
         *,
         users: UserRepository,
+        credentials: CredentialStore,
         verification_links: VerificationLinkRepository,
+        link_builder: LinkBuilder,
         mailer: Mailer,
         clock: Clock,
         token_factory: Callable[[], str],
@@ -226,6 +230,8 @@ class SignUpUseCase:
         (Req 7.2) but is injectable for focused tests.
         """
         self._users = users
+        self._credentials = credentials
+        self._link_builder = link_builder
         self._verification_links = verification_links
         self._mailer = mailer
         self._clock = clock
@@ -256,6 +262,8 @@ class SignUpUseCase:
 
         existing = self._users.get_by_email(request.email)
         if existing is not None:
+            # Equal work (Req 3.11): one hash, result discarded, as on the new-user path.
+            _ = self._password_hasher(request.password)
             self._notify_existing_owner(existing)
             return ACCEPTED
 
@@ -293,11 +301,11 @@ class SignUpUseCase:
             locale=request.locale,
             status=USER_STATUS_UNVERIFIED,
         )
-        # The password hash is computed so a real adapter persists it; the
-        # repository port stores only API-safe identity attributes, so hashing
-        # here keeps the raw secret out of the domain record.
-        _ = self._password_hasher(request.password)
+        # The hashed credential is stored behind the CredentialStore port before
+        # any mail is sent (Req 7.3); the raw secret never enters the user record.
+        hashed = self._password_hasher(request.password)
         self._users.add(user)
+        self._credentials.set_password(user.stable_id, hashed)
 
         link = VerificationLink(
             token=self._token_factory(),
@@ -308,7 +316,9 @@ class SignUpUseCase:
         self._verification_links.add(link)
 
         self._send_or_raise(
-            _verification_mail(user, link),
+            _verification_mail(
+                user, link, self._link_builder.verification_url(link.token, user.locale)
+            ),
             user_stable_id=user.stable_id,
             stage="verification",
         )
@@ -384,7 +394,7 @@ def _is_well_formed_email(email: str) -> bool:
     return all(labels)
 
 
-def _verification_mail(user: UserRecord, link: VerificationLink) -> OutboundMail:
+def _verification_mail(user: UserRecord, link: VerificationLink, url: str) -> OutboundMail:
     """Build the single-use verification email for ``user`` (Req 7.1, 7.3).
 
     The mail is locale-marked so the ``Mailer`` renders the FR/EN template; the
@@ -393,9 +403,9 @@ def _verification_mail(user: UserRecord, link: VerificationLink) -> OutboundMail
     """
     subject = "Confirmez votre adresse e-mail" if user.locale == "fr" else "Confirm your email"
     body = (
-        f"Bonjour, confirmez votre adresse e-mail avec ce lien à usage unique : {link.token}"
+        f"Bonjour, confirmez votre adresse e-mail avec ce lien à usage unique : {url}"
         if user.locale == "fr"
-        else f"Hello, confirm your email with this single-use link: {link.token}"
+        else f"Hello, confirm your email with this single-use link: {url}"
     )
     return OutboundMail(
         to=user.email,

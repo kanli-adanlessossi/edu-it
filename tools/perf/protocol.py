@@ -8,8 +8,9 @@ rule. The final attempt is the one that counts.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 WARMUP_SAMPLES = 3
 MAX_ATTEMPTS = 2  # first measurement + at most one full re-measurement

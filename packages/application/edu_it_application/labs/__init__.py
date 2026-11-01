@@ -82,7 +82,7 @@ __all__ = [
     "setup_script_argv",
 ]
 
-from edu_it_application.labs.reap_sessions import (  # noqa: E402
+from edu_it_application.labs.reap_sessions import (
     DestroyOutcome,
     DestroySandbox,
     ReapReport,

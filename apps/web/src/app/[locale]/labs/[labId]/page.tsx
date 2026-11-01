@@ -30,8 +30,8 @@ export async function generateMetadata({ params }: LabPageProps): Promise<Metada
 
 export default async function LabPage({ params }: LabPageProps) {
   const { locale: rawLocale, labId } = await params;
-  const { locale } = await requirePracticeContext(rawLocale);
-  const lab = await fetchLab(labId, locale).catch(() => undefined);
+  const { locale, cookie } = await requirePracticeContext(rawLocale);
+  const lab = await fetchLab(labId, locale, cookie).catch(() => undefined);
   if (lab === undefined || lab === null) {
     const t = await getTranslations({ locale, namespace: 'Labs.errors' });
     return <p role="alert">{lab === null ? t('notFound') : t('loadFailed')}</p>;

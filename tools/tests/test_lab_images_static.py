@@ -60,7 +60,8 @@ def test_every_external_from_is_digest_pinned(dockerfile: Path) -> None:
 
 def test_python_image_builds_on_a_bake_named_context() -> None:
     """The python image's only non-digest FROM must be a declared bake context."""
-    refs = [r for r, _ in FROM_RE.findall((LAB_IMAGES / "python" / "Dockerfile").read_text("utf-8"))]
+    dockerfile = (LAB_IMAGES / "python" / "Dockerfile").read_text("utf-8")
+    refs = [r for r, _ in FROM_RE.findall(dockerfile)]
     assert refs == ["linux-base"]
     assert "linux-base" in _bake_named_contexts()
 
@@ -80,7 +81,8 @@ def test_dockerfile_copies_no_secrets_bundles_or_solutions(dockerfile: Path) -> 
     text = dockerfile.read_text("utf-8")
     for line in text.splitlines():
         if re.match(r"^\s*(COPY|ADD)\b", line, re.I):
-            assert not re.search(r"secret|bundle|solution|expected|\.env|\.pem|id_rsa", line, re.I), line
+            forbidden = r"secret|bundle|solution|expected|\.env|\.pem|id_rsa"
+            assert not re.search(forbidden, line, re.I), line
     assert not re.search(r"^\s*ENV\s+\S*(PASSWORD|SECRET|TOKEN|KEY)", text, re.I | re.M)
 
 
@@ -121,7 +123,8 @@ def test_workflow_scan_step_fails_on_any_finding() -> None:
     for step in scans:
         w = step["with"]
         assert str(w["exit-code"]) == "1"
-        assert set(str(w["severity"]).split(",")) == {"UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
+        severities = set(str(w["severity"]).split(","))
+        assert severities == {"UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
         assert w["ignore-unfixed"] in (False, "false")
         assert "@" in step["uses"] and re.search(r"@[0-9a-f]{40}$", step["uses"])
     # Every built image is scanned.

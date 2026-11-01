@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import stack  # noqa: E402
+import stack
 
 # Not a character of the shell prompt (hex host name, lower-case paths), so only the echo matches.
 KEY = b"Q"

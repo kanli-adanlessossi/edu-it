@@ -20,8 +20,13 @@ export default defineConfig({
   timeout: 10 * 60_000,
   workers: 1,
   reporter: 'list',
+  // Bound every step: without these, a click or navigation waits for the whole test
+  // timeout, which hid the lab-route 401 as a ten-minute hang (api-route-wiring 13.3).
+  expect: { timeout: 15_000 },
   use: {
     baseURL: process.env.E2E_WEB_URL ?? 'http://localhost:3000',
     browserName: 'chromium',
+    actionTimeout: 30_000,
+    navigationTimeout: 60_000,
   },
 });

@@ -13,17 +13,20 @@ import { ResetPasswordForm } from './reset-password-form.js';
 
 interface ResetPasswordPageProps {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ token?: string | string[] }>;
 }
 
 export function generateMetadata({ params }: ResetPasswordPageProps): Promise<Metadata> {
   return pageMetadata(params, 'resetPassword');
 }
 
-export default async function ResetPasswordPage({ params }: ResetPasswordPageProps) {
+export default async function ResetPasswordPage({ params, searchParams }: ResetPasswordPageProps) {
   const { locale } = await params;
+  const rawToken = (await searchParams)?.token;
+  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
   if (!isLocale(locale)) {
     notFound();
   }
   setRequestLocale(locale);
-  return <ResetPasswordForm locale={locale} />;
+  return <ResetPasswordForm locale={locale} token={token} />;
 }

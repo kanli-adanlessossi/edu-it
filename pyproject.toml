@@ -86,6 +86,7 @@ include = [
     "packages/application/**/*.py",
     "packages/infrastructure/**/*.py",
     "packages/content/**/*.py",
+    "tools/**/*.py",
 ]
 extend-exclude = [
     "apps/web",

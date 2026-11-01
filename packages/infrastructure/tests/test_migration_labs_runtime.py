@@ -9,13 +9,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from edu_it_infrastructure.persistence import DATA_MODEL_TABLE_NAMES
+from edu_it_infrastructure.persistence import DATA_MODEL_TABLE_NAMES as _ALL_TABLES
 from edu_it_infrastructure.persistence.runner import Migration_Runner
 from sqlalchemy import create_engine, inspect
 
 _BASE = "0001_create_data_model"
 _REVISION = "0002_labs_runtime"
 _ACTIVE_INDEX = "uq_lab_session_active_user"
+# Revisions 0003 and 0004 (later) own these four; 0001 and 0002 do not create them.
+DATA_MODEL_TABLE_NAMES = _ALL_TABLES - {
+    "credential",
+    "verification_link",
+    "reset_link",
+    "pending_oauth_link",
+}
 
 
 def _schema(url: str) -> tuple[frozenset[str], dict[str, set[str]], set[str]]:

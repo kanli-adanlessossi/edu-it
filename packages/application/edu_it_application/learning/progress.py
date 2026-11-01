@@ -214,7 +214,12 @@ class GetProgressUseCase:
 
         mastery = self._mastery.list_for_user(user_id)
         by_concept = {m.concept_id: m for m in mastery}
-        stored = {p.module_id: p for p in self._progress.list_module_progress(enrollment.stable_id)}
+        # Lesson completions hang off one enrollment's module progress. Adapters that
+        # share a module across enrollments expose ``for_enrollment``; bind it so the
+        # read never guesses between learners (Req 17.2). Fakes keyed by module need no bind.
+        bind = getattr(self._progress, "for_enrollment", None)
+        progress = bind(enrollment.stable_id) if callable(bind) else self._progress
+        stored = {p.module_id: p for p in progress.list_module_progress(enrollment.stable_id)}
 
         views: list[ModuleProgressView] = []
         for module in self._catalog.list_modules_for_track(track_id):
@@ -225,7 +230,7 @@ class GetProgressUseCase:
                     ordinal=module.ordinal,
                     state=state,
                     tested_out=tested_out,
-                    completions=self._progress.list_lesson_completions(module.stable_id),
+                    completions=progress.list_lesson_completions(module.stable_id),
                 )
             )
         return ProgressView(

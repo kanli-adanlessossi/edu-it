@@ -1,9 +1,11 @@
 # packages/content — content schema layer (Pydantic v2 authoring contract).
 #
-# A framework-light package: it depends on Pydantic v2 only (not a web
-# framework), consistent with the existing Pydantic use in apps/api and the
-# learning-core design ("Content schemas"). It is the single definition of
-# every content format — the schemas the `edu-it content validate`/`sync` CLI
+# A framework-light package: it depends on Pydantic v2 and SQLAlchemy (not
+# a web framework, and no other EDU-IT package). SQLAlchemy backs
+# Postgres_ContentStore, the PostgreSQL implementation of the ContentStore port;
+# the PostgreSQL driver is the optional `postgres` extra. Pydantic use is
+# consistent with apps/api and the learning-core design ("Content schemas"). It
+# is the single definition of every content format — the schemas the `edu-it content validate`/`sync` CLI
 # and later AI output validation consume (Req 12.1-12.4).
 #
 # Versions are pinned exactly per docs/adr/0001-versions.md.
@@ -15,6 +17,13 @@ description = "EDU-IT content schema layer (Pydantic v2 content/provenance model
 requires-python = ">=3.12"
 dependencies = [
     "pydantic==2.14.1",
+    "sqlalchemy==2.1.6",
+]
+
+[project.optional-dependencies]
+# PostgreSQL driver for `edu-it-content sync --database-url postgresql://...`.
+postgres = [
+    "psycopg[binary]==3.3.6",
 ]
 
 [project.scripts]

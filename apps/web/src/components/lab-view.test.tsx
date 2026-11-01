@@ -32,6 +32,8 @@ vi.mock('../lab-api.js', async (importOriginal) => {
     fetchLabSession: vi.fn(),
     startLabSession: vi.fn(),
     resetLabSession: vi.fn(),
+    findAnyActiveSession: vi.fn(),
+    endLabSession: vi.fn(),
     requestGrading: vi.fn(),
     revealHint: vi.fn(),
     saveLabFiles: vi.fn(),
@@ -237,6 +239,28 @@ describe('Lab_View: ready state', () => {
     });
     await click(button('Start lab'));
     expect(mocked.startLabSession).toHaveBeenCalledTimes(1);
+    expect(button('Check my work')).toBeTruthy();
+  });
+
+  it('offers to end another lab\'s running session after a 409 and then starts this lab (Req 30.1)', async () => {
+    await mount({ session: null });
+    const other = session({ stableId: 'sess-other', labId: 'lab-other' });
+    mocked.startLabSession.mockRejectedValueOnce(
+      new api.LabApiError('Lab lab-other is running. End it first.', 409),
+    );
+    await click(button('Start lab'));
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('lab-other');
+    expect(mocked.endLabSession).not.toHaveBeenCalled();
+
+    mocked.findAnyActiveSession.mockResolvedValue(other);
+    mocked.endLabSession.mockResolvedValue(session({ ...other, status: 'ended' }));
+    mocked.startLabSession.mockImplementation(async () => {
+      current = session();
+      return current;
+    });
+    await click(button('End the running lab and start this one'));
+    expect(mocked.endLabSession).toHaveBeenCalledWith('sess-other', 'en');
+    expect(mocked.startLabSession).toHaveBeenCalledTimes(2);
     expect(button('Check my work')).toBeTruthy();
   });
 });

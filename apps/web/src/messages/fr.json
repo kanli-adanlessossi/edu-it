@@ -84,18 +84,40 @@
       "title": "Connexion",
       "submit": "Se connecter",
       "needAccount": "Besoin d'un compte ? Créez-en un.",
-      "forgotPassword": "Mot de passe oublié ?"
+      "forgotPassword": "Mot de passe oublié ?",
+      "githubLink": "Se connecter avec GitHub"
     },
     "verifyEmail": {
       "title": "Vérifiez votre e-mail",
       "instructions": "Nous vous avons envoyé un lien de vérification. Ouvrez-le pour activer votre compte.",
-      "resend": "Renvoyer l'e-mail de vérification"
+      "resend": "Renvoyer l'e-mail de vérification",
+      "resent": "Si un compte doit être vérifié, nous avons envoyé un nouveau lien à cette adresse.",
+      "verifying": "Vérification de votre e-mail…",
+      "successTitle": "E-mail vérifié",
+      "success": "Votre e-mail est vérifié. Vous pouvez maintenant vous connecter.",
+      "signInLink": "Aller à la connexion",
+      "invalidTitle": "Lien non valide",
+      "invalid": "Ce lien de vérification est invalide ou a expiré. Saisissez votre adresse e-mail pour en recevoir un nouveau.",
+      "verifyError": "Nous n'avons pas pu vérifier votre e-mail. Saisissez votre adresse e-mail pour recevoir un nouveau lien."
     },
     "resetPassword": {
       "title": "Réinitialisez votre mot de passe",
       "requestInstructions": "Saisissez votre adresse e-mail et nous vous enverrons un lien de réinitialisation.",
       "submit": "Envoyer le lien",
-      "setNewInstructions": "Choisissez un nouveau mot de passe pour votre compte."
+      "setNewInstructions": "Choisissez un nouveau mot de passe pour votre compte.",
+      "setNewSubmit": "Définir le nouveau mot de passe",
+      "invalidTitle": "Lien non valide",
+      "invalid": "Ce lien de réinitialisation est invalide ou a expiré.",
+      "requestNew": "Demander un nouveau lien de réinitialisation"
+    },
+    "githubConfirm": {
+      "title": "Associez votre compte GitHub",
+      "instructions": "Un compte existe déjà avec cet e-mail. Voulez-vous y associer votre compte GitHub ?",
+      "confirm": "Associer mon compte GitHub",
+      "decline": "Non, ne pas associer",
+      "declined": "Votre compte GitHub n'a pas été associé.",
+      "signInLink": "Retour à la connexion",
+      "error": "Nous n'avons pas pu terminer l'association. Recommencez depuis la page de connexion."
     }
   },
   "Dashboard": {
@@ -192,6 +214,7 @@
       "expiredBody": "Le temps de votre labo est écoulé. Vos réussites enregistrées sont conservées.",
       "idleBody": "Votre labo s'est terminé pour cause d'inactivité. Vos réussites enregistrées sont conservées.",
       "startNew": "Démarrer une nouvelle session",
+      "endAndStart": "Terminer le labo en cours et démarrer celui-ci",
       "activeElsewhere": "Vous avez déjà une session de labo active. Terminez-la avant d'en démarrer une autre."
     },
     "errors": {
@@ -250,6 +273,7 @@
     "signIn": "Connexion — EDU-IT",
     "verifyEmail": "Vérifiez votre e-mail — EDU-IT",
     "resetPassword": "Réinitialisez votre mot de passe — EDU-IT",
+    "githubConfirm": "Associez votre compte GitHub — EDU-IT",
     "dashboard": "Tableau de bord — EDU-IT"
   }
 }

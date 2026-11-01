@@ -3,10 +3,11 @@
 Everything here talks to the REAL stack: PostgreSQL and Redis through the project's own
 adapters, and the served API over HTTP and WebSocket. Nothing is mocked or simulated.
 
-Authentication for measurement: the API has no sign-up or sign-in route in this phase, so a
-learner is minted by inserting a verified ``user`` row and creating a server-side session
-in the Redis ``SessionStore`` (the same store the API resolves the ``edu_it_session``
-cookie through). The CSRF double-submit pair is generated client-side, as the web app does.
+Authentication for measurement: the API now has sign-up and sign-in routes, but the harness
+does not use them. It mints a learner directly by inserting a verified ``user`` row and
+creating a server-side session in the Redis ``SessionStore`` (the same store the API
+resolves the ``edu_it_session`` cookie through). The CSRF double-submit pair is
+generated client-side, as the web app does.
 
 Environment: ``DATABASE_URL`` and ``REDIS_URL`` (as the api/worker), ``PERF_API_BASE``
 (default ``http://127.0.0.1:8000``), ``PERF_CONTENT_ROOT`` (default ``content``).
@@ -14,14 +15,13 @@ Environment: ``DATABASE_URL`` and ``REDIS_URL`` (as the api/worker), ``PERF_API_
 
 from __future__ import annotations
 
-import importlib
 import json
 import os
 import secrets
 import time
 import uuid
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 from http.client import HTTPConnection
 from pathlib import Path
 from typing import Any
@@ -49,118 +49,31 @@ class Learner:
 
 
 def seed_database(content_root: str | Path | None = None) -> dict[str, int]:
-    """Insert the catalog rows a Lab_Session references (idempotent, by ``stable_id``).
+    """Sync the authored content into the relational catalog (idempotent, by ``stable_id``).
 
-    The persistent content store is not part of this phase, so the relational catalog rows
-    the foreign keys need (provenance, track, module, lesson, concept, lab, lab_task,
-    lab_check) are written here from the validated authored content. Returns rows inserted
-    per table.
+    Delegates to the same ``sync_content`` that ``edu-it-content sync --database-url``
+    runs, through ``Postgres_ContentStore``, so the foreign keys a Lab_Session needs and
+    the quiz, project and prerequisite rows are all written. A second call changes no
+    row. Returns the number of items inserted, updated, unchanged and archived.
     """
+    from edu_it_content.postgres_store import Postgres_ContentStore
+    from edu_it_content.sync import sync_content
     from edu_it_content.validation import load_content
     from edu_it_infrastructure.composition import CompositionSettings
-    from sqlalchemy import create_engine, insert, select
-
-    m: Any = importlib.import_module("edu_it_infrastructure.persistence.metadata")
+    from sqlalchemy import create_engine
 
     root = Path(content_root or os.environ.get("PERF_CONTENT_ROOT", REPO_ROOT / "content"))
-    content = load_content(root)
     engine = create_engine(CompositionSettings.from_env().database_url)
-    inserted: dict[str, int] = {}
-
-    def title(item: dict[str, Any]) -> tuple[str, str]:
-        t = item.get("title") or {}
-        return str(t.get("fr") or t.get("en") or ""), str(t.get("en") or t.get("fr") or "")
-
-    with engine.begin() as cx:
-
-        def pk(table: Any, stable_id: str) -> int | None:
-            return cx.execute(select(table.c.id).where(table.c.stable_id == stable_id)).scalar()
-
-        def provenance(prov: dict[str, Any]) -> int:
-            existing = pk(m.content_provenance, prov["stable_id"])
-            if existing is not None:
-                return existing
-            generated = prov.get("generation_date")
-            reviewed = prov.get("reviewed_at")
-            row = cx.execute(
-                insert(m.content_provenance)
-                .values(
-                    stable_id=prov["stable_id"],
-                    content_version=prov["content_version"],
-                    origin=prov["origin"],
-                    model=prov.get("model"),
-                    prompt_id=prov.get("prompt_id"),
-                    prompt_version=prov.get("prompt_version"),
-                    generation_date=(
-                        None if not generated else datetime.fromisoformat(generated)
-                    ),
-                    reviewed_at=None if not reviewed else datetime.fromisoformat(reviewed),
-                )
-                .returning(m.content_provenance.c.id)
-            )
-            return int(row.scalar_one())
-
-        def put(table_name: str, table: Any, stable_id: str, values: dict[str, Any]) -> None:
-            if pk(table, stable_id) is not None:
-                return
-            cx.execute(insert(table).values(stable_id=stable_id, **values))
-            inserted[table_name] = inserted.get(table_name, 0) + 1
-
-        items = content.raw_items
-        for it in items.get("track", ()):
-            fr, en = title(it)
-            sid = it["provenance"]["stable_id"]
-            put("track", m.track, sid, {
-                "provenance_id": provenance(it["provenance"]),
-                "title_fr": fr, "title_en": en, "status": str(it.get("status", "draft")),
-            })
-        for it in items.get("module", ()):
-            sid = it["provenance"]["stable_id"]
-            put("module", m.module, sid, {
-                "track_id": pk(m.track, it["track_stable_id"]),
-                "provenance_id": provenance(it["provenance"]),
-                "ordinal": int(it["ordinal"]),
-                "prerequisite_concept_ids": json.dumps(
-                    it.get("prerequisite_concept_stable_ids", [])
-                ),
-            })
-        for it in items.get("lesson", ()):
-            sid = it["provenance"]["stable_id"]
-            put("lesson", m.lesson, sid, {
-                "module_id": pk(m.module, it["module_stable_id"]),
-                "provenance_id": provenance(it["provenance"]),
-                "ordinal": int(it["ordinal"]),
-            })
-        for it in items.get("concept", ()):
-            fr, en = title(it)
-            sid = it["provenance"]["stable_id"]
-            put("concept", m.concept, sid, {
-                "provenance_id": provenance(it["provenance"]), "title_fr": fr, "title_en": en,
-            })
-        for it in items.get("lab", ()):
-            sid = it["provenance"]["stable_id"]
-            put("lab", m.lab, sid, {
-                "lesson_id": pk(m.lesson, it["lesson_stable_id"]),
-                "provenance_id": provenance(it["provenance"]),
-                "kind": it["kind"],
-                "image": it.get("image"),
-                "concept_stable_ids": json.dumps(it.get("concept_stable_ids", [])),
-            })
-        for it in items.get("lab_task", ()):
-            put("lab_task", m.lab_task, it["stable_id"], {
-                "lab_id": pk(m.lab, it["lab_stable_id"]),
-                "ordinal": int(it["ordinal"]),
-                "required": bool(it.get("required", True)),
-            })
-        for it in items.get("lab_check", ()):
-            put("lab_check", m.lab_check, it["stable_id"], {
-                "lab_task_id": pk(m.lab_task, it["lab_task_stable_id"]),
-                "check_kind": "shell",
-                "timeout_seconds": int(it["timeout_seconds"]),
-                "script": it.get("script"),
-            })
-    return inserted
-
+    try:
+        report = sync_content(Postgres_ContentStore(engine), load_content(root))
+    finally:
+        engine.dispose()
+    return {
+        "inserted": len(report.inserted),
+        "updated": len(report.updated),
+        "unchanged": len(report.unchanged),
+        "archived": len(report.archived),
+    }
 
 # -- learners -------------------------------------------------------------------------------
 

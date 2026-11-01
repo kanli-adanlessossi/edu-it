@@ -12,7 +12,7 @@ The design specifies these migration properties run against a disposable
 PostgreSQL via the :class:`Migration_Runner`. No live PostgreSQL is provisioned
 in this environment, so — following the lifecycle verification approach from
 task 6.1 — the test runs against a throwaway database: it uses the database at
-``EDU_IT_TEST_DATABASE_URL`` (or ``DATABASE_URL``) when one is reachable and
+``EDU_IT_TEST_DATABASE_URL`` (never ``DATABASE_URL``) when one is set and
 otherwise falls back to an ephemeral per-example SQLite file. Either way the
 property is exercised through the real runner's ``upgrade('head')`` path.
 
@@ -36,9 +36,11 @@ from sqlalchemy import create_engine, inspect
 # A disposable PostgreSQL is preferred (design Testing Strategy); when none is
 # reachable the test falls back to an ephemeral SQLite file per example, which
 # is how task 6.1 verified the migration lifecycle.
-_EXTERNAL_DATABASE_URL = os.environ.get("EDU_IT_TEST_DATABASE_URL") or os.environ.get(
-    "DATABASE_URL"
-)
+#
+# Only the dedicated EDU_IT_TEST_DATABASE_URL may name a database to reset. The test never reads
+# DATABASE_URL: that variable names the Real_Stack (or a developer) database, and this test
+# downgrades its target to ``base`` (api-route-wiring 13.5).
+_EXTERNAL_DATABASE_URL = os.environ.get("EDU_IT_TEST_DATABASE_URL")
 
 
 @contextmanager

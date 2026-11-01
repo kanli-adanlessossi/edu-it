@@ -37,7 +37,7 @@ def _load_gateway_helpers() -> object:
 _helpers = _load_gateway_helpers()
 Env = _helpers.Env  # type: ignore[attr-defined]
 FakeSocket = _helpers.FakeSocket  # type: ignore[attr-defined]
-_lab = _helpers._lab  # type: ignore[attr-defined]  # noqa: SLF001
+_lab = _helpers._lab  # type: ignore[attr-defined]
 
 RECONNECT = {"type": "reconnect"}
 

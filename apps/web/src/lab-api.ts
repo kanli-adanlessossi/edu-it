@@ -5,7 +5,8 @@
 // epoch milliseconds together with a server clock offset taken from `server_now`
 // (see lab-state.ts), so the view never trusts the client clock.
 
-import { GeneratedClient } from './generated/api-client.js';
+import { apiBaseUrl, createApiClient } from './create-api-client.js';
+import type { GeneratedClient } from './generated/api-client.js';
 import { routing } from './i18n/routing.js';
 import { clockOffsetMs, type CheckResultView, type RunStatus } from './lab-state.js';
 import { isLocale, type Locale } from './locale.js';
@@ -56,11 +57,6 @@ type Json = Record<string, unknown>;
 /** Base URL of the API, also used to derive the terminal WebSocket URL. */
 export function labApiBaseUrl(): string {
   return apiBaseUrl();
-}
-
-function apiBaseUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
-  return fromEnv && fromEnv.length > 0 ? fromEnv : 'http://localhost:8000/v1';
 }
 
 function resolveLocale(locale: string): Locale {
@@ -149,7 +145,7 @@ export function toRunView(body: Json): GradingRunView {
 }
 
 function http(client?: GeneratedClient): Pick<GeneratedClient, 'call'> {
-  return client ?? new GeneratedClient({ baseUrl: apiBaseUrl() });
+  return client ?? createApiClient();
 }
 
 export async function fetchLabSession(
@@ -262,13 +258,23 @@ export function toLabDetail(body: Json): LabDetailView {
 export async function fetchLab(
   labId: string,
   localeInput: string,
+  cookie?: string,
   client?: GeneratedClient,
 ): Promise<LabDetailView | null> {
   const locale = resolveLocale(localeInput);
+  // Server-side call: the Session_Cookie must be forwarded explicitly (no cookie jar),
+  // otherwise the API answers 401 (api-route-wiring task 13.3).
   const response = await http(client).call(
     'GET',
     `/labs/${encodeURIComponent(labId)}?locale=${encodeURIComponent(locale)}`,
-    { cache: 'no-store', headers: { accept: 'application/json', 'accept-language': locale } },
+    {
+      cache: 'no-store',
+      headers: {
+        accept: 'application/json',
+        'accept-language': locale,
+        ...(cookie ? { cookie } : {}),
+      },
+    },
   );
   if (response.status === 404) return null;
   return toLabDetail(await readJson(response));
@@ -285,11 +291,49 @@ const SESSION_PAGE_LIMIT = 50;
 const SESSION_PAGE_CAP = 40;
 
 /** The learner's active session for `labId`, or null when there is none. */
-export async function findActiveSession(
+export function findActiveSession(
   labId: string,
   localeInput: string,
   client?: GeneratedClient,
   clientNow: () => number = Date.now,
+): Promise<LabSessionView | null> {
+  return findActiveSessionWhere((view) => view.labId === labId, localeInput, client, clientNow);
+}
+
+/** The learner's Active_Session whatever the lab (at most one exists, Req 7.1), or null. */
+export function findAnyActiveSession(
+  localeInput: string,
+  client?: GeneratedClient,
+  clientNow: () => number = Date.now,
+): Promise<LabSessionView | null> {
+  return findActiveSessionWhere(() => true, localeInput, client, clientNow);
+}
+
+/** End a session; ending an already ended session is a no-op (Req 30.1 offers this on a 409). */
+export async function endLabSession(
+  sessionId: string,
+  localeInput: string,
+  client?: GeneratedClient,
+  clientNow: () => number = Date.now,
+): Promise<LabSessionView> {
+  const locale = resolveLocale(localeInput);
+  const response = await http(client).call(
+    'DELETE',
+    `/lab-sessions/${encodeURIComponent(sessionId)}`,
+    {
+      credentials: 'include',
+      headers: { accept: 'application/json', 'accept-language': locale },
+    },
+  );
+  const now = clientNow();
+  return toSessionView(await readJson(response), now);
+}
+
+async function findActiveSessionWhere(
+  matches: (view: LabSessionView) => boolean,
+  localeInput: string,
+  client: GeneratedClient | undefined,
+  clientNow: () => number,
 ): Promise<LabSessionView | null> {
   const locale = resolveLocale(localeInput);
   let cursor: string | null = null;
@@ -306,7 +350,7 @@ export async function findActiveSession(
     const items = Array.isArray(body.items) ? (body.items as Json[]) : [];
     for (const item of items) {
       const view = toSessionView(item, now);
-      if (view.labId === labId && isActiveStatus(view.status)) found = view;
+      if (matches(view) && isActiveStatus(view.status)) found = view;
     }
     cursor = typeof body.next_cursor === 'string' ? body.next_cursor : null;
     if (cursor === null) break;

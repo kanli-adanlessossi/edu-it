@@ -96,7 +96,7 @@ class Env:
         )
 
 
-def _lab():  # noqa: ANN202
+def _lab():
     from edu_it_domain.ports.lab_catalog import LabDefinition
 
     return LabDefinition(

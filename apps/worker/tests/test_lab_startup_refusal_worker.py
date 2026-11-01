@@ -62,7 +62,11 @@ def test_real_config_starts() -> None:
     create_health_app(lab_config=_config())
 
 
-@pytest.mark.parametrize(("overrides", "expected"), [c[1:] for c in _CASES], ids=[c[0] for c in _CASES])
+@pytest.mark.parametrize(
+    ("overrides", "expected"),
+    [c[1:] for c in _CASES],
+    ids=[c[0] for c in _CASES],
+)
 def test_worker_refuses_to_start_naming_keys_and_creates_no_sandbox(
     overrides: dict[str, object],
     expected: set[str],

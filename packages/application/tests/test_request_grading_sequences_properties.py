@@ -8,6 +8,7 @@ Feature: hands-on-labs, Property 7: Grading request sequences stay throttled and
 from __future__ import annotations
 
 from datetime import timedelta
+from itertools import pairwise
 
 from edu_it_application.labs import GradingRejectedError, RequestGradingUseCase
 from edu_it_domain import config
@@ -116,7 +117,7 @@ class GradingSequenceMachine(RuleBasedStateMachine):
     @invariant()
     def accepted_runs_are_spaced_and_each_enqueued_once(self) -> None:
         times = self.accepted_times
-        for earlier, later in zip(times, times[1:], strict=False):
+        for earlier, later in pairwise(times):
             assert later - earlier > _MIN
         grade_jobs = [j for j in self.queue._pending if j.job_name == "lab.grade"]
         assert len(grade_jobs) == len(self.accepted)

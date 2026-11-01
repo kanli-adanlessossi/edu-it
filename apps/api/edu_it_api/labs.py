@@ -148,9 +148,11 @@ def build_labs_router(services: LabServices) -> APIRouter:
     @router.get("/labs/{lab_id}", response_model=LabResponse)
     def get_lab(
         lab_id: str,
+        request: Request,
         locale: Annotated[str, Query(min_length=2, max_length=16)] = _DEFAULT_LOCALE,
     ) -> LabResponse:
         """A lab's instructions, tasks and starter file names; hint text is withheld."""
+        user_of(request)  # authenticated like every lab route (api-route-wiring Req 1.3)
         lab = services.catalog.get(lab_id)
         if lab is None or lab.archived:
             raise LabNotFoundError(lab_id)

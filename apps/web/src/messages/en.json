@@ -84,18 +84,40 @@
       "title": "Sign in",
       "submit": "Sign in",
       "needAccount": "Need an account? Sign up.",
-      "forgotPassword": "Forgot your password?"
+      "forgotPassword": "Forgot your password?",
+      "githubLink": "Sign in with GitHub"
     },
     "verifyEmail": {
       "title": "Verify your email",
       "instructions": "We sent you a verification link. Open it to activate your account.",
-      "resend": "Resend verification email"
+      "resend": "Resend verification email",
+      "resent": "If an account needs verification, we sent a new link to that address.",
+      "verifying": "Verifying your email…",
+      "successTitle": "Email verified",
+      "success": "Your email is verified. You can now sign in.",
+      "signInLink": "Go to sign in",
+      "invalidTitle": "Link not valid",
+      "invalid": "This verification link is invalid or has expired. Enter your email address to get a new one.",
+      "verifyError": "We could not verify your email. Enter your email address to get a new link."
     },
     "resetPassword": {
       "title": "Reset your password",
       "requestInstructions": "Enter your email address and we will send you a reset link.",
       "submit": "Send reset link",
-      "setNewInstructions": "Choose a new password for your account."
+      "setNewInstructions": "Choose a new password for your account.",
+      "setNewSubmit": "Set new password",
+      "invalidTitle": "Link not valid",
+      "invalid": "This reset link is invalid or has expired.",
+      "requestNew": "Request a new reset link"
+    },
+    "githubConfirm": {
+      "title": "Link your GitHub account",
+      "instructions": "An account with this email already exists. Do you want to link your GitHub account to it?",
+      "confirm": "Link my GitHub account",
+      "decline": "No, do not link",
+      "declined": "Your GitHub account was not linked.",
+      "signInLink": "Back to sign in",
+      "error": "We could not complete the link. Start again from the sign-in page."
     }
   },
   "Dashboard": {
@@ -192,6 +214,7 @@
       "expiredBody": "Your lab time ran out. Your recorded completions are kept.",
       "idleBody": "Your lab ended because of inactivity. Your recorded completions are kept.",
       "startNew": "Start a new session",
+      "endAndStart": "End the running lab and start this one",
       "activeElsewhere": "You already have an active lab session. End it before starting another."
     },
     "errors": {
@@ -250,6 +273,7 @@
     "signIn": "Sign in — EDU-IT",
     "verifyEmail": "Verify your email — EDU-IT",
     "resetPassword": "Reset your password — EDU-IT",
+    "githubConfirm": "Link your GitHub account — EDU-IT",
     "dashboard": "Dashboard — EDU-IT"
   }
 }

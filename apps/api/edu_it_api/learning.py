@@ -159,9 +159,11 @@ def build_learning_router(services: LearningServices) -> APIRouter:
     @router.get("/lessons/{stable_id}", response_model=LessonResponse)
     def lesson(
         stable_id: str,
+        request: Request,
         locale: Annotated[str, Query(min_length=2, max_length=16)] = "en",
     ) -> LessonResponse:
         """A lesson in ``locale``, falling back to English (Req 17.3)."""
+        user_of(request)  # authenticated like every learning route (api-route-wiring Req 1.3)
         view = services.lessons.execute(stable_id, locale)
         return LessonResponse(
             stable_id=view.stable_id,

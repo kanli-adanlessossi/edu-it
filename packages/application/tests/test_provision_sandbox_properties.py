@@ -8,6 +8,7 @@ Feature: hands-on-labs, Property 8: Provisioning is bounded, spaced, and creates
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from itertools import pairwise
 
 from edu_it_application.labs import ProvisionOutcome, ProvisionSandbox
 from edu_it_domain import config
@@ -40,7 +41,8 @@ _advances = st.lists(st.integers(min_value=0, max_value=25), min_size=1, max_siz
 def test_provisioning_is_bounded_spaced_and_creates_at_most_one_sandbox(
     modes: list[ProvisionMode], advances: list[int]
 ) -> None:
-    # Feature: hands-on-labs, Property 8: Provisioning is bounded, spaced, and creates at most one sandbox
+    # Feature: hands-on-labs, Property 8: Provisioning is bounded, spaced, and creates at most
+    # one sandbox
     clock = Test_Clock()
     sessions = In_Memory_LabSessionRepository(In_Memory_GradingRunRepository())
     sandbox = Fake_SandboxProvider(clock)
@@ -49,7 +51,7 @@ def test_provisioning_is_bounded_spaced_and_creates_at_most_one_sandbox(
     starts: list[datetime] = []
     real_provision = sandbox.provision
 
-    def recording_provision(spec):  # noqa: ANN001, ANN202
+    def recording_provision(spec):
         starts.append(clock.now())
         return real_provision(spec)
 
@@ -105,7 +107,7 @@ def test_provisioning_is_bounded_spaced_and_creates_at_most_one_sandbox(
     # Consecutive attempts are spaced by at least LAB_PROVISION_MIN_INTERVAL (25.1/25.2).
     # A start is recorded after any provider time was spent, so the previous failure's
     # scheduling instant (>= its start) bounds the gap from below.
-    for earlier, later in zip(starts, starts[1:], strict=False):
+    for earlier, later in pairwise(starts):
         assert later - earlier >= _MIN_INTERVAL
 
     # Once ready or failed, further deliveries never provision again (25.3).

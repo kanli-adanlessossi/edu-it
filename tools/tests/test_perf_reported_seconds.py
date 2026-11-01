@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "perf"))
-import lab_perf  # noqa: E402
+import lab_perf
 
 
 def test_last_json_line_with_seconds_is_the_sample() -> None:

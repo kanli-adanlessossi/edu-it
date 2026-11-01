@@ -1,5 +1,6 @@
 // Lesson fetch for the lesson reader, through the generated client (Req 16.3).
-import { GeneratedClient } from './generated/api-client.js';
+import { createApiClient } from './create-api-client.js';
+import type { GeneratedClient } from './generated/api-client.js';
 
 /** A lesson as served by `GET /v1/lessons/{stable_id}`. */
 export interface Lesson {
@@ -12,11 +13,6 @@ export interface Lesson {
   content_version: string;
   /** Labs the lesson references; the reader links to the Lab_View when non-empty. */
   lab_ids?: string[];
-}
-
-function apiBaseUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
-  return fromEnv && fromEnv.length > 0 ? fromEnv : 'http://localhost:8000/v1';
 }
 
 function isLesson(value: unknown): value is Lesson {
@@ -35,7 +31,7 @@ export async function fetchLesson(
   locale: string,
   client?: GeneratedClient,
 ): Promise<Lesson | undefined> {
-  const generated = client ?? new GeneratedClient({ baseUrl: apiBaseUrl() });
+  const generated = client ?? createApiClient();
   const response = await generated.call(
     'GET',
     `/lessons/${encodeURIComponent(lessonId)}?locale=${encodeURIComponent(locale)}`,

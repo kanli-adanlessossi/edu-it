@@ -25,8 +25,10 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 
 import {
   LabApiError,
+  endLabSession,
   fetchLabSession,
   findActiveSession,
+  findAnyActiveSession,
   isActiveStatus,
   labApiBaseUrl,
   labClientConfig,
@@ -84,6 +86,7 @@ export function LabView({ locale, lab }: LabViewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gone, setGone] = useState(false);
+  const [conflict, setConflict] = useState(false);
 
   const describe = useCallback(
     (cause: unknown): string =>
@@ -129,10 +132,29 @@ export function LabView({ locale, lab }: LabViewProps) {
     setBusy(true);
     setError(null);
     setGone(false);
+    setConflict(false);
     try {
       setSession(await startLabSession(lab.labId, locale, newKey()));
     } catch (cause) {
       setError(describe(cause));
+      // 409: another lab's Active_Session is running; offer to end it (Req 30.1).
+      setConflict(cause instanceof LabApiError && cause.status === 409);
+    } finally {
+      setBusy(false);
+    }
+  }, [lab.labId, locale, describe]);
+
+  const endOtherAndStart = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    setConflict(false);
+    try {
+      const running = await findAnyActiveSession(locale);
+      if (running !== null) await endLabSession(running.stableId, locale);
+      setSession(await startLabSession(lab.labId, locale, newKey()));
+    } catch (cause) {
+      setError(describe(cause));
+      setConflict(cause instanceof LabApiError && cause.status === 409);
     } finally {
       setBusy(false);
     }
@@ -144,6 +166,13 @@ export function LabView({ locale, lab }: LabViewProps) {
     <div className="lab-view" lang={locale}>
       <h1>{lab.title}</h1>
       {error !== null ? <p role="alert">{error}</p> : null}
+      {conflict ? (
+        <p>
+          <button type="button" onClick={() => void endOtherAndStart()} disabled={busy}>
+            {t('session.endAndStart')}
+          </button>
+        </p>
+      ) : null}
       {!loaded ? <p role="status">{t('status.loading')}</p> : null}
       {loaded && !active ? (
         <>
