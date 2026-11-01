@@ -141,7 +141,9 @@ export function createAuthApi(locale: string, client?: GeneratedClient): Verifyi
       });
       if (response.ok) {
         const redirectTo = await readRedirectTo(response);
-        return redirectTo === undefined ? { status: 'completed' } : { status: 'completed', redirectTo };
+        return redirectTo === undefined
+          ? { status: 'completed' }
+          : { status: 'completed', redirectTo };
       }
       // 400 is the invalid-or-expired link problem; 422 (weak password) and others carry a detail.
       if (response.status === 400) return { status: 'invalid' };

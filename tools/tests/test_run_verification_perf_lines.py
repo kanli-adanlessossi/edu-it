@@ -4,6 +4,7 @@ Requirements 17.2, 17.3).
 ``labs-performance`` needs the Real_Stack. When it fails, the attempt log on disk is the one from
 an earlier run, and printing it would look like a pass. Process calls are injected.
 """
+
 from __future__ import annotations
 
 import json

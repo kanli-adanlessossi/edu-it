@@ -7,7 +7,7 @@ Feature: hands-on-labs, Property 7: Grading request sequences stay throttled and
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from itertools import pairwise
 
 from edu_it_application.labs import GradingRejectedError, RequestGradingUseCase
@@ -67,7 +67,7 @@ class GradingSequenceMachine(RuleBasedStateMachine):
         )
         self.counter = 0
         self.accepted: dict[str, object] = {}  # key -> run
-        self.accepted_times: list = []
+        self.accepted_times: list[datetime] = []
 
     @rule(seconds=st.integers(min_value=0, max_value=int(_MIN.total_seconds()) * 3))
     def advance(self, seconds: int) -> None:

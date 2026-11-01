@@ -1,4 +1,4 @@
-﻿"""Docker tests for the code-exercise harness ``run_cases.py`` (hands-on-labs task 12.2).
+"""Docker tests for the code-exercise harness ``run_cases.py`` (hands-on-labs task 12.2).
 
 Requirements 14.3, 14.4, 14.10, 14.11, 14.12, 28.6, 28.7, 29.7, 29.9, evidenced against a real
 kernel. The real harness from ``content/linux-fundamentals/lab-bundles/world-writable-entries``

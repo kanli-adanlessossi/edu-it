@@ -13,7 +13,7 @@ import asyncio
 import importlib.util
 import json
 import sys
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
@@ -48,7 +48,7 @@ UNKNOWN: str = _MODULE.UNKNOWN
 ORIGIN = config.LAB_ALLOWED_WEB_ORIGINS[0]
 
 
-def _run(scenario: Callable[[], Awaitable[None]]) -> None:
+def _run(scenario: Callable[[], Coroutine[Any, Any, None]]) -> None:
     asyncio.run(scenario())
 
 

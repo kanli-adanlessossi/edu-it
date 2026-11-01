@@ -122,8 +122,7 @@ def run_protocol(
     outcome = ProtocolOutcome()
     for number in range(1, MAX_ATTEMPTS + 1):
         results = {
-            t: evaluate_target(t, collect(t, raw_required(t)), methods.get(t, ""))
-            for t in targets
+            t: evaluate_target(t, collect(t, raw_required(t)), methods.get(t, "")) for t in targets
         }
         outcome.attempts.append(Attempt(number, results))
         if outcome.attempts[-1].passed:
@@ -150,8 +149,11 @@ def outcome_to_dict(outcome: ProtocolOutcome, machine: Mapping[str, object]) -> 
     return {
         "machine": dict(machine),
         "attempts": [
-            {"attempt": a.number, "passed": a.passed,
-             "targets": {k: res(v) for k, v in a.results.items()}}
+            {
+                "attempt": a.number,
+                "passed": a.passed,
+                "targets": {k: res(v) for k, v in a.results.items()},
+            }
             for a in outcome.attempts
         ],
         "final_attempt": outcome.final.number,

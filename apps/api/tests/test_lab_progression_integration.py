@@ -170,7 +170,9 @@ class _Env:
         return body  # type: ignore[no-any-return]
 
     def module_state(self, module_id: str) -> str:
-        return next(m["state"] for m in self.progress()["modules"] if m["module_id"] == module_id)
+        return str(
+            next(m["state"] for m in self.progress()["modules"] if m["module_id"] == module_id)
+        )
 
 
 def _call(app: FastAPI, method: str, path: str, query: str = "") -> tuple[int, Any]:

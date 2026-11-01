@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from datetime import timedelta
 
 import pytest
@@ -53,7 +54,7 @@ class _Env:
         self.end = EndSessionUseCase(sessions=self.sessions, queue=self.queue, clock=self.clock)
         self.reset = ResetLabUseCase(sessions=self.sessions, end=self.end, start=self.start)
 
-    def jobs(self, name: str) -> list[tuple[str, object]]:
+    def jobs(self, name: str) -> list[tuple[str | None, Mapping[str, object]]]:
         return [(j.dedupe_key, j.payload) for j in self.queue._pending if j.job_name == name]
 
 
@@ -123,10 +124,11 @@ def test_end_session_cas_and_enqueues_destroy_once() -> None:
 def test_foreign_and_missing_sessions_are_indistinguishable() -> None:
     env = _Env()
     s = env.start.execute("u1", "lab-a", "k").session
-    for use in (
+    uses: list[Callable[[str], object]] = [
         lambda sid: env.end.execute("u2", sid),
         lambda sid: GetSessionUseCase(sessions=env.sessions).execute("u2", sid),
-    ):
+    ]
+    for use in uses:
         with pytest.raises(LabSessionNotFoundError):
             use(s.stable_id)
         with pytest.raises(LabSessionNotFoundError):

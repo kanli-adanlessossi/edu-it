@@ -51,7 +51,7 @@ _CSRF_COOKIE = "csrf_token"
 
 def _cookie_value(response: Any, name: str) -> str:
     header = next(c for c in response.headers.get_list("set-cookie") if c.startswith(f"{name}="))
-    return header.split(";", 1)[0].split("=", 1)[1]
+    return str(header.split(";", 1)[0].split("=", 1)[1])
 
 
 def _verified(world: Any, email: str, password: str) -> None:

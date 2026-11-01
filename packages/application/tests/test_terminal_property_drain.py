@@ -16,7 +16,7 @@ from edu_it_application.labs import Frame, TerminalAuthorization
 from edu_it_application.labs.terminal import TerminalRegistry, _Connection
 from edu_it_domain import config
 from edu_it_domain.labs.limits import HeartbeatTracker
-from edu_it_domain.labs.models import LabSession
+from edu_it_domain.labs.models import LabSession, SessionStatus
 from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
 from edu_it_infrastructure.fakes import Test_Clock
 from hypothesis import given, settings
@@ -42,7 +42,7 @@ _lab = _helpers._lab  # type: ignore[attr-defined]
 RECONNECT = {"type": "reconnect"}
 
 
-class _OrderedSocket(FakeSocket):
+class _OrderedSocket(FakeSocket):  # type: ignore[valid-type, misc]
     """Records the order of sends and the close in one event list."""
 
     def __init__(self) -> None:
@@ -128,7 +128,7 @@ def test_gateway_drain_ends_every_running_connection_with_1012(n: int) -> None:
                     stable_id=f"s{i}",
                     user_id=f"u{i}",
                     lab_id="lab1",
-                    status=_helpers.SessionStatus.READY,
+                    status=SessionStatus.READY,
                     created_at=now,
                     ttl_at=now + config.LAB_SESSION_TTL,
                     sandbox_ref=ref,

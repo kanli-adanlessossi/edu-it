@@ -161,8 +161,17 @@ jobs:
         env:
           DATABASE_URL: postgresql+psycopg://edu_it:ci-password@localhost:5432/edu_it
       # PostgreSQL variants of the content-store contract and the migration property test.
-      # The migration test resets the database it is given, so it reads only the dedicated
-      # EDU_IT_TEST_DATABASE_URL (never DATABASE_URL); this service container is throwaway.
+      # The content-store contract isolates itself in a temporary schema. The migration test
+      # resets the database it is given and needs it empty, so it gets its own database,
+      # `edu_it_migrations`, through EDU_IT_TEST_DATABASE_URL (never DATABASE_URL): the
+      # account contract step above leaves create_all tables in `edu_it`.
+      - name: Create the migration test database (PostgreSQL)
+        run: >-
+          uv run --frozen python -c
+          "import sqlalchemy as sa;
+          e = sa.create_engine('postgresql+psycopg://edu_it:ci-password@localhost:5432/edu_it',
+          isolation_level='AUTOCOMMIT');
+          c = e.connect(); c.execute(sa.text('CREATE DATABASE edu_it_migrations')); c.close()"
       - name: Content store and migration tests (PostgreSQL)
         run: >-
           uv run --frozen pytest
@@ -171,7 +180,7 @@ jobs:
           --no-cov -rs
         env:
           DATABASE_URL: postgresql+psycopg://edu_it:ci-password@localhost:5432/edu_it
-          EDU_IT_TEST_DATABASE_URL: postgresql+psycopg://edu_it:ci-password@localhost:5432/edu_it
+          EDU_IT_TEST_DATABASE_URL: postgresql+psycopg://edu_it:ci-password@localhost:5432/edu_it_migrations
 
       # -- Content validation (Req 14.5, 27.1, 27.2) ------------------------
       # Runs the ordered Content_Validator checks (`edu-it content validate`,

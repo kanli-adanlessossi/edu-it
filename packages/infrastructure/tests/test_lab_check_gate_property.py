@@ -27,10 +27,13 @@ _CONCEPTS = ("c0", "c1", "c2", "c3")
 _USERS = ("u0", "u1")
 
 
+type _Scenario = tuple[list[LabDefinition], dict[str, set[str]], set[tuple[str, str]]]
+
+
 @st.composite
-def _scenario(draw):
+def _scenario(draw: st.DrawFn) -> _Scenario:
     n_labs = draw(st.integers(min_value=0, max_value=4))
-    labs = []
+    labs: list[LabDefinition] = []
     for i in range(n_labs):
         required_flags = draw(st.lists(st.booleans(), min_size=0, max_size=4))
         tasks = tuple(
@@ -66,7 +69,7 @@ def _scenario(draw):
 # Feature: hands-on-labs, Property 13: The lab-check gate follows completed labs
 @settings(max_examples=100, deadline=None)
 @given(_scenario())
-def test_lab_check_gate_follows_completed_labs(scenario) -> None:
+def test_lab_check_gate_follows_completed_labs(scenario: _Scenario) -> None:
     labs, done, markers = scenario
     runs = In_Memory_GradingRunRepository()
     mastery = In_Memory_MasteryRepository()

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import dataclasses
+from typing import Any
 
 import pytest
 from edu_it_application.learning import GetProjectUseCase, GetQuizUseCase
@@ -83,7 +84,8 @@ def test_quiz_view_has_text_ranked_options_and_no_correctness() -> None:
     question = view.questions[0]
     assert (question.prompt, question.hints) == ("Which?", ("h1",))
     assert [(o.option_id, o.text) for o in question.options] == [(7, "seven"), (42, "forty-two")]
-    for item in (view, question, *question.options):
+    items: list[Any] = [view, question, *question.options]
+    for item in items:
         assert not any("correct" in f.name for f in dataclasses.fields(item))
 
 

@@ -1,0 +1,12 @@
+# gitleaks false positives, reviewed one by one (CI secret scan, gitleaks-action).
+# Six are the call `mark_consumed(link.token, consumed_at=...)` in the account-repository
+# contract tests, which the generic-api-key rule reads as `token, ...=<value>`. One is the
+# fixed CSRF test token in test_csrf_protection.py. None is a credential. Add a line here only
+# after checking the finding; never ignore a whole rule or path.
+61d0c2f62a23d230e9cd62c14e74e2793728e0a1:packages/infrastructure/tests/test_account_repositories_contract.py:generic-api-key:187
+61d0c2f62a23d230e9cd62c14e74e2793728e0a1:packages/infrastructure/tests/test_account_repositories_contract.py:generic-api-key:253
+61d0c2f62a23d230e9cd62c14e74e2793728e0a1:packages/infrastructure/tests/test_account_repositories_contract.py:generic-api-key:381
+61d0c2f62a23d230e9cd62c14e74e2793728e0a1:packages/infrastructure/tests/test_account_repositories_contract.py:generic-api-key:414
+61d0c2f62a23d230e9cd62c14e74e2793728e0a1:packages/infrastructure/tests/test_account_repositories_contract.py:generic-api-key:454
+61d0c2f62a23d230e9cd62c14e74e2793728e0a1:packages/infrastructure/tests/test_account_repositories_contract.py:generic-api-key:503
+1af1e0c819b497b5267bb5e33a5764cf6d45c40d:apps/api/tests/test_csrf_protection.py:generic-api-key:33

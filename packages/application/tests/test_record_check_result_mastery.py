@@ -36,7 +36,9 @@ def _r(check: str, task: str, outcome: CheckOutcome) -> CheckResult:
     return CheckResult(check, task, outcome, outcome.value, "fb")
 
 
-def _env():
+def _env() -> tuple[
+    RecordCheckResult, In_Memory_GradingRunRepository, In_Memory_MasteryRepository, LabSession
+]:
     clock = Test_Clock()
     runs = In_Memory_GradingRunRepository()
     sessions = In_Memory_LabSessionRepository(runs)

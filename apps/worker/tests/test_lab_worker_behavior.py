@@ -248,7 +248,7 @@ def test_failed_destroy_job_is_retried_by_reaper(tmp_path: Path) -> None:
     env.sessions.transition("s1", expected={SessionStatus.READY}, to=SessionStatus.ENDED)
     real_destroy = env.sandbox.destroy
 
-    def boom(_handle: SandboxHandle) -> None:
+    def boom(handle: SandboxHandle) -> None:
         raise RuntimeError("down")
 
     env.sandbox.destroy = boom  # type: ignore[method-assign]

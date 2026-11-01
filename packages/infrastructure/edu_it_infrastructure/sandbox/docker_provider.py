@@ -257,6 +257,20 @@ def _parse_ps(text: str) -> list[_Row]:
     return rows
 
 
+def _raw(sock: Any) -> Any:
+    """The writable socket behind a hijacked ``exec`` connection.
+
+    On a unix-socket daemon (Linux) the Docker SDK returns a ``socket.SocketIO`` wrapper,
+    which has no ``sendall`` or ``shutdown``; the socket itself is its ``_sock``. Named
+    pipes (Windows) and TLS connections already return an object with ``sendall``.
+    """
+
+    if isinstance(sock, _socket.SocketIO):
+        wrapped: Any = sock  # typeshed does not declare SocketIO._sock
+        return wrapped._sock
+    return sock
+
+
 def _half_close(sock: Any) -> None:
     """Signal EOF on stdin where the transport supports it.
 
@@ -267,12 +281,13 @@ def _half_close(sock: Any) -> None:
     if type(sock).__name__ == "NpipeSocket":
         return
     with contextlib.suppress(Exception):
-        sock.shutdown(_socket.SHUT_WR)
+        _raw(sock).shutdown(_socket.SHUT_WR)
 
 
 def _send_stream(sock: Any, stream: IO[bytes]) -> None:
+    raw = _raw(sock)
     while chunk := stream.read(_CHUNK):
-        sock.sendall(chunk)
+        raw.sendall(chunk)
 
 
 def _tar_mode(st_mode: int, *, is_dir: bool) -> int:
@@ -399,7 +414,7 @@ class _DockerTerminal:
     def write(self, data: bytes) -> None:
         self._check()
         try:
-            self._sock.sendall(data)
+            _raw(self._sock).sendall(data)
         except Exception as exc:
             raise SandboxGone("terminal closed") from exc
 

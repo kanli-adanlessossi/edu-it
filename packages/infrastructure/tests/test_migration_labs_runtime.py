@@ -31,7 +31,7 @@ def _schema(url: str) -> tuple[frozenset[str], dict[str, set[str]], set[str]]:
         insp = inspect(engine)
         tables = frozenset(insp.get_table_names()) - {"alembic_version"}
         cols = {t: {c["name"] for c in insp.get_columns(t)} for t in tables}
-        indexes = {i["name"] for i in insp.get_indexes("lab_session")} if tables else set()
+        indexes = {str(i["name"]) for i in insp.get_indexes("lab_session")} if tables else set()
         return tables, cols, indexes
     finally:
         engine.dispose()

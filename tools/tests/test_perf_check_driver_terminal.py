@@ -84,9 +84,7 @@ def test_fresh_session_keeps_the_terminal_open_until_the_run_ends(
     assert check_driver.main() == 0
     assert events.index("terminal-send") < events.index("grading-post")
     # No terminal teardown may run between the request and the end of the run.
-    assert events.index("grading-post") < events.index("run-ended") < events.index(
-        "terminal-close"
-    )
+    assert events.index("grading-post") < events.index("run-ended") < events.index("terminal-close")
     assert events.count("terminal-close") == 1
 
 

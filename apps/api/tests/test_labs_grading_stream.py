@@ -177,7 +177,8 @@ class _Env:
         if key is not None:
             headers["idempotency-key"] = key
         body = {"lab_id": "lab1"} if path == "/lab-sessions" else None
-        return _call(self.app, method, path, body=body, headers=headers)
+        result: tuple[int, Any] = _call(self.app, method, path, body=body, headers=headers)
+        return result
 
     def request_run(self) -> tuple[str, str]:
         """Start a ready session with a sandbox and accept a grading run (session -> grading)."""

@@ -438,9 +438,7 @@ class Postgres_OAuthLinkRepository(OAuthLinkRepository):
             if exists is not None:
                 raise ValueError("an OAuth link for this identity already exists")
             connection.execute(
-                table.insert().values(
-                    user_id=user_id, provider=link.provider, subject=link.subject
-                )
+                table.insert().values(user_id=user_id, provider=link.provider, subject=link.subject)
             )
 
     def get(self, provider: str, subject: str) -> OAuthLink | None:

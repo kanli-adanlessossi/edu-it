@@ -41,7 +41,8 @@ def _ready(env: Any) -> tuple[str, SandboxHandle]:
 
 
 def _put(env: Any, sid: str, files: dict[str, str]) -> tuple[int, Any]:
-    return env.call("PUT", f"/lab-sessions/{sid}/files", body={"files": files})
+    result: tuple[int, Any] = env.call("PUT", f"/lab-sessions/{sid}/files", body={"files": files})
+    return result
 
 
 def test_save_copies_learner_file_into_workspace() -> None:

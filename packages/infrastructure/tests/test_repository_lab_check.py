@@ -38,7 +38,9 @@ def _lab(
     )
 
 
-def _build(*labs: LabDefinition):
+def _build(
+    *labs: LabDefinition,
+) -> tuple[Repository_LabCheck, In_Memory_GradingRunRepository, In_Memory_MasteryRepository]:
     runs = In_Memory_GradingRunRepository()
     mastery = In_Memory_MasteryRepository()
     return Repository_LabCheck(Fake_LabCatalog(labs), runs, mastery), runs, mastery

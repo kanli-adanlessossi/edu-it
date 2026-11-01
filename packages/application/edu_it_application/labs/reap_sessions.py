@@ -96,7 +96,7 @@ class ReapSessions:
     def execute(self) -> ReapReport:
         """Run one reaper tick."""
         now = self._clock.now()
-        counts = dict.fromkeys(ReapReport.__slots__, 0)  # type: ignore[attr-defined]
+        counts = dict.fromkeys(ReapReport.__slots__, 0)
 
         running = self._close_stale_runs(now, counts)
 

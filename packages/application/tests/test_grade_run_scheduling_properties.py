@@ -12,9 +12,11 @@ time, which must come out of the freeze bound and never out of the Usable_Run_Bu
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 from edu_it_application.labs import GradeRun, RecordCheckResult
 from edu_it_domain import config
@@ -27,7 +29,7 @@ from edu_it_domain.labs.models import (
 )
 from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
 from edu_it_domain.ports.lab_catalog import LabCheckDefinition, LabDefinition, LabTaskDefinition
-from edu_it_domain.ports.sandbox import ExecResult
+from edu_it_domain.ports.sandbox import ExecResult, SandboxHandle
 from edu_it_infrastructure.fakes import (
     Fake_LabCatalog,
     Fake_SandboxProvider,
@@ -143,13 +145,13 @@ def _grade(specs: list[_Spec], queue_ms: int, vanish_at: int | None = None) -> _
         last_check_end = [0]
         real_exec = sandbox.exec
 
-        def spy(h, command, **kw):  # type: ignore[no-untyped-def]
+        def spy(handle: SandboxHandle, command: Sequence[str], **kw: Any) -> ExecResult:
             cmd = list(command)
             if cmd[:1] == ["/bin/sh"]:
                 idx = int(cmd[1].rsplit("/c", 1)[1].removesuffix(".sh"))
                 if vanish_at == idx:
                     sandbox.vanish(handle)
-                    return real_exec(h, command, **kw)  # raises SandboxGone
+                    return real_exec(handle, command, **kw)  # raises SandboxGone
                 spec = specs[idx]
                 limit_ms = round(kw["timeout_s"] * 1000)
                 seen[f"c{idx}"] = kw["timeout_s"]
@@ -162,7 +164,7 @@ def _grade(specs: list[_Spec], queue_ms: int, vanish_at: int | None = None) -> _
                 return ExecResult(-1 if timed_out else spec.exit_code, b"", b"", timed_out)
             if cmd == _STOP or cmd[:1] == [_PS]:
                 clock.advance(timedelta(milliseconds=_FREEZE_CALL_MS))
-            return real_exec(h, command, **kw)
+            return real_exec(handle, command, **kw)
 
         sandbox.exec = spy  # type: ignore[method-assign]
         clock.advance(timedelta(milliseconds=queue_ms))  # queue delay after acceptance

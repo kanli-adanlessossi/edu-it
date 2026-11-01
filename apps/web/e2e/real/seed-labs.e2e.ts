@@ -131,7 +131,10 @@ async function openLab(page: Page, locale: Locale, labId: string): Promise<void>
   const settled = await Promise.race([
     check.waitFor({ timeout: 30_000 }).then(() => 'check' as const),
     start.waitFor({ timeout: 30_000 }).then(() => 'start' as const),
-    failure.first().waitFor({ timeout: 30_000 }).then(() => 'error' as const),
+    failure
+      .first()
+      .waitFor({ timeout: 30_000 })
+      .then(() => 'error' as const),
   ]).catch(() => 'timeout' as const);
   if (settled === 'error') {
     const text = (await failure.first().textContent())?.trim();

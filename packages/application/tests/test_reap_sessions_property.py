@@ -11,12 +11,14 @@ the fakes, advances the Test_Clock, runs ``ReapSessions`` and checks the invaria
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import Any
 
 from edu_it_application.labs import ReapSessions
 from edu_it_domain import config
 from edu_it_domain.labs.models import GradingRun, LabSession, RunStatus, SessionStatus
 from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
 from edu_it_domain.ports.lab_catalog import LabDefinition
+from edu_it_domain.ports.sandbox import SandboxHandle
 from edu_it_infrastructure.fakes import (
     Fake_SandboxProvider,
     In_Memory_GradingRunRepository,
@@ -60,7 +62,7 @@ class ReaperMachine(RuleBasedStateMachine):
 
     # -- world building ------------------------------------------------------
 
-    def _provision(self, sid: str):
+    def _provision(self, sid: str) -> SandboxHandle:
         handle = self.sandbox.provision(build_sandbox_spec(_LAB, sid))
         self.sandbox_ids.add(handle.sandbox_id)
         return handle
@@ -179,7 +181,7 @@ class ReaperMachine(RuleBasedStateMachine):
         """sandbox_id -> session_stable_id for every undestroyed sandbox."""
         return {h.sandbox_id: h.session_stable_id for h in self.sandbox.list_sandboxes()}
 
-    def _snapshot(self) -> tuple:
+    def _snapshot(self) -> tuple[Any, ...]:
         return (
             tuple(self.sessions.get(s) for s in self.session_ids),
             tuple(self.runs.get(r) for r in self.run_ids),

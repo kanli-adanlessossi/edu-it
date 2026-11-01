@@ -1,4 +1,4 @@
-﻿import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -25,7 +25,12 @@ describe('web source', () => {
     const offenders = sources(resolve(WEB_ROOT, 'src'))
       .filter((file) => file !== SELF)
       .filter((file) => /reviews\/schedule/.test(readFileSync(file, 'utf8')))
-      .map((file) => file.slice(WEB_ROOT.length + 1).split(sep).join('/'));
+      .map((file) =>
+        file
+          .slice(WEB_ROOT.length + 1)
+          .split(sep)
+          .join('/'),
+      );
     // learning-api.ts may name the path in the comment explaining why it is not called.
     expect(offenders.filter((f) => f !== 'src/learning-api.ts')).toEqual([]);
   });
@@ -44,4 +49,3 @@ describe('web source', () => {
     expect(calls).toEqual([]);
   });
 });
-

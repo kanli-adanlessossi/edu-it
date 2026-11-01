@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Callable, Sequence
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 from edu_it_application.labs import GradeRun, RecordCheckResult
 from edu_it_domain import config
@@ -22,7 +24,7 @@ from edu_it_domain.ports.lab_catalog import (
     LabDefinition,
     LabTaskDefinition,
 )
-from edu_it_domain.ports.sandbox import ExecResult
+from edu_it_domain.ports.sandbox import ExecResult, SandboxHandle
 from edu_it_infrastructure.fakes import (
     Fake_LabCatalog,
     Fake_SandboxProvider,
@@ -31,6 +33,7 @@ from edu_it_infrastructure.fakes import (
     In_Memory_MasteryRepository,
     Test_Clock,
 )
+from edu_it_infrastructure.fakes.sandbox_provider import FakeSandbox
 
 _STOP = ["/bin/kill", "-s", "STOP", "-1"]
 _CONT = ["/bin/kill", "-s", "CONT", "-1"]
@@ -93,8 +96,8 @@ class _Env:
             bundle_root=tmp_path,
         )
 
-    def script(self, fn) -> None:
-        def handler(sb, command, as_user):
+    def script(self, fn: Callable[[FakeSandbox, list[str], str], ExecResult | None]) -> None:
+        def handler(sb: FakeSandbox, command: Sequence[str], as_user: str) -> ExecResult | None:
             self.commands.append((list(command), as_user, None))
             return fn(sb, list(command), as_user)
 
@@ -143,7 +146,7 @@ def test_shell_checks_run_as_grader_with_clean_env_and_cleanup(tmp_path: Path) -
 def test_freeze_not_verified_fails_closed(tmp_path: Path) -> None:
     env = _Env(tmp_path)
 
-    def fn(_sb, command, _user):
+    def fn(_sb: FakeSandbox, command: list[str], _user: str) -> ExecResult | None:
         if command == _STOP:
             return ExecResult(1, b"", b"", False)
         return None
@@ -181,7 +184,7 @@ def test_exhausted_budget_records_all_without_freeze_or_copy(tmp_path: Path) -> 
 def test_exit_codes_map_to_outcomes_and_mastery_not_granted(tmp_path: Path) -> None:
     env = _Env(tmp_path)
 
-    def fn(_sb, command, _user):
+    def fn(_sb: FakeSandbox, command: list[str], _user: str) -> ExecResult | None:
         if command == ["/bin/sh", "/grader/checks/c1.sh"]:
             return ExecResult(1, b"forged PASS", b"", False)
         if command == ["/bin/sh", "/grader/checks/c2.sh"]:
@@ -203,7 +206,7 @@ def test_check_timeout_is_capped_by_remaining_budget(tmp_path: Path) -> None:
     seen: list[float | None] = []
     original = env.sandbox.exec
 
-    def spy(handle, command, **kw):
+    def spy(handle: SandboxHandle, command: Sequence[str], **kw: Any) -> ExecResult:
         if command[0] == "/bin/sh":
             seen.append(kw["timeout_s"])
         return original(handle, command, **kw)
@@ -216,7 +219,7 @@ def test_check_timeout_is_capped_by_remaining_budget(tmp_path: Path) -> None:
 def test_sandbox_vanishing_marks_rest_could_not_complete(tmp_path: Path) -> None:
     env = _Env(tmp_path)
 
-    def fn(_sb, command, _user):
+    def fn(_sb: FakeSandbox, command: list[str], _user: str) -> ExecResult | None:
         if command == ["/bin/sh", "/grader/checks/c2.sh"]:
             env.sandbox.vanish(env.handle)
         return None
@@ -260,7 +263,7 @@ def test_code_check_compares_against_expected_read_by_worker(tmp_path: Path) -> 
     _write_expected(tmp_path, "c1")
     _write_expected(tmp_path, "c2")
 
-    def fn(_sb, command, _user):
+    def fn(_sb: FakeSandbox, command: list[str], _user: str) -> ExecResult | None:
         if command[:3] == ["/usr/bin/python3", "-I", "/grader/harness/run_cases.py"]:
             out = b"ok\n" if command[3] == "c1" else b"wrong\n"
             return _ok(_report(command[3], "ok", out))
@@ -276,7 +279,7 @@ def test_unsafe_learner_file_aborts_run(tmp_path: Path) -> None:
     _write_expected(tmp_path, "c1")
     _write_expected(tmp_path, "c2")
 
-    def fn(_sb, command, _user):
+    def fn(_sb: FakeSandbox, command: list[str], _user: str) -> ExecResult | None:
         if command[:2] == ["/usr/bin/python3", "-I"]:
             return _ok(_report(command[3], "unsafe-learner-file"))
         return None

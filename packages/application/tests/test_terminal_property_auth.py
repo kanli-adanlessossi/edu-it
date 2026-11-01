@@ -35,7 +35,11 @@ from hypothesis.stateful import (
 )
 
 sys.path.insert(0, str(Path(__file__).parent))
-from test_terminal_gateway import ORIGIN, Env, FakeSocket
+from test_terminal_gateway import (  # type: ignore[import-not-found]  # sibling, loaded by path
+    ORIGIN,
+    Env,
+    FakeSocket,
+)
 
 # None = no cookie, "unknown" = cookie not in the store, else a known cookie.
 _REFS = st.sampled_from([None, "unknown", "ref-u1", "ref-u2"])

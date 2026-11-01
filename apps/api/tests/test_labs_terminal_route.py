@@ -13,7 +13,7 @@ import asyncio
 import importlib.util
 import json
 import sys
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine, MutableMapping
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
@@ -124,7 +124,7 @@ class _Setup:
         return msg["type"], msg.get("code"), msg.get("reason", "")
 
 
-def _run(scenario: Callable[[], Awaitable[None]]) -> None:
+def _run(scenario: Callable[[], Coroutine[Any, Any, None]]) -> None:
     asyncio.run(scenario())
 
 
@@ -133,11 +133,13 @@ def test_owner_gets_binary_echo_and_json_control_frames() -> None:
         client = _Setup().connect()
         assert (await client.open())["type"] == "websocket.accept"
         client.send(data=b"ls\n")
-        echoed = await client.until(lambda m: m["type"] == "websocket.send" and m.get("bytes"))
+        echoed = await client.until(
+            lambda m: m["type"] == "websocket.send" and bool(m.get("bytes"))
+        )
         assert echoed["bytes"] == b"ls\n"
         client.send(text=json.dumps({"type": "resize", "rows": 30, "cols": 100}))
         client.send(text='{"type":"ping"}')
-        pong = await client.until(lambda m: m["type"] == "websocket.send" and m.get("text"))
+        pong = await client.until(lambda m: m["type"] == "websocket.send" and bool(m.get("text")))
         assert json.loads(pong["text"]) == {"type": "pong"}
         await client.disconnect()
 
@@ -193,8 +195,8 @@ def test_csrf_guard_still_rejects_unsafe_http_while_websocket_passes() -> None:
         async def receive() -> dict[str, Any]:
             return {"type": "http.request", "body": b"{}", "more_body": False}
 
-        async def send(message: dict[str, Any]) -> None:
-            sent.append(message)
+        async def send(message: MutableMapping[str, Any]) -> None:
+            sent.append(dict(message))
 
         scope = {
             "type": "http",

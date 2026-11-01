@@ -14,14 +14,16 @@ kernel, users and file permissions (Requirements 10.12, 29.11).
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path, PurePosixPath
+from typing import Any
 
 from edu_it_application.labs import GradeRun, RecordCheckResult
 from edu_it_domain import config
 from edu_it_domain.labs.models import GradingRun, LabSession, RunStatus, SessionStatus
 from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
 from edu_it_domain.ports.lab_catalog import LabCheckDefinition, LabDefinition, LabTaskDefinition
-from edu_it_domain.ports.sandbox import ExecResult
+from edu_it_domain.ports.sandbox import ExecResult, SandboxHandle
 from edu_it_infrastructure.fakes import (
     Fake_LabCatalog,
     Fake_SandboxProvider,
@@ -81,7 +83,9 @@ def _lab() -> LabDefinition:
 
 def _run(
     root: Path, files: dict[str, bytes], procs: list[tuple[str, str]], failure: str
-) -> tuple[list[tuple], list[tuple], Fake_SandboxProvider, RunStatus | None, Path]:
+) -> tuple[
+    list[tuple[Any, ...]], list[tuple[Any, ...]], Fake_SandboxProvider, RunStatus | None, Path
+]:
     """Grade one run; return (exec calls, copy_in calls, provider, status, bundle root)."""
     lab = _lab()
     (root / "lab1" / "sandbox" / "checks").mkdir(parents=True, exist_ok=True)
@@ -108,11 +112,11 @@ def _run(
     )
     runs.add(GradingRun("r1", "s1", RunStatus.RUNNING, now, now + config.LAB_GRADING_RUN_DEADLINE))
 
-    execs: list[tuple] = []
-    copies: list[tuple] = []
+    execs: list[tuple[Any, ...]] = []
+    copies: list[tuple[Any, ...]] = []
     real_exec, real_copy = sandbox.exec, sandbox.copy_in
 
-    def spy_exec(h, command, **kw):  # type: ignore[no-untyped-def]
+    def spy_exec(handle: SandboxHandle, command: Sequence[str], **kw: Any) -> ExecResult:
         execs.append((tuple(command), kw["as_user"], dict(kw["env"]), kw["cwd"], kw["timeout_s"]))
         is_check = list(command)[:1] == ["/bin/sh"]
         if is_check and failure == "check-raises" and command[1].endswith("/c1.sh"):
@@ -121,11 +125,13 @@ def _run(
             return ExecResult(1, b"", b"", False)
         if is_check and failure == "check-times-out":
             return ExecResult(124, b"", b"", True)
-        return real_exec(h, command, **kw)
+        return real_exec(handle, command, **kw)
 
-    def spy_copy(h, source, dest, *, as_user=None):  # type: ignore[no-untyped-def]
-        copies.append((source, dest, as_user))
-        return real_copy(h, source, dest, as_user=as_user)
+    def spy_copy(
+        handle: SandboxHandle, source_ro: Path, dest: str, *, as_user: str | None = None
+    ) -> None:
+        copies.append((source_ro, dest, as_user))
+        real_copy(handle, source_ro, dest, as_user=as_user)
 
     sandbox.exec = spy_exec  # type: ignore[method-assign]
     sandbox.copy_in = spy_copy  # type: ignore[method-assign]

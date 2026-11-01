@@ -68,7 +68,7 @@ def test_tracker_closes_exactly_after_max_consecutive_missed_pongs(
         assert not tracker.should_close or run >= max_missed
 
 
-class _AutoPongSocket(FakeSocket):
+class _AutoPongSocket(FakeSocket):  # type: ignore[valid-type, misc]
     """Answers the first ``answers`` pings with a pong, then stays silent."""
 
     def __init__(self, answers: int) -> None:

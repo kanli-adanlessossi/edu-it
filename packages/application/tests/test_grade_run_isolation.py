@@ -11,12 +11,15 @@ isolation. Real isolation is demonstrated only by the Docker integration tests.
 from __future__ import annotations
 
 import importlib.util
+from collections.abc import Callable, Sequence
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 from edu_it_domain import config
 from edu_it_domain.labs.models import CheckOutcome, RunStatus
-from edu_it_domain.ports.sandbox import ExecResult
+from edu_it_domain.ports.sandbox import ExecResult, SandboxHandle
+from edu_it_infrastructure.fakes.sandbox_provider import FakeSandbox
 
 # Reuse the helpers of test_grade_run.py (tests dir is not a package).
 _spec = importlib.util.spec_from_file_location(
@@ -34,15 +37,17 @@ _BUDGET_S = (
 ).total_seconds()
 
 
-def _spy_copy_in(env) -> list[tuple[Path, str, str | None]]:
+def _spy_copy_in(env: Any) -> list[tuple[Path, str, str | None]]:
     seen: list[tuple[Path, str, str | None]] = []
-    original = env.sandbox.copy_in
+    original: Callable[..., None] = env.sandbox.copy_in
 
-    def spy(handle, source_ro, dest, *, as_user=None):
+    def spy(
+        handle: SandboxHandle, source_ro: Path, dest: str, *, as_user: str | None = None
+    ) -> None:
         seen.append((Path(source_ro), dest, as_user))
-        return original(handle, source_ro, dest, as_user=as_user)
+        original(handle, source_ro, dest, as_user=as_user)
 
-    env.sandbox.copy_in = spy  # type: ignore[method-assign]
+    env.sandbox.copy_in = spy
     return seen
 
 
@@ -53,7 +58,7 @@ def test_bundle_copied_from_read_only_source_into_root_owned_grader(tmp_path: Pa
     copies = _spy_copy_in(env)
     seen_files: dict[str, bytes] = {}
 
-    def fn(sb, command, _user):
+    def fn(sb: FakeSandbox, command: list[str], _user: str) -> ExecResult | None:
         if command[0] == "/bin/sh":  # snapshot what a Check would see
             seen_files.update(sb.files)
         return None
@@ -74,7 +79,7 @@ def test_bundle_copied_from_read_only_source_into_root_owned_grader(tmp_path: Pa
 def test_grader_directory_removed_as_root_after_grading_before_thaw(tmp_path: Path) -> None:
     env = _Env(tmp_path)
 
-    def fn(sb, command, user):
+    def fn(sb: FakeSandbox, command: list[str], user: str) -> ExecResult | None:
         # Model the real teardown command's effect on the in-memory file map.
         if user == "root" and command[:2] == ["/bin/bash", "-c"] and "rm -rf" in command[2]:
             for path in [p for p in sb.files if p.startswith("/grader/")]:
@@ -95,7 +100,7 @@ def test_grader_directory_removed_as_root_after_grading_before_thaw(tmp_path: Pa
 def test_grader_directory_removed_even_when_a_check_raises(tmp_path: Path) -> None:
     env = _Env(tmp_path)
 
-    def fn(_sb, command, _user):
+    def fn(_sb: FakeSandbox, command: list[str], _user: str) -> ExecResult | None:
         if command == ["/bin/sh", "/grader/checks/c1.sh"]:
             raise RuntimeError("boom")
         return None
@@ -109,16 +114,16 @@ def test_grader_directory_removed_even_when_a_check_raises(tmp_path: Path) -> No
 def test_slow_check_hits_per_check_timeout_and_later_check_still_runs(tmp_path: Path) -> None:
     env = _Env(tmp_path, _lab(timeout_s=5.0))
     timeouts: dict[str, float | None] = {}
-    original = env.sandbox.exec
+    original: Callable[..., ExecResult] = env.sandbox.exec
 
-    def spy(handle, command, **kw):
+    def spy(handle: SandboxHandle, command: Sequence[str], **kw: Any) -> ExecResult:
         if command[0] == "/bin/sh":
             timeouts[command[1]] = kw["timeout_s"]
         return original(handle, command, **kw)
 
-    env.sandbox.exec = spy  # type: ignore[method-assign]
+    env.sandbox.exec = spy
 
-    def fn(_sb, command, _user):
+    def fn(_sb: FakeSandbox, command: list[str], _user: str) -> ExecResult | None:
         if command == ["/bin/sh", "/grader/checks/c1.sh"]:
             env.clock.advance(timedelta(seconds=5))  # consumes its whole per-Check timeout
             return ExecResult(-9, b"", b"", True)
@@ -141,16 +146,16 @@ def test_slow_check_exhausts_run_deadline_and_remaining_checks_not_executed(
 ) -> None:
     env = _Env(tmp_path, _lab(timeout_s=60.0))
     timeouts: list[float | None] = []
-    original = env.sandbox.exec
+    original: Callable[..., ExecResult] = env.sandbox.exec
 
-    def spy(handle, command, **kw):
+    def spy(handle: SandboxHandle, command: Sequence[str], **kw: Any) -> ExecResult:
         if command[0] == "/bin/sh":
             timeouts.append(kw["timeout_s"])
         return original(handle, command, **kw)
 
-    env.sandbox.exec = spy  # type: ignore[method-assign]
+    env.sandbox.exec = spy
 
-    def fn(_sb, command, _user):
+    def fn(_sb: FakeSandbox, command: list[str], _user: str) -> ExecResult | None:
         if command == ["/bin/sh", "/grader/checks/c1.sh"]:
             env.clock.advance(timedelta(seconds=_BUDGET_S))  # runs to the capped timeout
             return ExecResult(-9, b"", b"", True)

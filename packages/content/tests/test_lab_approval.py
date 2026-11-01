@@ -9,6 +9,7 @@ import json
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from edu_it_content.content_store import In_Memory_ContentStore
@@ -69,9 +70,8 @@ class _ForgetfulStore(In_Memory_ContentStore):
 def test_repository_seed_labs_are_reviewed_and_pending_list_is_empty() -> None:
     assert load_pending_review_list(SEED.parent) == frozenset()
     content = load_content(SEED.parent)
-    assert {lab["provenance"]["reviewed_by"] for lab in content.raw_items["lab"]} == {
-        "kanli-adanlessossi"
-    }
+    labs = cast("list[dict[str, Any]]", content.raw_items["lab"])
+    assert {lab["provenance"]["reviewed_by"] for lab in labs} == {"kanli-adanlessossi"}
     assert _rules(SEED.parent) == []
 
 
