@@ -11,6 +11,7 @@ from edu_it_domain.labs.models import (
     GradingRun,
     LabSession,
     RunStatus,
+    SandboxSpec,
     SessionStatus,
 )
 from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
@@ -34,11 +35,13 @@ class _Lab:
     image = "linux-base"
 
 
-def _spec(sid: str = "s1"):
+def _spec(sid: str = "s1") -> SandboxSpec:
     return build_sandbox_spec(_Lab(), sid)
 
 
-def _session(sid: str, user: str = "u1", status=SessionStatus.PROVISIONING) -> LabSession:
+def _session(
+    sid: str, user: str = "u1", status: SessionStatus = SessionStatus.PROVISIONING
+) -> LabSession:
     return LabSession(sid, user, "lab", status, _T0, _T0 + timedelta(hours=1))
 
 

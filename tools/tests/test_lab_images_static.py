@@ -176,9 +176,25 @@ SCANNER_FILE_RE = re.compile(
     re.I,
 )
 FORBIDDEN_KEYS = {
-    "trivyignores", "trivy-ignores", "ignore-policy", "ignore_policy", "skip-dirs", "skip-files",
-    "skip-setup", "vex", "ignorefile", "ignore-file", "ignores", "allowlist", "allow-list",
-    "waiver", "waivers", "exceptions", "cve-ignore", "ignore-cves", "ignore-vulns",
+    "trivyignores",
+    "trivy-ignores",
+    "ignore-policy",
+    "ignore_policy",
+    "skip-dirs",
+    "skip-files",
+    "skip-setup",
+    "vex",
+    "ignorefile",
+    "ignore-file",
+    "ignores",
+    "allowlist",
+    "allow-list",
+    "waiver",
+    "waivers",
+    "exceptions",
+    "cve-ignore",
+    "ignore-cves",
+    "ignore-vulns",
 }
 
 
@@ -187,7 +203,10 @@ def _repo_files() -> list[str]:
     if git:
         res = subprocess.run(
             [git, "ls-files", "--cached", "--others", "--exclude-standard"],
-            cwd=ROOT, capture_output=True, text=True, check=False,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
         )
         if res.returncode == 0 and res.stdout.strip():
             return [line for line in res.stdout.splitlines() if line]
@@ -225,10 +244,15 @@ def test_no_waiver_keys_or_thresholds_in_workflows() -> None:
         for step in _steps(_load(wf)):
             if "trivy" in step.get("uses", "").lower():
                 w = step.get("with", {})
-                assert not any(k.lower().startswith(("skip", "ignore-policy", "trivyignores"))
-                               for k in w)
+                assert not any(
+                    k.lower().startswith(("skip", "ignore-policy", "trivyignores")) for k in w
+                )
                 assert set(str(w.get("severity", "")).split(",")) == {
-                    "UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"
+                    "UNKNOWN",
+                    "LOW",
+                    "MEDIUM",
+                    "HIGH",
+                    "CRITICAL",
                 }
                 assert str(w.get("exit-code")) == "1"
                 assert w.get("ignore-unfixed") in (False, "false")
@@ -283,22 +307,60 @@ def test_built_image_has_no_secrets_bundles_or_solutions(built_image: str) -> No
         "-o -iname '*solution*' -o -iname 'expected*' -o -iname '.netrc' \\) -print; "
         "ls -A /grader"
     )
-    res = _docker("run", "--rm", "--network", "none", "--user", "0", "--entrypoint", "sh",
-                  built_image, "-c", script)
+    res = _docker(
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--user",
+        "0",
+        "--entrypoint",
+        "sh",
+        built_image,
+        "-c",
+        script,
+    )
     assert res.returncode == 0, res.stderr
     assert res.stdout.strip() == "", res.stdout
 
 
 @pytest.mark.docker
 def test_built_image_has_no_setuid_binaries(built_image: str) -> None:
-    res = _docker("run", "--rm", "--network", "none", "--entrypoint", "find", built_image,
-                  "/", "-xdev", "-type", "f", "(", "-perm", "-4000", "-o", "-perm", "-2000", ")")
+    res = _docker(
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--entrypoint",
+        "find",
+        built_image,
+        "/",
+        "-xdev",
+        "-type",
+        "f",
+        "(",
+        "-perm",
+        "-4000",
+        "-o",
+        "-perm",
+        "-2000",
+        ")",
+    )
     assert res.stdout.strip() == ""
 
 
 @pytest.mark.docker
 def test_built_image_users_and_group(built_image: str) -> None:
     """Req 4.3 context: learner 1000, grader 1001, learner in devs."""
-    out = _docker("run", "--rm", "--network", "none", "--entrypoint", "sh", built_image, "-c",
-                  "id -u learner; id -u grader; id -nG learner").stdout.split("\n")
+    out = _docker(
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--entrypoint",
+        "sh",
+        built_image,
+        "-c",
+        "id -u learner; id -u grader; id -nG learner",
+    ).stdout.split("\n")
     assert out[0] == "1000" and out[1] == "1001" and "devs" in out[2].split()

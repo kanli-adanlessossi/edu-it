@@ -5,6 +5,7 @@ The Real_Stack worker's ReapSessions orphan sweep destroys every ``edu-it.manage
 that has no known session, which includes the pytest harness containers. Process and Docker
 calls are injected: nothing here starts a process or talks to a daemon.
 """
+
 from __future__ import annotations
 
 import socket

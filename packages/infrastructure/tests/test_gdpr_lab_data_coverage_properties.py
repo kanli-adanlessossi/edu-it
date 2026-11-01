@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from edu_it_application.gdpr import (
     DeleteAccountRequest,
@@ -44,13 +45,19 @@ from edu_it_infrastructure.persistence import (
 from edu_it_infrastructure.persistence.personal_data import _OWNING_FOREIGN_KEY
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from sqlalchemy import create_engine, func, insert, select
+from sqlalchemy import CursorResult, create_engine, func, insert, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 
 T = metadata.tables
 _NOW = datetime(2024, 6, 1, tzinfo=UTC)
 _OLD = _NOW - config.LAB_RETENTION_PERIOD - timedelta(days=1)
+
+
+def _pk(result: CursorResult[Any]) -> Any:
+    key = result.inserted_primary_key
+    assert key is not None
+    return key[0]
 
 
 def _reaches_user(table_name: str) -> bool:
@@ -88,33 +95,39 @@ def _seed_user(
         # The repository joins ``lab``; SQLite does not enforce the lesson/provenance FKs.
         if c.execute(select(T["lab"].c.id)).first() is None:
             c.execute(insert(T["lab"]).values(stable_id="lab1", lesson_id=1, provenance_id=1))
-        uid = c.execute(
-            insert(T["user"]).values(
-                stable_id=name, email=f"{name}@example.test", locale="en", status="verified"
-            )
-        ).inserted_primary_key[0]
-        for i, runs in enumerate(shape):
-            sid = c.execute(
-                insert(T["lab_session"]).values(
-                    stable_id=f"ls-{name}-{i}",
-                    user_id=uid,
-                    lab_id=1,
-                    status="ended",
-                    started_at=_OLD,
-                    ttl_at=_OLD,
-                    ended_at=ended_at,
+        uid = _pk(
+            c.execute(
+                insert(T["user"]).values(
+                    stable_id=name, email=f"{name}@example.test", locale="en", status="verified"
                 )
-            ).inserted_primary_key[0]
-            for j, completions in enumerate(runs):
-                rid = c.execute(
-                    insert(T["lab_run"]).values(
-                        stable_id=f"lr-{name}-{i}-{j}",
-                        lab_session_id=sid,
-                        status="passed",
-                        accepted_at=_OLD,
-                        deadline_at=_OLD,
+            )
+        )
+        for i, runs in enumerate(shape):
+            sid = _pk(
+                c.execute(
+                    insert(T["lab_session"]).values(
+                        stable_id=f"ls-{name}-{i}",
+                        user_id=uid,
+                        lab_id=1,
+                        status="ended",
+                        started_at=_OLD,
+                        ttl_at=_OLD,
+                        ended_at=ended_at,
                     )
-                ).inserted_primary_key[0]
+                )
+            )
+            for j, completions in enumerate(runs):
+                rid = _pk(
+                    c.execute(
+                        insert(T["lab_run"]).values(
+                            stable_id=f"lr-{name}-{i}-{j}",
+                            lab_session_id=sid,
+                            status="passed",
+                            accepted_at=_OLD,
+                            deadline_at=_OLD,
+                        )
+                    )
+                )
                 for k in range(completions):
                     c.execute(
                         insert(T["lab_task_completion"]).values(

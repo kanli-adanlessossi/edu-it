@@ -437,7 +437,7 @@ class GradeRun:
         argv: list[str],
         user: str,
         cwd: str,
-        timeout_s: float,
+        timeout_s: float | None,
         *,
         check: bool = False,
     ) -> ExecResult:

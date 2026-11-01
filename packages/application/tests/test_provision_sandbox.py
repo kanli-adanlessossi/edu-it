@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import timedelta
 from pathlib import Path
 
@@ -17,7 +18,7 @@ from edu_it_infrastructure.fakes import (
     In_Memory_LabSessionRepository,
     Test_Clock,
 )
-from edu_it_infrastructure.fakes.sandbox_provider import ProvisionMode
+from edu_it_infrastructure.fakes.sandbox_provider import FakeSandbox, ProvisionMode
 
 _LAB = LabDefinition(
     lab_id="lab1", kind="terminal", image="img", concept_ids=(), tasks=(), checks=()
@@ -60,7 +61,7 @@ def test_success_runs_setup_as_learner_removes_it_and_marks_ready(tmp_path: Path
     env = _Env(tmp_path)
     seen: list[tuple[list[str], str]] = []
 
-    def handler(_sb, command, as_user):
+    def handler(_sb: FakeSandbox, command: Sequence[str], as_user: str) -> ExecResult | None:
         seen.append((list(command), as_user))
         return None
 
@@ -98,7 +99,7 @@ def test_lost_claim_race_exits(tmp_path: Path) -> None:
     stale = env.sessions.get("s1")
     assert stale is not None
     real_get = env.sessions.get
-    env.sessions.get = lambda _sid: stale.__class__(  # type: ignore[method-assign]
+    env.sessions.get = lambda session_id: stale.__class__(  # type: ignore[method-assign]
         **{**{f: getattr(stale, f) for f in stale.__slots__}, "provision_attempts": 0}
     )
     try:
@@ -163,7 +164,7 @@ def test_slow_provision_beyond_timeout_destroys_sandbox(tmp_path: Path) -> None:
 def test_failing_setup_script_destroys_sandbox_and_retries(tmp_path: Path) -> None:
     env = _Env(tmp_path)
 
-    def handler(_sb, command, _user):
+    def handler(_sb: FakeSandbox, command: Sequence[str], _user: str) -> ExecResult | None:
         if command[-1] == "/tmp/setup.sh":
             return ExecResult(1, b"", b"boom", False)
         return None
@@ -177,8 +178,9 @@ def test_failing_setup_script_destroys_sandbox_and_retries(tmp_path: Path) -> No
 def test_session_ended_meanwhile_destroys_sandbox(tmp_path: Path) -> None:
     env = _Env(tmp_path)
 
-    def handler(_sb, _command, _user):
+    def handler(_sb: FakeSandbox, _command: Sequence[str], _user: str) -> ExecResult | None:
         env.sessions.transition("s1", expected={SessionStatus.PROVISIONING}, to=SessionStatus.ENDED)
+        return None
 
     env.sandbox.exec_handler = handler
     assert env.job.execute("s1") is ProvisionOutcome.SKIPPED

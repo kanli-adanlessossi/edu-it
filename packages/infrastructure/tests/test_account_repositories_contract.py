@@ -344,6 +344,7 @@ def test_oauth_same_subject_other_provider_is_distinct(backend: _Backend) -> Non
     backend.oauth.add(_oauth(backend, subject, provider="other"))
     assert backend.oauth.get("other", subject) is not None
 
+
 # --- CredentialStore ---------------------------------------------------------
 
 
@@ -423,12 +424,13 @@ def test_concurrent_mark_consumed_reset_and_pending_exactly_one_wins(
 
 # --- Property 11 -------------------------------------------------------------
 
+
 # Feature: api-route-wiring, Property 11: Link tokens are stored as digests and consumed once
 # Validates: Requirements 7.5, 7.6, 7.8
 @settings(max_examples=100, deadline=None)
 @given(
     token=st.text(
-        alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\x00"),
+        alphabet=st.characters(blacklist_categories=["Cs"], blacklist_characters="\x00"),
         min_size=8,
         max_size=64,
     ),
@@ -466,7 +468,7 @@ def test_property_11_tokens_stored_as_digests_and_consumed_once(token: str, atte
 @settings(max_examples=100, deadline=None)
 @given(
     token=st.text(
-        alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\x00"),
+        alphabet=st.characters(blacklist_categories=["Cs"], blacklist_characters="\x00"),
         min_size=8,
         max_size=64,
     ),

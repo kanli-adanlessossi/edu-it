@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -48,12 +48,10 @@ def test_startup_logs_dev_only_runc_warning(caplog: pytest.LogCaptureFixture) ->
 @pytest.mark.parametrize("base_url", ["tcp://127.0.0.1:1", "tcp://10.255.255.1:2375"])
 def test_unreachable_daemon_is_provider_unavailable_within_bound(base_url: str) -> None:
     bound = 1.0
-    provider = DockerSandboxProvider(
-        base_url=base_url, operation_timeout=timedelta(seconds=bound)
-    )
+    provider = DockerSandboxProvider(base_url=base_url, operation_timeout=timedelta(seconds=bound))
     handle = SandboxHandle("abc", "sess", "docker")
     spec = build_sandbox_spec(_Lab(), "sess")
-    calls = [
+    calls: list[Callable[[], object]] = [
         lambda: provider.provision(spec),
         lambda: provider.health(handle),
         lambda: provider.list_sandboxes(),
@@ -180,7 +178,10 @@ def test_timeout_kills_command_and_background_and_sandbox_survives(
     script = "sleep 1000 & setsid /bin/sleep 1001 & sleep 1002"
     start = time.monotonic()
     res = provider.exec(
-        sandbox, ["/bin/bash", "-c", script], timeout_s=1.0, **LOCAL  # type: ignore[arg-type]
+        sandbox,
+        ["/bin/bash", "-c", script],
+        timeout_s=1.0,
+        **LOCAL,  # type: ignore[arg-type]
     )
     assert res.timed_out and res.exit_code == 137
     assert time.monotonic() - start < 10
@@ -244,8 +245,7 @@ def test_terminal_echo_and_close(provider: DockerSandboxProvider, sandbox: Sandb
     seen = b""
     deadline = time.monotonic() + 10
     while (
-        b"hello-term" not in seen.replace(b"echo hello-term", b"")
-        and time.monotonic() < deadline
+        b"hello-term" not in seen.replace(b"echo hello-term", b"") and time.monotonic() < deadline
     ):
         seen += term.read(4096, timeout_s=1.0)
     assert b"hello-term" in seen

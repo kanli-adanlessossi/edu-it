@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import timedelta
 
 from edu_it_application.labs import DestroyOutcome, DestroySandbox, ProvisionSandbox, ReapSessions
@@ -17,6 +18,7 @@ from edu_it_infrastructure.fakes import (
     In_Memory_LabSessionRepository,
     Test_Clock,
 )
+from edu_it_infrastructure.fakes.sandbox_provider import FakeSandbox
 
 _LAB = LabDefinition(
     lab_id="lab1", kind="terminal", image="img", concept_ids=(), tasks=(), checks=()
@@ -174,7 +176,7 @@ def test_failed_thaw_is_retried_next_tick_and_run_stays_running() -> None:
     env.sessions.touch_activity("s1", env.clock.now())
     failing = {"on": True}
 
-    def handler(sb, command, as_user):
+    def handler(sb: FakeSandbox, command: Sequence[str], as_user: str) -> ExecResult | None:
         if failing["on"] and "CONT" in command:
             return ExecResult(1, b"", b"boom", False)
         return None
@@ -195,7 +197,7 @@ def test_destroy_failure_is_logged_and_retried_next_tick() -> None:
     env.ready_session()
     env.sessions.transition("s1", expected={SessionStatus.READY}, to=SessionStatus.ENDED)
     real = env.sandbox.destroy
-    env.sandbox.destroy = lambda h: (_ for _ in ()).throw(RuntimeError("down"))  # type: ignore[method-assign]
+    env.sandbox.destroy = lambda handle: (_ for _ in ()).throw(RuntimeError("down"))  # type: ignore[method-assign]
     report = env.reaper.execute()
     assert report.destroy_failures == 1 and env.alive()
     env.sandbox.destroy = real  # type: ignore[method-assign]

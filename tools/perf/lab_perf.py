@@ -35,8 +35,7 @@ import protocol
 
 def _run(cmd: str, args: list[str] | None = None) -> str:
     try:
-        out = subprocess.run(args or shlex.split(cmd), capture_output=True,
-                             text=True, timeout=30)
+        out = subprocess.run(args or shlex.split(cmd), capture_output=True, text=True, timeout=30)
         return (out.stdout or out.stderr).strip()
     except Exception as exc:
         return f"unavailable ({exc.__class__.__name__})"
@@ -47,16 +46,25 @@ def _memory() -> dict:
         import psutil  # type: ignore
 
         vm = psutil.virtual_memory()
-        return {"total_bytes": vm.total, "available_bytes": vm.available,
-                "cpu_percent": psutil.cpu_percent(interval=1.0)}
+        return {
+            "total_bytes": vm.total,
+            "available_bytes": vm.available,
+            "cpu_percent": psutil.cpu_percent(interval=1.0),
+        }
     except ImportError:
         pass
     if os.name == "nt":
-        raw = _run("", ["powershell", "-NoProfile", "-Command",
-                        "(Get-CimInstance Win32_OperatingSystem | "
-                        "ForEach-Object { \"$($_.TotalVisibleMemorySize) "
-                        "$($_.FreePhysicalMemory)\" })"
-                        ])
+        raw = _run(
+            "",
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                "(Get-CimInstance Win32_OperatingSystem | "
+                'ForEach-Object { "$($_.TotalVisibleMemorySize) '
+                '$($_.FreePhysicalMemory)" })',
+            ],
+        )
         try:
             total, free = (int(x) * 1024 for x in raw.split())
             return {"total_bytes": total, "available_bytes": free, "cpu_percent": None}
@@ -125,9 +133,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default="perf-results.json")
     args = ap.parse_args(argv)
 
-    cmds = {protocol.START_TO_READY: args.start_cmd,
-            protocol.KEYSTROKE: args.keystroke_cmd,
-            protocol.SHELL_CHECK: args.check_cmd}
+    cmds = {
+        protocol.START_TO_READY: args.start_cmd,
+        protocol.KEYSTROKE: args.keystroke_cmd,
+        protocol.SHELL_CHECK: args.check_cmd,
+    }
     methods = {t: f"wall-clock of command: {c}" for t, c in cmds.items()}
 
     machine = machine_setup()
@@ -142,8 +152,10 @@ def main(argv: list[str] | None = None) -> int:
 
     for a in outcome.attempts:
         for name, r in a.results.items():
-            print(f"attempt {a.number} {name}: n={r.counted_count} "
-                  f"p95={r.p95} max={r.max_value} limit={r.limit} met={r.met}")
+            print(
+                f"attempt {a.number} {name}: n={r.counted_count} "
+                f"p95={r.p95} max={r.max_value} limit={r.limit} met={r.met}"
+            )
     print("RESULT:", "PASS" if outcome.passed else "FAIL", "->", args.out)
     return 0 if outcome.passed else 1
 

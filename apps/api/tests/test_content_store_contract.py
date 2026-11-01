@@ -300,15 +300,15 @@ def test_sync_writes_the_module_gate_from_the_concept_prerequisites(
     module = metadata.tables["module"]
     with engine.connect() as cx:
         gates = {
-            str(sid): json.loads(gate) if gate else []
+            str(sid): json.loads(str(gate)) if gate else []
             for sid, gate in cx.execute(
                 select(module.c.stable_id, module.c.prerequisite_concept_ids)
             )
         }
     required: dict[str, set[str]] = {}
     for edge in seed.raw_items.get("prerequisite", []):
-        required.setdefault(edge["concept_stable_id"], set()).add(
-            edge["requires_concept_stable_id"]
+        required.setdefault(str(edge["concept_stable_id"]), set()).add(
+            str(edge["requires_concept_stable_id"])
         )
     assert required, "the seed content authors prerequisite edges"
     for stable_id, gate in gates.items():
@@ -341,6 +341,6 @@ def test_sync_writes_the_question_to_concept_links_by_the_quiz_name(
     for quiz_id, links in rows:
         concept = "concept." + str(quiz_id).split(".", 1)[1]
         expected = [concept] if concept in concepts else None
-        assert (json.loads(links) if links else None) == expected, quiz_id
-    reading = [json.loads(links) for qid, links in rows if qid == "quiz.reading-permissions"]
+        assert (json.loads(str(links)) if links else None) == expected, quiz_id
+    reading = [json.loads(str(links)) for qid, links in rows if qid == "quiz.reading-permissions"]
     assert reading and all(links == ["concept.reading-permissions"] for links in reading)

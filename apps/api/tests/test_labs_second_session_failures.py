@@ -298,7 +298,7 @@ def test_sixth_start_in_window_is_429_with_retry_after_then_allowed() -> None:
 
 
 def _ready_session(env: _Env) -> str:
-    sid = env.start()[2]["stable_id"]
+    sid = str(env.start()[2]["stable_id"])
     env.make_ready(sid)
     return sid
 
@@ -363,8 +363,11 @@ def test_foreign_owner_is_indistinguishable_from_missing() -> None:
             method, "/lab-sessions/" + template.format(s="ses-missing"), user="u2", body=body
         )
         assert foreign[0] == missing[0] == 404, (method, template)
+
         # Identical apart from the echoed request path (`instance`).
-        strip = lambda d: {k: v for k, v in d.items() if k != "instance"}  # noqa: E731
+        def strip(d: dict[str, Any]) -> dict[str, Any]:
+            return {k: v for k, v in d.items() if k != "instance"}
+
         assert strip(foreign[2]) == strip(missing[2]), (method, template)
 
     assert env.sessions.get(sid).status is SessionStatus.GRADING  # type: ignore[union-attr]

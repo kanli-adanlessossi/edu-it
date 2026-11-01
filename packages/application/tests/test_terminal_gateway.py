@@ -17,6 +17,7 @@ from edu_it_application.labs import (
 )
 from edu_it_domain import config
 from edu_it_domain.labs.models import LabSession, SessionStatus
+from edu_it_domain.ports.lab_catalog import LabDefinition
 from edu_it_infrastructure.fakes import (
     Fake_SandboxProvider,
     In_Memory_GradingRunRepository,
@@ -96,8 +97,7 @@ class Env:
         )
 
 
-def _lab():
-    from edu_it_domain.ports.lab_catalog import LabDefinition
+def _lab() -> LabDefinition:
 
     return LabDefinition(
         lab_id="lab1", kind="terminal", image="img", concept_ids=(), tasks=(), checks=()
@@ -105,7 +105,7 @@ def _lab():
 
 
 def _authorize(env: Env, **kw: object) -> object:
-    args = {"session_ref": "ref-u1", "origin": ORIGIN, "session_id": "s1"}
+    args: dict[str, object] = {"session_ref": "ref-u1", "origin": ORIGIN, "session_id": "s1"}
     args.update(kw)
     return env.auth.execute(**args)  # type: ignore[arg-type]
 

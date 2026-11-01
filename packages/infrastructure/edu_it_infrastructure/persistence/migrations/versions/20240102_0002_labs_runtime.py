@@ -19,9 +19,13 @@ only what ``upgrade`` added.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from contextlib import AbstractContextManager
+from typing import cast
 
 import sqlalchemy as sa
 from alembic import op
+from alembic.operations import BatchOperations
+from sqlalchemy.engine.interfaces import ReflectedColumn
 
 from edu_it_infrastructure.persistence.metadata import metadata
 
@@ -69,12 +73,13 @@ _SIMPLE_COLUMNS: tuple[tuple[str, sa.Column], ...] = (  # type: ignore[type-arg]
 )
 
 
-def _columns(table: str) -> dict[str, dict]:  # type: ignore[type-arg]
+def _columns(table: str) -> dict[str, ReflectedColumn]:
     return {c["name"]: c for c in sa.inspect(op.get_bind()).get_columns(table)}
 
 
-def _batch(table: str):
-    return op.batch_alter_table(table, naming_convention=metadata.naming_convention)
+def _batch(table: str) -> AbstractContextManager[BatchOperations]:
+    convention = cast("dict[str, str]", dict(metadata.naming_convention))
+    return op.batch_alter_table(table, naming_convention=convention)
 
 
 def upgrade() -> None:

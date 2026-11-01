@@ -49,7 +49,7 @@ _PASSWORD = "a-valid-password-123"
 _locales = st.sampled_from(["fr", "en"])
 # Arbitrary tokens, including whitespace, reserved URL characters, and non-ASCII
 # text; surrogates are excluded because they cannot be encoded as UTF-8.
-_tokens = st.text(alphabet=st.characters(blacklist_categories=("Cs",)), min_size=1, max_size=64)
+_tokens = st.text(alphabet=st.characters(blacklist_categories=["Cs"]), min_size=1, max_size=64)
 # Optional trailing slash on the configured base must not change the URL.
 _bases = st.sampled_from([_BASE, _BASE + "/"])
 

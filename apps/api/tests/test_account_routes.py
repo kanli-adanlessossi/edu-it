@@ -213,9 +213,7 @@ class _Harness:
                 password_hasher=lambda raw: raw,
                 session_ref_factory=lambda: f"reset-ref-{next(refs)}",
             ),
-            export_data=ExportUserDataUseCase(
-                personal_data=self.gateway, object_storage=storage
-            ),
+            export_data=ExportUserDataUseCase(personal_data=self.gateway, object_storage=storage),
             object_storage=storage,
             delete_account=DeleteAccountUseCase(
                 personal_data=self.gateway,

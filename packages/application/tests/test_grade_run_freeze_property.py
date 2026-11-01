@@ -11,6 +11,7 @@ import shutil
 import tempfile
 from datetime import timedelta
 from pathlib import Path
+from typing import Any, cast
 
 from edu_it_application.labs import GradeRun, RecordCheckResult
 from edu_it_domain import config
@@ -82,7 +83,7 @@ class FreezeFailClosed(RuleBasedStateMachine):
     """Drives one GradeRun under a generated freeze scenario and run outcome."""
 
     @initialize(freeze=_FREEZE, outcome=_OUTCOME)
-    def setup(self, freeze: tuple, outcome: tuple[str, int]) -> None:
+    def setup(self, freeze: tuple[Any, ...], outcome: tuple[str, int]) -> None:
         self.freeze = freeze
         self.outcome = outcome
         self.tmp = Path(tempfile.mkdtemp())
@@ -132,9 +133,9 @@ class FreezeFailClosed(RuleBasedStateMachine):
         """Failure mode to apply to the current freeze attempt (``None`` = behave normally)."""
         kind = self.freeze[0]
         if kind == "never":
-            return self.freeze[1]
+            return cast("str | None", self.freeze[1])
         if kind == "verified" and self.stops < self.freeze[1]:
-            return self.freeze[2]
+            return cast("str | None", self.freeze[2])
         return None
 
     def _install(self) -> None:
@@ -259,7 +260,7 @@ class FreezeFailClosed(RuleBasedStateMachine):
     def _freeze_verified(self) -> bool:
         if self.outcome[0] == "budget":
             return False
-        return self.freeze[0] == "verified"
+        return bool(self.freeze[0] == "verified")
 
     def teardown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)

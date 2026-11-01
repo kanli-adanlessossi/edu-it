@@ -6,12 +6,15 @@
 from __future__ import annotations
 
 import importlib.util
+from collections.abc import Callable, Sequence
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 import pytest
 from edu_it_domain import config
 from edu_it_domain.labs.models import CheckOutcome, RunStatus
+from edu_it_domain.ports.sandbox import ExecResult, SandboxHandle
 
 # Reuse the helpers of test_grade_run.py (tests dir is not a package).
 _spec = importlib.util.spec_from_file_location(
@@ -38,14 +41,14 @@ def test_delay_below_budget_runs_checks_within_reduced_budget(tmp_path: Path) ->
     delay = 5.0
     env.clock.advance(timedelta(seconds=delay))
     seen: list[float | None] = []
-    original = env.sandbox.exec
+    original: Callable[..., ExecResult] = env.sandbox.exec
 
-    def spy(handle, command, **kw):
+    def spy(handle: SandboxHandle, command: Sequence[str], **kw: Any) -> ExecResult:
         if command[0] == "/bin/sh":
             seen.append(kw["timeout_s"])
         return original(handle, command, **kw)
 
-    env.sandbox.exec = spy  # type: ignore[method-assign]
+    env.sandbox.exec = spy
     assert env.job.execute("r1") is RunStatus.PASSED
     assert seen, "checks should run when budget remains"
     assert all(0 < t <= _BUDGET_S - delay for t in seen if t is not None)

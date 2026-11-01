@@ -75,6 +75,7 @@ def seed_database(content_root: str | Path | None = None) -> dict[str, int]:
         "archived": len(report.archived),
     }
 
+
 # -- learners -------------------------------------------------------------------------------
 
 

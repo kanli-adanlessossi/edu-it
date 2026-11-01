@@ -63,9 +63,7 @@ SWEEP_JOB: Final = "lab.sweep"
 class SweepProvisioning:
     """Re-enqueue ``lab.provision`` for every ``provisioning`` session that is due."""
 
-    def __init__(
-        self, *, sessions: LabSessionRepository, queue: TaskQueue, clock: Clock
-    ) -> None:
+    def __init__(self, *, sessions: LabSessionRepository, queue: TaskQueue, clock: Clock) -> None:
         """Wire the ports the sweep uses."""
         self._sessions = sessions
         self._queue = queue

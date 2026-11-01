@@ -12,8 +12,9 @@ from itertools import pairwise
 
 from edu_it_application.labs import ProvisionOutcome, ProvisionSandbox
 from edu_it_domain import config
-from edu_it_domain.labs.models import LabSession, SessionStatus
+from edu_it_domain.labs.models import LabSession, SandboxSpec, SessionStatus
 from edu_it_domain.ports.lab_catalog import LabDefinition
+from edu_it_domain.ports.sandbox import SandboxHandle
 from edu_it_infrastructure.fakes import (
     Fake_LabCatalog,
     Fake_SandboxProvider,
@@ -51,7 +52,7 @@ def test_provisioning_is_bounded_spaced_and_creates_at_most_one_sandbox(
     starts: list[datetime] = []
     real_provision = sandbox.provision
 
-    def recording_provision(spec):
+    def recording_provision(spec: SandboxSpec) -> SandboxHandle:
         starts.append(clock.now())
         return real_provision(spec)
 

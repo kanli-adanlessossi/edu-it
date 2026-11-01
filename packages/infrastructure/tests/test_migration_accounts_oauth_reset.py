@@ -46,11 +46,23 @@ def test_upgrade_creates_only_the_two_tables_and_downgrade_drops_only_them(tmp_p
             uniques = [u["column_names"] for u in insp.get_unique_constraints(name)]
             assert ["token_digest"] in uniques
         assert {c["name"] for c in insp.get_columns("reset_link")} == {
-            "id", "token_digest", "user_id", "issued_at", "expires_at", "consumed_at",
+            "id",
+            "token_digest",
+            "user_id",
+            "issued_at",
+            "expires_at",
+            "consumed_at",
         }
         assert {c["name"] for c in insp.get_columns("pending_oauth_link")} == {
-            "id", "token_digest", "provider", "subject", "user_id", "email",
-            "issued_at", "expires_at", "consumed_at",
+            "id",
+            "token_digest",
+            "provider",
+            "subject",
+            "user_id",
+            "email",
+            "issued_at",
+            "expires_at",
+            "consumed_at",
         }
     finally:
         engine.dispose()
