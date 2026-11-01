@@ -14,8 +14,10 @@ dependencies = [
     "pydantic==2.14.1",
     "sqlalchemy==2.1.6",
     "alembic==1.20.1",
-    "psycopg==3.3.6",
+    "psycopg[binary]==3.3.6",
     "redis==8.1.0",
+    # Docker SDK for Python: dev-only DockerSandboxProvider (ADR 0001, hands-on-labs).
+    "docker==7.2.0",
 ]
 
 [project.scripts]

@@ -39,6 +39,7 @@ from typing import Final
 
 from edu_it_domain.config import VERIFICATION_LINK_TTL
 from edu_it_domain.ports.clock import Clock
+from edu_it_domain.ports.link_builder import LinkBuilder
 from edu_it_domain.ports.mailer import Mailer, OutboundMail
 from edu_it_domain.ports.repository import USER_STATUS_UNVERIFIED, UserRecord, UserRepository
 from edu_it_domain.ports.verification_link import (
@@ -114,6 +115,7 @@ class ResendVerificationUseCase:
         *,
         users: UserRepository,
         verification_links: VerificationLinkRepository,
+        link_builder: LinkBuilder,
         mailer: Mailer,
         clock: Clock,
         token_factory: Callable[[], str],
@@ -127,6 +129,7 @@ class ResendVerificationUseCase:
         """
         self._users = users
         self._verification_links = verification_links
+        self._link_builder = link_builder
         self._mailer = mailer
         self._clock = clock
         self._token_factory = token_factory
@@ -144,6 +147,8 @@ class ResendVerificationUseCase:
         """
         user = self._users.get_by_email(request.email)
         if user is None or user.status != USER_STATUS_UNVERIFIED:
+            # Equal work (Req 3.11): mint one token and discard it.
+            _ = self._token_factory()
             return ACCEPTED
 
         self._issue_and_send(user)
@@ -161,7 +166,8 @@ class ResendVerificationUseCase:
         self._verification_links.add(link)
 
         try:
-            self._mailer.send(_verification_mail(user, link))
+            url = self._link_builder.verification_url(link.token, user.locale)
+            self._mailer.send(_verification_mail(user, link, url))
         except Exception as error:
             _LOGGER.warning(
                 "resend verification email delivery failed",
@@ -173,7 +179,7 @@ class ResendVerificationUseCase:
             raise ResendVerificationError from error
 
 
-def _verification_mail(user: UserRecord, link: VerificationLink) -> OutboundMail:
+def _verification_mail(user: UserRecord, link: VerificationLink, url: str) -> OutboundMail:
     """Build the single-use verification email for ``user`` (Req 7.1, 7.3).
 
     The mail is locale-marked so the ``Mailer`` renders the FR/EN template and
@@ -182,9 +188,9 @@ def _verification_mail(user: UserRecord, link: VerificationLink) -> OutboundMail
     """
     subject = "Confirmez votre adresse e-mail" if user.locale == "fr" else "Confirm your email"
     body = (
-        f"Bonjour, confirmez votre adresse e-mail avec ce lien à usage unique : {link.token}"
+        f"Bonjour, confirmez votre adresse e-mail avec ce lien à usage unique : {url}"
         if user.locale == "fr"
-        else f"Hello, confirm your email with this single-use link: {link.token}"
+        else f"Hello, confirm your email with this single-use link: {url}"
     )
     return OutboundMail(
         to=user.email,

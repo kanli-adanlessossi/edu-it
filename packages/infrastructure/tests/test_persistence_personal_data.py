@@ -232,6 +232,93 @@ def test_export_resolves_rows_reached_through_a_parent_foreign_key(
     assert len(export["mastery_event"]) == 1  # via mastery
 
 
+def test_export_and_delete_cover_credential_and_verification_link_without_secrets(
+    engine: Engine, gateway: Postgres_PersonalDataGateway
+) -> None:
+    from edu_it_infrastructure.persistence.metadata import credential, verification_link
+
+    user_id = _seed_user(engine, "user-1", "a@example.test")
+    other_id = _seed_user(engine, "user-2", "b@example.test")
+    instant = datetime(2024, 1, 1, tzinfo=UTC)
+    with engine.begin() as connection:
+        for uid, tag in ((user_id, "1"), (other_id, "2")):
+            connection.execute(
+                insert(credential).values(
+                    user_id=uid, secret=f"scrypt$secret{tag}", updated_at=instant
+                )
+            )
+            connection.execute(
+                insert(verification_link).values(
+                    token_digest=f"digest{tag}",
+                    user_id=uid,
+                    issued_at=instant,
+                    expires_at=instant,
+                )
+            )
+
+    export = gateway.export_user_data("user-1")
+
+    assert len(export["credential"]) == 1
+    assert len(export["verification_link"]) == 1
+    # Password hash and token digest are never exported; the rows themselves are.
+    assert "secret" not in export["credential"][0]
+    assert "token_digest" not in export["verification_link"][0]
+    assert "scrypt$secret1" not in repr(export)
+    assert "digest1" not in repr(export)
+
+    assert gateway.delete_user_data("user-1") > 0
+    gone = gateway.export_user_data("user-1")
+    assert gone["credential"] == [] and gone["verification_link"] == []
+    assert len(gateway.export_user_data("user-2")["credential"]) == 1
+
+
+def test_export_and_delete_cover_reset_link_and_pending_oauth_link_without_digests(
+    engine: Engine, gateway: Postgres_PersonalDataGateway
+) -> None:
+    from edu_it_infrastructure.persistence.metadata import pending_oauth_link, reset_link
+
+    user_id = _seed_user(engine, "user-1", "a@example.test")
+    other_id = _seed_user(engine, "user-2", "b@example.test")
+    instant = datetime(2024, 1, 1, tzinfo=UTC)
+    with engine.begin() as connection:
+        for uid, tag in ((user_id, "1"), (other_id, "2")):
+            connection.execute(
+                insert(reset_link).values(
+                    token_digest=f"resetdigest{tag}",
+                    user_id=uid,
+                    issued_at=instant,
+                    expires_at=instant,
+                )
+            )
+            connection.execute(
+                insert(pending_oauth_link).values(
+                    token_digest=f"oauthdigest{tag}",
+                    provider="github",
+                    subject=f"subject{tag}",
+                    user_id=uid,
+                    email=f"u{tag}@example.test",
+                    issued_at=instant,
+                    expires_at=instant,
+                )
+            )
+
+    export = gateway.export_user_data("user-1")
+
+    assert len(export["reset_link"]) == 1
+    assert len(export["pending_oauth_link"]) == 1
+    assert "token_digest" not in export["reset_link"][0]
+    assert "token_digest" not in export["pending_oauth_link"][0]
+    assert export["pending_oauth_link"][0]["subject"] == "subject1"
+    assert "resetdigest1" not in repr(export)
+    assert "oauthdigest1" not in repr(export)
+
+    assert gateway.delete_user_data("user-1") > 0
+    gone = gateway.export_user_data("user-1")
+    assert gone["reset_link"] == [] and gone["pending_oauth_link"] == []
+    other = gateway.export_user_data("user-2")
+    assert len(other["reset_link"]) == 1 and len(other["pending_oauth_link"]) == 1
+
+
 def test_export_for_unknown_user_is_all_empty(gateway: Postgres_PersonalDataGateway) -> None:
     export = gateway.export_user_data("ghost")
     assert set(export) == set(PERSONAL_DATA_TABLES)

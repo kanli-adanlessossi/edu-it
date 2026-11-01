@@ -147,8 +147,10 @@ def test_settings_from_env_reads_the_documented_variable_names() -> None:
         "SMTP_USE_TLS": "true",
         "MAIL_FROM_ADDRESS": "noreply@edu-it.test",
         "DEFAULT_LOCALE": "fr",
+        "LAB_IMAGE_TAG": "ci-42",
     }
     settings = CompositionSettings.from_env(env)
+    assert settings.lab_image_tag == "ci-42"
     assert settings.environment is Environment.PRODUCTION
     assert settings.mailer_backend is MailerBackend.SMTP
     assert settings.smtp_host == "smtp.internal"

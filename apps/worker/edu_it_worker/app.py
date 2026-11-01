@@ -16,8 +16,11 @@ directly to drive every reachable/unreachable assignment without a datastore.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 
+from edu_it_domain import config as _domain_config
+from edu_it_domain.labs.config_rules import LabConfigError, validate_lab_config
 from edu_it_domain.ports.health import DependencyProbe
 from edu_it_infrastructure.reachability import required_dependency_probes
 from starlette.applications import Starlette
@@ -27,8 +30,20 @@ from edu_it_worker.health import build_health_app
 __all__ = ["create_health_app"]
 
 
-def create_health_app() -> Starlette:
-    """Build the worker health/readiness ASGI app wired to the real probes."""
+def create_health_app(lab_config: object = _domain_config) -> Starlette:
+    """Build the worker health/readiness ASGI app wired to the real probes.
+
+    The lab Config is validated first, before any provider call (Req 1.8,
+    1.11). A :class:`LabConfigError` propagates: the worker refuses to start,
+    the offending keys are logged, and no Sandbox is created.
+    """
+    try:
+        validate_lab_config(lab_config)
+    except LabConfigError as exc:
+        logging.getLogger(__name__).critical(
+            "refusing to start: invalid lab Config", extra={"keys": list(exc.keys)}
+        )
+        raise
     return build_health_app(_default_probes_provider)
 
 

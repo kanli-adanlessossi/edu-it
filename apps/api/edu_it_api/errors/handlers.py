@@ -188,7 +188,11 @@ def install_error_handlers(app: FastAPI) -> None:
     for datastore_error in DATASTORE_UNAVAILABLE_ERRORS:
         app.add_exception_handler(datastore_error, _handle_datastore_unavailable)
     # Imported lazily: the learning mapping reuses this module's response helpers.
+    from edu_it_api.errors.accounts import install_account_error_handlers
+    from edu_it_api.errors.labs import install_lab_error_handlers
     from edu_it_api.errors.learning import install_learning_error_handlers
 
+    install_account_error_handlers(app)
     install_learning_error_handlers(app)
+    install_lab_error_handlers(app)
     app.add_exception_handler(Exception, _handle_unexpected_error)

@@ -27,7 +27,11 @@ PostgreSQL-backed store lands (task 20).
 Usage::
 
     edu-it-content validate [--content-root DIR]
-    edu-it-content sync [--content-root DIR]
+    edu-it-content sync [--content-root DIR] [--database-url URL]
+
+With ``--database-url`` the sync writes the relational catalog through
+:class:`~edu_it_content.postgres_store.Postgres_ContentStore` (api-route-wiring Req 12);
+without it the sync uses the throwaway in-memory store.
 
 Exit status:
 
@@ -38,6 +42,8 @@ Exit status:
   ``sync``: the content was invalid, so nothing was synced (Req 14).
 - ``2`` — the content root could not be loaded (missing directory or malformed
   ``items.json``), so the command could not begin.
+- ``3`` — ``sync --database-url``: the database could not be used (unreachable, driver
+  missing, migrations not applied) or a write failed.
 
 When ``--content-root`` is omitted the command reads ``EDU_IT_CONTENT_ROOT`` from
 the environment, falling back to a ``content`` directory under the current
@@ -52,12 +58,18 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+from sqlalchemy import create_engine
+from sqlalchemy.exc import ArgumentError, SQLAlchemyError
+
 from edu_it_content.content_store import In_Memory_ContentStore
+from edu_it_content.postgres_store import CatalogSchemaMissingError, Postgres_ContentStore
 from edu_it_content.sync import Approval, sync_content
 from edu_it_content.validation import (
     ContentLoadError,
     ValidationFailure,
+    apply_pending_allowance,
     load_content,
+    load_pending_review_list,
     validate_content,
 )
 
@@ -69,6 +81,10 @@ _VALIDATION_FAILED_EXIT = 1
 #: Exit status when the content root cannot be loaded at all (missing dir or
 #: unparseable ``items.json``) — validation could not even start.
 _LOAD_ERROR_EXIT = 2
+
+#: Exit status when ``sync --database-url`` cannot use the database (unreachable, driver
+#: missing, or migrations not applied) or a write fails.
+_STORE_ERROR_EXIT = 3
 
 #: Environment variable naming the content root when ``--content-root`` is
 #: omitted; falls back to ``./content`` so a configured checkout needs no flag.
@@ -116,6 +132,14 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     _add_content_root_argument(validate)
+    validate.add_argument(
+        "--allow-pending",
+        action="store_true",
+        help=(
+            "tolerate only the ai-reviewer-present failure for labs listed in "
+            "pending-review.json; every other failure still fails (Req 20.13)"
+        ),
+    )
     validate.set_defaults(handler=_run_validate)
 
     sync = subcommands.add_parser(
@@ -146,6 +170,16 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="ISO8601",
         help="approval timestamp (timezone-aware ISO 8601); defaults to now (UTC)",
+    )
+    sync.add_argument(
+        "--database-url",
+        default=None,
+        metavar="URL",
+        help=(
+            "SQLAlchemy URL of a migrated database; the sync then writes the relational "
+            "catalog through Postgres_ContentStore (needs the `postgres` extra for "
+            "PostgreSQL). Omit to sync into a throwaway in-memory store."
+        ),
     )
     sync.set_defaults(handler=_run_sync)
 
@@ -184,6 +218,13 @@ def _run_validate(args: argparse.Namespace) -> int:
         return _LOAD_ERROR_EXIT
 
     failures = validate_content(content)
+    if args.allow_pending:
+        try:
+            pending = load_pending_review_list(content_root)
+        except ContentLoadError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return _LOAD_ERROR_EXIT
+        failures = apply_pending_allowance(failures, content, pending)
     if failures:
         _report_failures(failures)
         return _VALIDATION_FAILED_EXIT
@@ -223,18 +264,49 @@ def _run_sync(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return _LOAD_ERROR_EXIT
 
-    store = In_Memory_ContentStore()
+    store: In_Memory_ContentStore | Postgres_ContentStore
+    if args.database_url is None:
+        store = In_Memory_ContentStore()
+    else:
+        try:
+            store = _open_postgres_store(args.database_url)
+        except (CatalogSchemaMissingError, ImportError, SQLAlchemyError, ArgumentError) as exc:
+            # Never echo the URL: it may carry credentials.
+            print(f"error: cannot use the database: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return _STORE_ERROR_EXIT
     try:
         report = sync_content(store, content, approval=approval)
-    except ValueError as exc:
+        if isinstance(store, Postgres_ContentStore):
+            store.flush()
+    except ValueError as exc:  # includes CatalogWriteError
         print(f"error: {exc}", file=sys.stderr)
         return _VALIDATION_FAILED_EXIT
+    except SQLAlchemyError as exc:
+        print(f"error: database write failed: {type(exc).__name__}", file=sys.stderr)
+        return _STORE_ERROR_EXIT
 
     print(f"content synced: {report.summary()} in {content_root}")
     if approval is not None:
         golden_count = len(store.golden_ids())
         print(f"approved by {approval.reviewer}: {golden_count} item(s) in the Golden_Set")
     return 0
+
+
+def _open_postgres_store(database_url: str) -> Postgres_ContentStore:
+    """Build the engine from ``database_url`` and open the PostgreSQL-backed store (Req 12.2).
+
+    A bare ``postgresql://`` URL is pointed at the psycopg 3 driver pinned in ADR 0001
+    (SQLAlchemy would otherwise look for psycopg2).
+    """
+    url = database_url
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://") :]
+    engine = create_engine(url)
+    try:
+        return Postgres_ContentStore(engine)
+    except BaseException:
+        engine.dispose()
+        raise
 
 
 def _parse_approval(approved_by: str | None, approved_at: str | None) -> Approval | None:

@@ -27,6 +27,7 @@ from collections.abc import Sequence
 from fastapi import APIRouter, FastAPI
 
 from edu_it_api import __version__
+from edu_it_api.errors import install_error_handlers
 
 __all__ = [
     "SUPPORTED_MAJOR_VERSIONS",
@@ -66,6 +67,10 @@ def build_version_app(major: int, routers: Sequence[APIRouter] | None = None) ->
         docs_url="/docs",
         redoc_url=None,
     )
+    # A mounted sub-app handles its own exceptions: handlers installed on the
+    # root app never see an error raised inside it, so without this a versioned
+    # route's typed errors would surface as bare 500s instead of RFC 9457 problems.
+    install_error_handlers(app)
     for router in routers or ():
         app.include_router(router)
     return app

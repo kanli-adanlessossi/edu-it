@@ -42,6 +42,9 @@ class LessonRecord:
     content_version: str = ""
     """The content hash of this lesson revision."""
 
+    lab_ids: tuple[StableId, ...] = ()
+    """The ``stable_id`` of each non-archived lab the lesson references (labs Req 15.12)."""
+
 
 @runtime_checkable
 class LessonRepository(Protocol):

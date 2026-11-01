@@ -30,6 +30,31 @@ from edu_it_domain.ports.repository import UserRecord
 from edu_it_domain.ports.verification_link import VerificationLink
 
 _T0 = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+
+
+class StubCredentialStore:
+    """Records the hashed credential stored at sign-up."""
+
+    def __init__(self) -> None:
+        self.secrets: dict[str, str] = {}
+
+    def set_password(self, user_stable_id: str, hashed_secret: str) -> None:
+        self.secrets[user_stable_id] = hashed_secret
+
+    def verify_password(self, user_stable_id: str, password: str) -> bool:
+        return self.secrets.get(user_stable_id) == password
+
+
+class StubLinkBuilder:
+    """Builds ``https://web.test/{locale}/verify-email?token={token}``."""
+
+    def verification_url(self, token: str, locale: str) -> str:
+        return f"https://web.test/{locale}/verify-email?token={token}"
+
+    def reset_url(self, token: str, locale: str) -> str:
+        return f"https://web.test/{locale}/reset-password?token={token}"
+
+
 _VALID_PASSWORD = "correct horse battery staple"  # 28 chars: within 12-128
 
 
@@ -118,7 +143,9 @@ def _make_use_case(
     ids = (f"user-{n}" for n in count())
     return SignUpUseCase(
         users=users,
+        credentials=StubCredentialStore(),
         verification_links=links,
+        link_builder=StubLinkBuilder(),
         mailer=mailer,
         clock=clock,
         token_factory=lambda: next(tokens),

@@ -1,0 +1,36 @@
+{
+  "cases": {
+    "file-reported": {
+      "stdout_b64": "bm90ZXMudHh0CnJ1bi5zaAo=",
+      "exit_status": 0
+    },
+    "file-other-write-only": {
+      "stdout_b64": "ZHJvcC5kYXQK",
+      "exit_status": 0
+    },
+    "file-not-reported": {
+      "stdout_b64": "",
+      "exit_status": 0
+    },
+    "dir-reported": {
+      "stdout_b64": "c2hhcmVkCg==",
+      "exit_status": 0
+    },
+    "dir-not-reported": {
+      "stdout_b64": "",
+      "exit_status": 0
+    },
+    "symlink-not-reported": {
+      "stdout_b64": "",
+      "exit_status": 0
+    },
+    "symlink-among-entries": {
+      "stdout_b64": "YWZ0ZXIudHh0Cg==",
+      "exit_status": 0
+    },
+    "order-kept": {
+      "stdout_b64": "emV0YQphbHBoYQptaWQK",
+      "exit_status": 0
+    }
+  }
+}

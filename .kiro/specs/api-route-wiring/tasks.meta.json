@@ -1,0 +1,1077 @@
+{
+  "pbtResults": {
+    "1.4 Write property test for the password hasher": {
+      "status": "passed",
+      "lastRunTimestamp": 1793370585105
+    },
+    "3.3 Write property test for the verification link URL": {
+      "status": "passed",
+      "lastRunTimestamp": 1793372897650
+    },
+    "4.3 Write property tests for cookie attributes and CORS": {
+      "status": "passed",
+      "lastRunTimestamp": 1793373407585
+    },
+    "6.3 Write property test for content reads": {
+      "status": "passed",
+      "lastRunTimestamp": 1793374945350
+    },
+    "11.1 Add the client factory with credentials and CSRF, and regenerate the client": {
+      "status": "passed",
+      "lastRunTimestamp": 1793379831906
+    }
+  },
+  "executionHistory": {
+    "1.1 Add configuration values and settings": [
+      {
+        "executionId": "56c8252c-b8cf-46df-bfec-918cb88c9ea7",
+        "chatSessionId": "sess_40b5259d-08d0-4b82-995a-f93b37073b69",
+        "timestamp": 1793370081075
+      },
+      {
+        "executionId": "56c8252c-b8cf-46df-bfec-918cb88c9ea7",
+        "chatSessionId": "sess_40b5259d-08d0-4b82-995a-f93b37073b69",
+        "timestamp": 1793370173586
+      }
+    ],
+    "1.2 Define the new domain ports": [
+      {
+        "executionId": "56c8252c-b8cf-46df-bfec-918cb88c9ea7",
+        "chatSessionId": "sess_40b5259d-08d0-4b82-995a-f93b37073b69",
+        "timestamp": 1793370081136
+      },
+      {
+        "executionId": "56c8252c-b8cf-46df-bfec-918cb88c9ea7",
+        "chatSessionId": "sess_40b5259d-08d0-4b82-995a-f93b37073b69",
+        "timestamp": 1793370174393
+      }
+    ],
+    "1.3 Implement `Scrypt_PasswordHasher`": [
+      {
+        "executionId": "56c8252c-b8cf-46df-bfec-918cb88c9ea7",
+        "chatSessionId": "sess_40b5259d-08d0-4b82-995a-f93b37073b69",
+        "timestamp": 1793370185305
+      },
+      {
+        "executionId": "56c8252c-b8cf-46df-bfec-918cb88c9ea7",
+        "chatSessionId": "sess_40b5259d-08d0-4b82-995a-f93b37073b69",
+        "timestamp": 1793370266851
+      }
+    ],
+    "1.4 Write property test for the password hasher": [
+      {
+        "executionId": "56c8252c-b8cf-46df-bfec-918cb88c9ea7",
+        "chatSessionId": "sess_40b5259d-08d0-4b82-995a-f93b37073b69",
+        "timestamp": 1793370266905
+      },
+      {
+        "executionId": "56c8252c-b8cf-46df-bfec-918cb88c9ea7",
+        "chatSessionId": "sess_40b5259d-08d0-4b82-995a-f93b37073b69",
+        "timestamp": 1793370593501
+      }
+    ],
+    "1. Contracts, configuration, and the password hasher": [
+      {
+        "executionId": "56c8252c-b8cf-46df-bfec-918cb88c9ea7",
+        "chatSessionId": "sess_40b5259d-08d0-4b82-995a-f93b37073b69",
+        "timestamp": 1793370593581
+      }
+    ],
+    "2.1 Add Alembic revision `0003_accounts_runtime` and update `metadata.py`": [
+      {
+        "executionId": "4042ae8b-c396-48ac-867a-3a607b53e24a",
+        "chatSessionId": "sess_58deaca9-c5f7-487d-9a45-d36f69629113",
+        "timestamp": 1793370635629
+      },
+      {
+        "executionId": "4042ae8b-c396-48ac-867a-3a607b53e24a",
+        "chatSessionId": "sess_58deaca9-c5f7-487d-9a45-d36f69629113",
+        "timestamp": 1793371183736
+      }
+    ],
+    "2.2 Implement the PostgreSQL adapters for credentials and verification links": [
+      {
+        "executionId": "4042ae8b-c396-48ac-867a-3a607b53e24a",
+        "chatSessionId": "sess_58deaca9-c5f7-487d-9a45-d36f69629113",
+        "timestamp": 1793371192755
+      },
+      {
+        "executionId": "4042ae8b-c396-48ac-867a-3a607b53e24a",
+        "chatSessionId": "sess_58deaca9-c5f7-487d-9a45-d36f69629113",
+        "timestamp": 1793371354506
+      }
+    ],
+    "2.3 Write contract and migration tests": [
+      {
+        "executionId": "4042ae8b-c396-48ac-867a-3a607b53e24a",
+        "chatSessionId": "sess_58deaca9-c5f7-487d-9a45-d36f69629113",
+        "timestamp": 1793371355062
+      },
+      {
+        "executionId": "4042ae8b-c396-48ac-867a-3a607b53e24a",
+        "chatSessionId": "sess_58deaca9-c5f7-487d-9a45-d36f69629113",
+        "timestamp": 1793371470970
+      }
+    ],
+    "2.4 Extend GDPR coverage and the data-model document for `credential` and `verification_link`": [
+      {
+        "executionId": "4042ae8b-c396-48ac-867a-3a607b53e24a",
+        "chatSessionId": "sess_58deaca9-c5f7-487d-9a45-d36f69629113",
+        "timestamp": 1793371471621
+      },
+      {
+        "executionId": "4042ae8b-c396-48ac-867a-3a607b53e24a",
+        "chatSessionId": "sess_58deaca9-c5f7-487d-9a45-d36f69629113",
+        "timestamp": 1793371960973
+      }
+    ],
+    "2. Persistence for sign-up and verification (revision `0003`)": [
+      {
+        "executionId": "4042ae8b-c396-48ac-867a-3a607b53e24a",
+        "chatSessionId": "sess_58deaca9-c5f7-487d-9a45-d36f69629113",
+        "timestamp": 1793371961063
+      }
+    ],
+    "3.1 Implement `Web_LinkBuilder` and update the sign-up and resend use cases": [
+      {
+        "executionId": "7992be0f-1c2d-47d4-8a1d-845cb5a19ceb",
+        "chatSessionId": "sess_55afa746-81bb-4a52-bd4d-3b0246d582ae",
+        "timestamp": 1793372073563
+      },
+      {
+        "executionId": "7992be0f-1c2d-47d4-8a1d-845cb5a19ceb",
+        "chatSessionId": "sess_55afa746-81bb-4a52-bd4d-3b0246d582ae",
+        "timestamp": 1793372737892
+      }
+    ],
+    "3.2 Update existing fixtures and tests for the new constructor arguments": [
+      {
+        "executionId": "7992be0f-1c2d-47d4-8a1d-845cb5a19ceb",
+        "chatSessionId": "sess_55afa746-81bb-4a52-bd4d-3b0246d582ae",
+        "timestamp": 1793372738485
+      },
+      {
+        "executionId": "7992be0f-1c2d-47d4-8a1d-845cb5a19ceb",
+        "chatSessionId": "sess_55afa746-81bb-4a52-bd4d-3b0246d582ae",
+        "timestamp": 1793372808086
+      }
+    ],
+    "3.3 Write property test for the verification link URL": [
+      {
+        "executionId": "7992be0f-1c2d-47d4-8a1d-845cb5a19ceb",
+        "chatSessionId": "sess_55afa746-81bb-4a52-bd4d-3b0246d582ae",
+        "timestamp": 1793372808481
+      },
+      {
+        "executionId": "7992be0f-1c2d-47d4-8a1d-845cb5a19ceb",
+        "chatSessionId": "sess_55afa746-81bb-4a52-bd4d-3b0246d582ae",
+        "timestamp": 1793372905390
+      }
+    ],
+    "3. Use-case changes for credentials, verification links, and equal work": [
+      {
+        "executionId": "7992be0f-1c2d-47d4-8a1d-845cb5a19ceb",
+        "chatSessionId": "sess_55afa746-81bb-4a52-bd4d-3b0246d582ae",
+        "timestamp": 1793372905438
+      }
+    ],
+    "4. API boundary primitives": [
+      {
+        "executionId": "7ea718c5-f602-41a4-882f-f28a9f3354dc",
+        "chatSessionId": "sess_def07aa7-1787-41dd-a266-1ae70542363c",
+        "timestamp": 1793372927799
+      },
+      {
+        "executionId": "7ea718c5-f602-41a4-882f-f28a9f3354dc",
+        "chatSessionId": "sess_def07aa7-1787-41dd-a266-1ae70542363c",
+        "timestamp": 1793373205157
+      }
+    ],
+    "4.1 Add the shared resolver, cookie, CSRF token, CORS, and route-table modules": [
+      {
+        "executionId": "f6153015-b6cf-47a6-acd1-9352eb12fa64",
+        "chatSessionId": "sess_def07aa7-1787-41dd-a266-1ae70542363c",
+        "timestamp": 1793373366263
+      },
+      {
+        "executionId": "f6153015-b6cf-47a6-acd1-9352eb12fa64",
+        "chatSessionId": "sess_def07aa7-1787-41dd-a266-1ae70542363c",
+        "timestamp": 1793373422586
+      }
+    ],
+    "4.2 Add account problem types and handlers for Milestone 1": [
+      {
+        "executionId": "f6153015-b6cf-47a6-acd1-9352eb12fa64",
+        "chatSessionId": "sess_def07aa7-1787-41dd-a266-1ae70542363c",
+        "timestamp": 1793373367081
+      },
+      {
+        "executionId": "f6153015-b6cf-47a6-acd1-9352eb12fa64",
+        "chatSessionId": "sess_def07aa7-1787-41dd-a266-1ae70542363c",
+        "timestamp": 1793373423197
+      }
+    ],
+    "4.3 Write property tests for cookie attributes and CORS": [
+      {
+        "executionId": "f6153015-b6cf-47a6-acd1-9352eb12fa64",
+        "chatSessionId": "sess_def07aa7-1787-41dd-a266-1ae70542363c",
+        "timestamp": 1793373368180
+      },
+      {
+        "executionId": "f6153015-b6cf-47a6-acd1-9352eb12fa64",
+        "chatSessionId": "sess_def07aa7-1787-41dd-a266-1ae70542363c",
+        "timestamp": 1793373423711
+      }
+    ],
+    "5.1 Implement schemas and the Milestone 1 account routes": [
+      {
+        "executionId": "f9d3ec01-eca5-4248-9ffa-295d034d57f0",
+        "chatSessionId": "sess_c252265a-a115-4763-afcd-78758a404d7e",
+        "timestamp": 1793373457179
+      },
+      {
+        "executionId": "f9d3ec01-eca5-4248-9ffa-295d034d57f0",
+        "chatSessionId": "sess_c252265a-a115-4763-afcd-78758a404d7e",
+        "timestamp": 1793373635000
+      }
+    ],
+    "5.2 Write property tests for non-disclosure, indistinguishable failures, and invalid input": [
+      {
+        "executionId": "f9d3ec01-eca5-4248-9ffa-295d034d57f0",
+        "chatSessionId": "sess_c252265a-a115-4763-afcd-78758a404d7e",
+        "timestamp": 1793373635417
+      },
+      {
+        "executionId": "f9d3ec01-eca5-4248-9ffa-295d034d57f0",
+        "chatSessionId": "sess_c252265a-a115-4763-afcd-78758a404d7e",
+        "timestamp": 1793373953329
+      }
+    ],
+    "5.3 Write property tests for the sign-up flow, secret hygiene, and rotation, plus example tests": [
+      {
+        "executionId": "f9d3ec01-eca5-4248-9ffa-295d034d57f0",
+        "chatSessionId": "sess_c252265a-a115-4763-afcd-78758a404d7e",
+        "timestamp": 1793373953838
+      },
+      {
+        "executionId": "f9d3ec01-eca5-4248-9ffa-295d034d57f0",
+        "chatSessionId": "sess_c252265a-a115-4763-afcd-78758a404d7e",
+        "timestamp": 1793374344077
+      }
+    ],
+    "5. Account routes for sign-up, verification, and sign-in": [
+      {
+        "executionId": "f9d3ec01-eca5-4248-9ffa-295d034d57f0",
+        "chatSessionId": "sess_c252265a-a115-4763-afcd-78758a404d7e",
+        "timestamp": 1793374344143
+      }
+    ],
+    "6.1 Implement the read use cases and the text source": [
+      {
+        "executionId": "cdf08f63-a2cf-4371-b45b-60ae3f57a4bc",
+        "chatSessionId": "sess_a4dbd875-8b4f-4434-8510-9e3f413eaac6",
+        "timestamp": 1793374391458
+      },
+      {
+        "executionId": "cdf08f63-a2cf-4371-b45b-60ae3f57a4bc",
+        "chatSessionId": "sess_a4dbd875-8b4f-4434-8510-9e3f413eaac6",
+        "timestamp": 1793374692636
+      }
+    ],
+    "6.2 Implement the Content_Router": [
+      {
+        "executionId": "cdf08f63-a2cf-4371-b45b-60ae3f57a4bc",
+        "chatSessionId": "sess_a4dbd875-8b4f-4434-8510-9e3f413eaac6",
+        "timestamp": 1793374696712
+      },
+      {
+        "executionId": "cdf08f63-a2cf-4371-b45b-60ae3f57a4bc",
+        "chatSessionId": "sess_a4dbd875-8b4f-4434-8510-9e3f413eaac6",
+        "timestamp": 1793374866487
+      }
+    ],
+    "6.3 Write property test for content reads": [
+      {
+        "executionId": "cdf08f63-a2cf-4371-b45b-60ae3f57a4bc",
+        "chatSessionId": "sess_a4dbd875-8b4f-4434-8510-9e3f413eaac6",
+        "timestamp": 1793374868995
+      },
+      {
+        "executionId": "cdf08f63-a2cf-4371-b45b-60ae3f57a4bc",
+        "chatSessionId": "sess_a4dbd875-8b4f-4434-8510-9e3f413eaac6",
+        "timestamp": 1793374958040
+      }
+    ],
+    "6. Quiz and project read routes": [
+      {
+        "executionId": "cdf08f63-a2cf-4371-b45b-60ae3f57a4bc",
+        "chatSessionId": "sess_a4dbd875-8b4f-4434-8510-9e3f413eaac6",
+        "timestamp": 1793374958087
+      }
+    ],
+    "7.1 Implement `Pending_ProjectReviewer`": [
+      {
+        "executionId": "b29da2fd-809d-46c6-9d72-3b2207d2816b",
+        "chatSessionId": "sess_0f7a988a-453e-4497-abcd-5527b0f55921",
+        "timestamp": 1793374997662
+      },
+      {
+        "executionId": "b29da2fd-809d-46c6-9d72-3b2207d2816b",
+        "chatSessionId": "sess_0f7a988a-453e-4497-abcd-5527b0f55921",
+        "timestamp": 1793375040467
+      }
+    ],
+    "7.2 Implement `Postgres_ContentStore` in `packages/content` and the sync database option": [
+      {
+        "executionId": "b29da2fd-809d-46c6-9d72-3b2207d2816b",
+        "chatSessionId": "sess_0f7a988a-453e-4497-abcd-5527b0f55921",
+        "timestamp": 1793375050843
+      },
+      {
+        "executionId": "b29da2fd-809d-46c6-9d72-3b2207d2816b",
+        "chatSessionId": "sess_0f7a988a-453e-4497-abcd-5527b0f55921",
+        "timestamp": 1793375779419
+      }
+    ],
+    "7.3 Write the store contract test and update the perf seeding": [
+      {
+        "executionId": "b29da2fd-809d-46c6-9d72-3b2207d2816b",
+        "chatSessionId": "sess_0f7a988a-453e-4497-abcd-5527b0f55921",
+        "timestamp": 1793375779481
+      },
+      {
+        "executionId": "b29da2fd-809d-46c6-9d72-3b2207d2816b",
+        "chatSessionId": "sess_0f7a988a-453e-4497-abcd-5527b0f55921",
+        "timestamp": 1793376046817
+      }
+    ],
+    "7.4 Add the package dependency-graph test": [
+      {
+        "executionId": "b29da2fd-809d-46c6-9d72-3b2207d2816b",
+        "chatSessionId": "sess_0f7a988a-453e-4497-abcd-5527b0f55921",
+        "timestamp": 1793375783849
+      },
+      {
+        "executionId": "b29da2fd-809d-46c6-9d72-3b2207d2816b",
+        "chatSessionId": "sess_0f7a988a-453e-4497-abcd-5527b0f55921",
+        "timestamp": 1793376047301
+      }
+    ],
+    "7. Catalog persistence, project reviewer, and the dependency-graph check": [
+      {
+        "executionId": "b29da2fd-809d-46c6-9d72-3b2207d2816b",
+        "chatSessionId": "sess_0f7a988a-453e-4497-abcd-5527b0f55921",
+        "timestamp": 1793376047354
+      }
+    ],
+    "8. Composition and serving": [
+      {
+        "executionId": "9878d838-75f0-417e-8c17-e5660ea26cb1",
+        "chatSessionId": "sess_17afb092-2b3b-44c0-a4a3-f7ea14a1f694",
+        "timestamp": 1793376081386
+      },
+      {
+        "executionId": "9878d838-75f0-417e-8c17-e5660ea26cb1",
+        "chatSessionId": "sess_17afb092-2b3b-44c0-a4a3-f7ea14a1f694",
+        "timestamp": 1793378401430
+      }
+    ],
+    "8.1 Implement `build_adapters`": [
+      {
+        "executionId": "90627caf-a85b-4b00-bd42-99789ec8ae7a",
+        "chatSessionId": "sess_17afb092-2b3b-44c0-a4a3-f7ea14a1f694",
+        "timestamp": 1793378751637
+      }
+    ],
+    "8.2 Implement `build_api_routers` and wire the shared resolver": [
+      {
+        "executionId": "90627caf-a85b-4b00-bd42-99789ec8ae7a",
+        "chatSessionId": "sess_17afb092-2b3b-44c0-a4a3-f7ea14a1f694",
+        "timestamp": 1793378751697
+      }
+    ],
+    "8.3 Update `create_app`: signature, CORS order, and startup refusal": [
+      {
+        "executionId": "90627caf-a85b-4b00-bd42-99789ec8ae7a",
+        "chatSessionId": "sess_17afb092-2b3b-44c0-a4a3-f7ea14a1f694",
+        "timestamp": 1793378751761
+      }
+    ],
+    "8.4 Update `serve.py` and the OpenAPI export": [
+      {
+        "executionId": "90627caf-a85b-4b00-bd42-99789ec8ae7a",
+        "chatSessionId": "sess_17afb092-2b3b-44c0-a4a3-f7ea14a1f694",
+        "timestamp": 1793378752187
+      }
+    ],
+    "8.5 Write property tests over the mounted app": [
+      {
+        "executionId": "90627caf-a85b-4b00-bd42-99789ec8ae7a",
+        "chatSessionId": "sess_17afb092-2b3b-44c0-a4a3-f7ea14a1f694",
+        "timestamp": 1793378752786
+      }
+    ],
+    "8.6 Write integration tests for the mounted app": [
+      {
+        "executionId": "90627caf-a85b-4b00-bd42-99789ec8ae7a",
+        "chatSessionId": "sess_17afb092-2b3b-44c0-a4a3-f7ea14a1f694",
+        "timestamp": 1793378753368
+      }
+    ],
+    "9.1 Add the accepted risks to `docs/RISKS.md`": [
+      {
+        "executionId": "1334bda7-e325-46b7-a645-91575644cb33",
+        "chatSessionId": "sess_38eecf7f-d557-4c45-b3c2-558decd3faa1",
+        "timestamp": 1793378797283
+      },
+      {
+        "executionId": "1334bda7-e325-46b7-a645-91575644cb33",
+        "chatSessionId": "sess_38eecf7f-d557-4c45-b3c2-558decd3faa1",
+        "timestamp": 1793378837982
+      }
+    ],
+    "9.2 Record the mail-failure mapping in `docs/API-CONVENTIONS.md`": [
+      {
+        "executionId": "1334bda7-e325-46b7-a645-91575644cb33",
+        "chatSessionId": "sess_38eecf7f-d557-4c45-b3c2-558decd3faa1",
+        "timestamp": 1793378797841
+      },
+      {
+        "executionId": "1334bda7-e325-46b7-a645-91575644cb33",
+        "chatSessionId": "sess_38eecf7f-d557-4c45-b3c2-558decd3faa1",
+        "timestamp": 1793378838550
+      }
+    ],
+    "9. Record the accepted risks and the mail-failure convention": [
+      {
+        "executionId": "1334bda7-e325-46b7-a645-91575644cb33",
+        "chatSessionId": "sess_38eecf7f-d557-4c45-b3c2-558decd3faa1",
+        "timestamp": 1793378838621
+      }
+    ],
+    "10. Checkpoint: Milestone 1 API complete": [
+      {
+        "executionId": "615afbaf-ef03-44c6-a507-a11c0916b2ef",
+        "chatSessionId": "sess_b19de791-e751-44fd-9eb2-a63295bc841d",
+        "timestamp": 1793378864899
+      },
+      {
+        "executionId": "615afbaf-ef03-44c6-a507-a11c0916b2ef",
+        "chatSessionId": "sess_b19de791-e751-44fd-9eb2-a63295bc841d",
+        "timestamp": 1793379633292
+      }
+    ],
+    "11.1 Add the client factory with credentials and CSRF, and regenerate the client": [
+      {
+        "executionId": "23e7af80-92d7-4eb9-a312-8e59e97411fe",
+        "chatSessionId": "sess_64dda4aa-7703-4a5f-ae32-c0197b2711d4",
+        "timestamp": 1793379657126
+      },
+      {
+        "executionId": "23e7af80-92d7-4eb9-a312-8e59e97411fe",
+        "chatSessionId": "sess_64dda4aa-7703-4a5f-ae32-c0197b2711d4",
+        "timestamp": 1793379844150
+      }
+    ],
+    "11.2 Connect the Milestone 1 pages and add messages": [
+      {
+        "executionId": "23e7af80-92d7-4eb9-a312-8e59e97411fe",
+        "chatSessionId": "sess_64dda4aa-7703-4a5f-ae32-c0197b2711d4",
+        "timestamp": 1793379851402
+      },
+      {
+        "executionId": "23e7af80-92d7-4eb9-a312-8e59e97411fe",
+        "chatSessionId": "sess_64dda4aa-7703-4a5f-ae32-c0197b2711d4",
+        "timestamp": 1793380032608
+      }
+    ],
+    "11.3 Write web tests": [
+      {
+        "executionId": "23e7af80-92d7-4eb9-a312-8e59e97411fe",
+        "chatSessionId": "sess_64dda4aa-7703-4a5f-ae32-c0197b2711d4",
+        "timestamp": 1793380033132
+      },
+      {
+        "executionId": "23e7af80-92d7-4eb9-a312-8e59e97411fe",
+        "chatSessionId": "sess_64dda4aa-7703-4a5f-ae32-c0197b2711d4",
+        "timestamp": 1793380350396
+      }
+    ],
+    "11. Web integration for Milestone 1": [
+      {
+        "executionId": "23e7af80-92d7-4eb9-a312-8e59e97411fe",
+        "chatSessionId": "sess_64dda4aa-7703-4a5f-ae32-c0197b2711d4",
+        "timestamp": 1793380350479
+      }
+    ],
+    "12.1 Implement `tools/e2e_stack.py` and its dry-run test": [
+      {
+        "executionId": "07439eef-ac0d-47fb-a09c-ec67198e3d51",
+        "chatSessionId": "sess_aec16adf-fae0-4d47-a789-08b3fb9779d2",
+        "timestamp": 1793380381498
+      },
+      {
+        "executionId": "07439eef-ac0d-47fb-a09c-ec67198e3d51",
+        "chatSessionId": "sess_aec16adf-fae0-4d47-a789-08b3fb9779d2",
+        "timestamp": 1793380559312
+      }
+    ],
+    "12.2 Write the real-stack Seed_Lab test": [
+      {
+        "executionId": "07439eef-ac0d-47fb-a09c-ec67198e3d51",
+        "chatSessionId": "sess_aec16adf-fae0-4d47-a789-08b3fb9779d2",
+        "timestamp": 1793380562182
+      },
+      {
+        "executionId": "07439eef-ac0d-47fb-a09c-ec67198e3d51",
+        "chatSessionId": "sess_aec16adf-fae0-4d47-a789-08b3fb9779d2",
+        "timestamp": 1793380633481
+      }
+    ],
+    "12. Real-stack bootstrap and Seed_Lab test": [
+      {
+        "executionId": "07439eef-ac0d-47fb-a09c-ec67198e3d51",
+        "chatSessionId": "sess_aec16adf-fae0-4d47-a789-08b3fb9779d2",
+        "timestamp": 1793380633531
+      }
+    ],
+    "13. Checkpoint: ready for the real stack": [
+      {
+        "executionId": "1f698d62-0cc8-4268-83b2-28bb92caf60f",
+        "chatSessionId": "sess_27486d55-1774-4de8-b5bb-709f53c20df7",
+        "timestamp": 1793380659145
+      },
+      {
+        "executionId": "1f698d62-0cc8-4268-83b2-28bb92caf60f",
+        "chatSessionId": "sess_27486d55-1774-4de8-b5bb-709f53c20df7",
+        "timestamp": 1793381392992
+      }
+    ],
+    "14. Milestone 1 gate: rerun the labs verification suite and hand back": [
+      {
+        "executionId": "672c33de-64ba-4e53-a96c-662246480693",
+        "chatSessionId": "sess_c387a37f-fda5-4ab1-bd50-af7a9b773adc",
+        "timestamp": 1793381424247
+      },
+      {
+        "executionId": "032e5773-adb4-42f0-8c0a-0e1002c61711",
+        "chatSessionId": "sess_c387a37f-fda5-4ab1-bd50-af7a9b773adc",
+        "timestamp": 1793393224529
+      },
+      {
+        "executionId": "bb115d5d-65d7-4f15-8e9f-a7883dd058f8",
+        "chatSessionId": "sess_9317df5f-d6a1-400c-85a2-186687dc6520",
+        "timestamp": 1793394473292
+      },
+      {
+        "executionId": "d13e5d60-cf72-4e6f-8cb0-b3cd645aef27",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793433918374
+      },
+      {
+        "executionId": "75435f4a-3a27-47b3-a459-0f7444a466e5",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793463672804
+      },
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793480912268
+      }
+    ],
+    "13.1 Fix the multi-enrollment progress read and the missing Processes lock state": [
+      {
+        "executionId": "d5fa164f-95ad-4ae5-9eea-ddec1384ad60",
+        "chatSessionId": "sess_d076b2e4-e69c-45c5-b9a7-874c718caed0",
+        "timestamp": 1793393366797
+      },
+      {
+        "executionId": "d5fa164f-95ad-4ae5-9eea-ddec1384ad60",
+        "chatSessionId": "sess_d076b2e4-e69c-45c5-b9a7-874c718caed0",
+        "timestamp": 1793393852646
+      }
+    ],
+    "13.2 Mount `GET /v1/reviews/schedule`, or stop the web app calling it": [
+      {
+        "executionId": "d5fa164f-95ad-4ae5-9eea-ddec1384ad60",
+        "chatSessionId": "sess_d076b2e4-e69c-45c5-b9a7-874c718caed0",
+        "timestamp": 1793393852723
+      },
+      {
+        "executionId": "d5fa164f-95ad-4ae5-9eea-ddec1384ad60",
+        "chatSessionId": "sess_d076b2e4-e69c-45c5-b9a7-874c718caed0",
+        "timestamp": 1793393954997
+      }
+    ],
+    "13.3 Fix the 401 on the lab route and the Seed_Lab real-stack hang": [
+      {
+        "executionId": "d5fa164f-95ad-4ae5-9eea-ddec1384ad60",
+        "chatSessionId": "sess_d076b2e4-e69c-45c5-b9a7-874c718caed0",
+        "timestamp": 1793393955647
+      },
+      {
+        "executionId": "d5fa164f-95ad-4ae5-9eea-ddec1384ad60",
+        "chatSessionId": "sess_d076b2e4-e69c-45c5-b9a7-874c718caed0",
+        "timestamp": 1793394075008
+      }
+    ],
+    "13.4 Diagnose the five labs-docker failures and the labs-image-build failure": [
+      {
+        "executionId": "d5fa164f-95ad-4ae5-9eea-ddec1384ad60",
+        "chatSessionId": "sess_d076b2e4-e69c-45c5-b9a7-874c718caed0",
+        "timestamp": 1793394075517
+      },
+      {
+        "executionId": "d5fa164f-95ad-4ae5-9eea-ddec1384ad60",
+        "chatSessionId": "sess_d076b2e4-e69c-45c5-b9a7-874c718caed0",
+        "timestamp": 1793394428220
+      }
+    ],
+    "13. Checkpoint: ready for the real stack, including remediation of the failed first gate run": [
+      {
+        "executionId": "d5fa164f-95ad-4ae5-9eea-ddec1384ad60",
+        "chatSessionId": "sess_d076b2e4-e69c-45c5-b9a7-874c718caed0",
+        "timestamp": 1793394428299
+      }
+    ],
+    "13.5 Diagnose and fix the real-stack sign-up failure (second gate run)": [
+      {
+        "executionId": "0c843d0e-d5e2-4d88-8139-0d18c4be14d5",
+        "chatSessionId": "sess_c476adb8-eebf-41b6-9cab-63f971ec4ed6",
+        "timestamp": 1793427180819
+      },
+      {
+        "executionId": "0c843d0e-d5e2-4d88-8139-0d18c4be14d5",
+        "chatSessionId": "sess_c476adb8-eebf-41b6-9cab-63f971ec4ed6",
+        "timestamp": 1793427972252
+      }
+    ],
+    "13.6 Fix the missing Processes lock state on the track page": [
+      {
+        "executionId": "1081d4e3-a8bc-44e0-a72a-ff9c48f53fb6",
+        "chatSessionId": "sess_c5da9aae-1900-4ca4-9d29-17649a61539b",
+        "timestamp": 1793428247499
+      },
+      {
+        "executionId": "1081d4e3-a8bc-44e0-a72a-ff9c48f53fb6",
+        "chatSessionId": "sess_c5da9aae-1900-4ca4-9d29-17649a61539b",
+        "timestamp": 1793428922887
+      }
+    ],
+    "13.7 Fix the `ActiveSessionConflictError` between the two Seed_Lab cases": [
+      {
+        "executionId": "ab91781b-1569-4f1d-9ebb-3b2e76b0c287",
+        "chatSessionId": "sess_9cc11e50-c0ab-4201-a983-df7cb88e5da7",
+        "timestamp": 1793429965144
+      },
+      {
+        "executionId": "ab91781b-1569-4f1d-9ebb-3b2e76b0c287",
+        "chatSessionId": "sess_9cc11e50-c0ab-4201-a983-df7cb88e5da7",
+        "timestamp": 1793430096298
+      }
+    ],
+    "13.8 Find the remaining caller of `GET /v1/reviews/schedule`": [
+      {
+        "executionId": "d7a525c4-70a8-4db8-8ed2-c919631425c9",
+        "chatSessionId": "sess_4740cfc2-65ca-4208-88c2-57e59b437c91",
+        "timestamp": 1793430425315
+      },
+      {
+        "executionId": "d7a525c4-70a8-4db8-8ed2-c919631425c9",
+        "chatSessionId": "sess_4740cfc2-65ca-4208-88c2-57e59b437c91",
+        "timestamp": 1793431009174
+      }
+    ],
+    "13.9 Make `e2e_stack.py up` handle a busy PostgreSQL port cleanly": [
+      {
+        "executionId": "82079c01-3331-42c0-b836-e59dbd23b1a7",
+        "chatSessionId": "sess_7639dc82-2206-41bf-8ec9-3bba00fb3e8f",
+        "timestamp": 1793431110826
+      },
+      {
+        "executionId": "82079c01-3331-42c0-b836-e59dbd23b1a7",
+        "chatSessionId": "sess_7639dc82-2206-41bf-8ec9-3bba00fb3e8f",
+        "timestamp": 1793431685203
+      }
+    ],
+    "13.10 Fix the empty `terminal-connection` in the learner journey": [
+      {
+        "executionId": "747652fa-ba29-4d29-ad32-5554931f57ba",
+        "chatSessionId": "sess_878c8a57-d26b-46d8-8178-2924cd0d854c",
+        "timestamp": 1793431786751
+      },
+      {
+        "executionId": "747652fa-ba29-4d29-ad32-5554931f57ba",
+        "chatSessionId": "sess_878c8a57-d26b-46d8-8178-2924cd0d854c",
+        "timestamp": 1793432809670
+      }
+    ],
+    "13.11 Write the question-to-concept links in `edu-it-content sync`": [
+      {
+        "executionId": "23a53a62-87e3-41f4-a5e8-d1d4bf2d4e8e",
+        "chatSessionId": "sess_878c8a57-d26b-46d8-8178-2924cd0d854c",
+        "timestamp": 1793433399281
+      },
+      {
+        "executionId": "23a53a62-87e3-41f4-a5e8-d1d4bf2d4e8e",
+        "chatSessionId": "sess_878c8a57-d26b-46d8-8178-2924cd0d854c",
+        "timestamp": 1793433784329
+      }
+    ],
+    "14.1 Fix the duplicate pass-message assertion in the Seed_Lab real-stack test": [
+      {
+        "executionId": "75435f4a-3a27-47b3-a459-0f7444a466e5",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793463677164
+      },
+      {
+        "executionId": "75435f4a-3a27-47b3-a459-0f7444a466e5",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793463862162
+      }
+    ],
+    "14.2 Run `labs-docker` apart from the Real_Stack": [
+      {
+        "executionId": "75435f4a-3a27-47b3-a459-0f7444a466e5",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793463677998
+      },
+      {
+        "executionId": "75435f4a-3a27-47b3-a459-0f7444a466e5",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793464564228
+      }
+    ],
+    "14.3 Rerun the Milestone 1 gate": [
+      {
+        "executionId": "75435f4a-3a27-47b3-a459-0f7444a466e5",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793464568138
+      },
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793470657704
+      },
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793475545186
+      },
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793480912159
+      }
+    ],
+    "14.4 Fix the `could_not_complete` shell Check on a fresh performance session": [
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793470658570
+      },
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793475168091
+      }
+    ],
+    "14.5 Move `labs-performance` into phase 2 of the gate procedure": [
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793475169311
+      },
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793475438229
+      }
+    ],
+    "14.6 Lint `tools/` with ruff": [
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793475439433
+      },
+      {
+        "executionId": "d0fb6e29-a628-4902-bbd1-9e810544f6e7",
+        "chatSessionId": "sess_d1da803d-af93-4c68-a645-00fe5724dac3",
+        "timestamp": 1793475544303
+      }
+    ],
+    "15.1 Add Alembic revision `0004_accounts_oauth_reset` and update `metadata.py`": [
+      {
+        "executionId": "947cec0f-4dce-4266-8cb7-197a7c11720c",
+        "chatSessionId": "sess_5fe1ffc4-1ffd-4f68-8bd8-b00ebcb8c95d",
+        "timestamp": 1793481037802
+      },
+      {
+        "executionId": "947cec0f-4dce-4266-8cb7-197a7c11720c",
+        "chatSessionId": "sess_5fe1ffc4-1ffd-4f68-8bd8-b00ebcb8c95d",
+        "timestamp": 1793482224203
+      }
+    ],
+    "15.2 Implement the remaining PostgreSQL account adapters": [
+      {
+        "executionId": "947cec0f-4dce-4266-8cb7-197a7c11720c",
+        "chatSessionId": "sess_5fe1ffc4-1ffd-4f68-8bd8-b00ebcb8c95d",
+        "timestamp": 1793482232121
+      },
+      {
+        "executionId": "947cec0f-4dce-4266-8cb7-197a7c11720c",
+        "chatSessionId": "sess_5fe1ffc4-1ffd-4f68-8bd8-b00ebcb8c95d",
+        "timestamp": 1793482619572
+      }
+    ],
+    "15.3 Write contract and migration tests": [
+      {
+        "executionId": "947cec0f-4dce-4266-8cb7-197a7c11720c",
+        "chatSessionId": "sess_5fe1ffc4-1ffd-4f68-8bd8-b00ebcb8c95d",
+        "timestamp": 1793482620849
+      },
+      {
+        "executionId": "947cec0f-4dce-4266-8cb7-197a7c11720c",
+        "chatSessionId": "sess_5fe1ffc4-1ffd-4f68-8bd8-b00ebcb8c95d",
+        "timestamp": 1793482750969
+      }
+    ],
+    "15.4 Extend GDPR coverage and the data-model document for `reset_link` and `pending_oauth_link`": [
+      {
+        "executionId": "947cec0f-4dce-4266-8cb7-197a7c11720c",
+        "chatSessionId": "sess_5fe1ffc4-1ffd-4f68-8bd8-b00ebcb8c95d",
+        "timestamp": 1793482752225
+      },
+      {
+        "executionId": "947cec0f-4dce-4266-8cb7-197a7c11720c",
+        "chatSessionId": "sess_5fe1ffc4-1ffd-4f68-8bd8-b00ebcb8c95d",
+        "timestamp": 1793515507513
+      }
+    ],
+    "15. Persistence for reset and OAuth links (revision `0004`)": [
+      {
+        "executionId": "947cec0f-4dce-4266-8cb7-197a7c11720c",
+        "chatSessionId": "sess_5fe1ffc4-1ffd-4f68-8bd8-b00ebcb8c95d",
+        "timestamp": 1793515507623
+      }
+    ],
+    "16.1 Add the reset URL and the reset-request changes": [
+      {
+        "executionId": "ce14b098-b51b-4ccf-9000-5f44aac91151",
+        "chatSessionId": "sess_1570a848-feea-41d9-b158-e0349f060392",
+        "timestamp": 1793515589255
+      },
+      {
+        "executionId": "ce14b098-b51b-4ccf-9000-5f44aac91151",
+        "chatSessionId": "sess_1570a848-feea-41d9-b158-e0349f060392",
+        "timestamp": 1793515872224
+      }
+    ],
+    "16.2 Add the Milestone 2 reset problem types": [
+      {
+        "executionId": "ce14b098-b51b-4ccf-9000-5f44aac91151",
+        "chatSessionId": "sess_1570a848-feea-41d9-b158-e0349f060392",
+        "timestamp": 1793515873488
+      },
+      {
+        "executionId": "ce14b098-b51b-4ccf-9000-5f44aac91151",
+        "chatSessionId": "sess_1570a848-feea-41d9-b158-e0349f060392",
+        "timestamp": 1793516011343
+      }
+    ],
+    "16.3 Implement the reset routes": [
+      {
+        "executionId": "ce14b098-b51b-4ccf-9000-5f44aac91151",
+        "chatSessionId": "sess_1570a848-feea-41d9-b158-e0349f060392",
+        "timestamp": 1793516014097
+      },
+      {
+        "executionId": "ce14b098-b51b-4ccf-9000-5f44aac91151",
+        "chatSessionId": "sess_1570a848-feea-41d9-b158-e0349f060392",
+        "timestamp": 1793516348833
+      }
+    ],
+    "16.4 Write the reset tests": [
+      {
+        "executionId": "ce14b098-b51b-4ccf-9000-5f44aac91151",
+        "chatSessionId": "sess_1570a848-feea-41d9-b158-e0349f060392",
+        "timestamp": 1793516348929
+      },
+      {
+        "executionId": "ce14b098-b51b-4ccf-9000-5f44aac91151",
+        "chatSessionId": "sess_1570a848-feea-41d9-b158-e0349f060392",
+        "timestamp": 1793516598914
+      }
+    ],
+    "16. Password reset": [
+      {
+        "executionId": "ce14b098-b51b-4ccf-9000-5f44aac91151",
+        "chatSessionId": "sess_1570a848-feea-41d9-b158-e0349f060392",
+        "timestamp": 1793516598992
+      }
+    ],
+    "17.1 Implement the port, the PKCE helpers, the adapter, and the fake": [
+      {
+        "executionId": "2b435003-94f7-4f51-b43b-2fb23add86fe",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793516982975
+      },
+      {
+        "executionId": "2b435003-94f7-4f51-b43b-2fb23add86fe",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793517112059
+      }
+    ],
+    "17. GitHub OAuth with PKCE": [
+      {
+        "executionId": "9669717b-08ea-4d89-adbd-806a4af15c80",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793517299113
+      },
+      {
+        "executionId": "5fe277a2-ff43-424a-80a9-305fbdfc2c8c",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793518260978
+      }
+    ],
+    "17.2 Implement conditional mounting and the startup checks": [
+      {
+        "executionId": "9669717b-08ea-4d89-adbd-806a4af15c80",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793517304883
+      },
+      {
+        "executionId": "5fe277a2-ff43-424a-80a9-305fbdfc2c8c",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793517432664
+      },
+      {
+        "executionId": "5fe277a2-ff43-424a-80a9-305fbdfc2c8c",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793517663119
+      }
+    ],
+    "17.3 Implement the OAuth routes": [
+      {
+        "executionId": "5fe277a2-ff43-424a-80a9-305fbdfc2c8c",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793517667205
+      },
+      {
+        "executionId": "5fe277a2-ff43-424a-80a9-305fbdfc2c8c",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793518097739
+      }
+    ],
+    "17.4 Write the OAuth tests": [
+      {
+        "executionId": "5fe277a2-ff43-424a-80a9-305fbdfc2c8c",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793518100531
+      },
+      {
+        "executionId": "5fe277a2-ff43-424a-80a9-305fbdfc2c8c",
+        "chatSessionId": "sess_22e46317-fc65-46ad-8dd1-ea1e7c268fa3",
+        "timestamp": 1793518260889
+      }
+    ],
+    "18.1 Wire Object_Storage": [
+      {
+        "executionId": "5d55d25f-eb82-4727-b1b3-83e90d516c3f",
+        "chatSessionId": "sess_54a11291-a65d-4401-8ddb-3102fb4a8fbc",
+        "timestamp": 1793518366091
+      },
+      {
+        "executionId": "5d55d25f-eb82-4727-b1b3-83e90d516c3f",
+        "chatSessionId": "sess_54a11291-a65d-4401-8ddb-3102fb4a8fbc",
+        "timestamp": 1793518892239
+      }
+    ],
+    "18.2 Implement the export, download, and deletion routes": [
+      {
+        "executionId": "5d55d25f-eb82-4727-b1b3-83e90d516c3f",
+        "chatSessionId": "sess_54a11291-a65d-4401-8ddb-3102fb4a8fbc",
+        "timestamp": 1793518895242
+      },
+      {
+        "executionId": "5d55d25f-eb82-4727-b1b3-83e90d516c3f",
+        "chatSessionId": "sess_54a11291-a65d-4401-8ddb-3102fb4a8fbc",
+        "timestamp": 1793519561926
+      }
+    ],
+    "18.3 Write the account data tests": [
+      {
+        "executionId": "5d55d25f-eb82-4727-b1b3-83e90d516c3f",
+        "chatSessionId": "sess_54a11291-a65d-4401-8ddb-3102fb4a8fbc",
+        "timestamp": 1793519565426
+      },
+      {
+        "executionId": "5d55d25f-eb82-4727-b1b3-83e90d516c3f",
+        "chatSessionId": "sess_54a11291-a65d-4401-8ddb-3102fb4a8fbc",
+        "timestamp": 1793519651529
+      }
+    ],
+    "18. Account export, download, and deletion": [
+      {
+        "executionId": "5d55d25f-eb82-4727-b1b3-83e90d516c3f",
+        "chatSessionId": "sess_54a11291-a65d-4401-8ddb-3102fb4a8fbc",
+        "timestamp": 1793519651599
+      }
+    ],
+    "19.1 Connect the reset and OAuth pages": [
+      {
+        "executionId": "040353b7-be1c-4665-b16d-e3f7f0ecad98",
+        "chatSessionId": "sess_462e916d-fcb0-442c-83e3-b5a85838dfdf",
+        "timestamp": 1793519729180
+      },
+      {
+        "executionId": "040353b7-be1c-4665-b16d-e3f7f0ecad98",
+        "chatSessionId": "sess_462e916d-fcb0-442c-83e3-b5a85838dfdf",
+        "timestamp": 1793519945149
+      }
+    ],
+    "19.2 Write web tests": [
+      {
+        "executionId": "040353b7-be1c-4665-b16d-e3f7f0ecad98",
+        "chatSessionId": "sess_462e916d-fcb0-442c-83e3-b5a85838dfdf",
+        "timestamp": 1793519946435
+      },
+      {
+        "executionId": "040353b7-be1c-4665-b16d-e3f7f0ecad98",
+        "chatSessionId": "sess_462e916d-fcb0-442c-83e3-b5a85838dfdf",
+        "timestamp": 1793520178210
+      }
+    ],
+    "19. Web integration for Milestone 2": [
+      {
+        "executionId": "040353b7-be1c-4665-b16d-e3f7f0ecad98",
+        "chatSessionId": "sess_462e916d-fcb0-442c-83e3-b5a85838dfdf",
+        "timestamp": 1793520178300
+      }
+    ],
+    "20. Checkpoint: Milestone 2 complete": [
+      {
+        "executionId": "0c203c9b-66ed-4cf6-a445-52136a1fce9a",
+        "chatSessionId": "sess_6099ba4f-1e4d-41f5-9553-edb5fec6b963",
+        "timestamp": 1793520244734
+      },
+      {
+        "executionId": "0c203c9b-66ed-4cf6-a445-52136a1fce9a",
+        "chatSessionId": "sess_6099ba4f-1e4d-41f5-9553-edb5fec6b963",
+        "timestamp": 1793521096126
+      }
+    ],
+    "21. Final task: Milestone 2 regression run": [
+      {
+        "executionId": "1356d2e1-b54d-4134-8ec5-ab0df3e0365d",
+        "chatSessionId": "sess_306820fc-8e5d-42d9-bd58-95c7043e57cd",
+        "timestamp": 1793521213556
+      },
+      {
+        "executionId": "1356d2e1-b54d-4134-8ec5-ab0df3e0365d",
+        "chatSessionId": "sess_306820fc-8e5d-42d9-bd58-95c7043e57cd",
+        "timestamp": 1793526504216
+      }
+    ]
+  }
+}

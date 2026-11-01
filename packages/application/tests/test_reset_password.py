@@ -217,6 +217,16 @@ class _RecordingMailer:
         self.sent.append(mail)
 
 
+class _FakeLinkBuilder:
+    """A minimal :class:`LinkBuilder` double with a recognizable URL shape."""
+
+    def verification_url(self, token: str, locale: str) -> str:  # pragma: no cover
+        return f"https://web.test/{locale}/verify-email?token={token}"
+
+    def reset_url(self, token: str, locale: str) -> str:
+        return f"https://web.test/{locale}/reset-password?token={token}"
+
+
 def _hash(password: str) -> str:
     """The test hashing scheme the credential double verifies against."""
     return f"hash:{password}"
@@ -226,22 +236,62 @@ def _hash(password: str) -> str:
 
 
 def _request_setup(
-    *, registered: bool = True, fail_mail: bool = False
+    *, registered: bool = True, fail_mail: bool = False, locale: str = "en"
 ) -> tuple[RequestPasswordResetUseCase, _FakeResetLinks, _RecordingMailer, _MutableClock]:
     users = _FakeUsers()
     if registered:
-        users.add(UserRecord(stable_id=_USER_ID, email=_EMAIL, locale="en", status="verified"))
+        users.add(UserRecord(stable_id=_USER_ID, email=_EMAIL, locale=locale, status="verified"))
     reset_links = _FakeResetLinks()
     mailer = _RecordingMailer(fail=fail_mail)
     clock = _MutableClock(_T0)
     use_case = RequestPasswordResetUseCase(
         users=users,
         reset_links=reset_links,
+        link_builder=_FakeLinkBuilder(),
         mailer=mailer,
         clock=clock,
         token_factory=lambda: _TOKEN,
     )
     return use_case, reset_links, mailer, clock
+
+
+@pytest.mark.parametrize("locale", ["fr", "en"])
+def test_reset_mail_carries_the_reset_url_on_a_single_line(locale: str) -> None:
+    # Req 8.2, 8.3: the mail body holds the builder's URL, with no line break.
+    use_case, _, mailer, _ = _request_setup(locale=locale)
+
+    use_case.execute(RequestPasswordResetRequest(email=_EMAIL))
+
+    url = f"https://web.test/{locale}/reset-password?token={_TOKEN}"
+    body = mailer.sent[0].body
+    assert url in body
+    assert "\n" not in body
+
+
+@pytest.mark.parametrize("registered", [True, False])
+def test_token_factory_is_called_once_for_any_email(registered: bool) -> None:
+    # Req 5.6: equal work whether or not the email is registered.
+    calls: list[str] = []
+
+    def factory() -> str:
+        calls.append("x")
+        return f"t-{len(calls)}"
+
+    users = _FakeUsers()
+    if registered:
+        users.add(UserRecord(stable_id=_USER_ID, email=_EMAIL, locale="en", status="verified"))
+    use_case = RequestPasswordResetUseCase(
+        users=users,
+        reset_links=_FakeResetLinks(),
+        link_builder=_FakeLinkBuilder(),
+        mailer=_RecordingMailer(),
+        clock=_MutableClock(_T0),
+        token_factory=factory,
+    )
+
+    use_case.execute(RequestPasswordResetRequest(email=_EMAIL))
+
+    assert len(calls) == 1
 
 
 def test_registered_email_enqueues_one_reset_link_and_mail() -> None:

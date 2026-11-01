@@ -829,21 +829,37 @@ class Postgres_MasteryRepository(_Base, MasteryRepository):
         """Record ``reveal`` as a revealed hint, append-only (Req 7.1)."""
         with self._engine.begin() as connection:
             user_pk = _require_id(connection, m.user, reveal.user_id, "user")
-            question_pk = _require_id(connection, m.question, reveal.question_id, "question")
+            question_pk = (
+                _require_id(connection, m.question, reveal.question_id, "question")
+                if reveal.question_id is not None
+                else None
+            )
+            lab_task_pk = (
+                _require_id(connection, m.lab_task, reveal.lab_task_id, "lab task")
+                if reveal.lab_task_id is not None
+                else None
+            )
             connection.execute(
                 m.hint_reveal.insert().values(
-                    user_id=user_pk, question_id=question_pk, revealed_at=reveal.revealed_at
+                    user_id=user_pk,
+                    question_id=question_pk,
+                    lab_task_id=lab_task_pk,
+                    revealed_at=reveal.revealed_at,
                 )
             )
 
     def list_hint_reveals(self, user_id: StableId) -> tuple[HintRevealRecord, ...]:
         """Return every hint reveal by ``user_id``, oldest first."""
         statement = (
-            select(m.question.c.stable_id, m.hint_reveal.c.revealed_at)
+            select(
+                m.question.c.stable_id.label("question_stable_id"),
+                m.lab_task.c.stable_id.label("lab_task_stable_id"),
+                m.hint_reveal.c.revealed_at,
+            )
             .select_from(
-                m.hint_reveal.join(m.user, m.hint_reveal.c.user_id == m.user.c.id).join(
-                    m.question, m.hint_reveal.c.question_id == m.question.c.id
-                )
+                m.hint_reveal.join(m.user, m.hint_reveal.c.user_id == m.user.c.id)
+                .outerjoin(m.question, m.hint_reveal.c.question_id == m.question.c.id)
+                .outerjoin(m.lab_task, m.hint_reveal.c.lab_task_id == m.lab_task.c.id)
             )
             .where(m.user.c.stable_id == user_id)
             .order_by(m.hint_reveal.c.revealed_at, m.hint_reveal.c.id)
@@ -853,8 +869,9 @@ class Postgres_MasteryRepository(_Base, MasteryRepository):
         return tuple(
             HintRevealRecord(
                 user_id=user_id,
-                question_id=row["stable_id"],
+                question_id=row["question_stable_id"],
                 revealed_at=_as_aware(row["revealed_at"]),
+                lab_task_id=row["lab_task_stable_id"],
             )
             for row in rows
             if row["revealed_at"] is not None
@@ -1389,8 +1406,15 @@ class Postgres_LessonRepository(_Base, LessonRepository):
             )
             .where(m.lesson.c.stable_id == stable_id)
         )
+        labs_statement = (
+            select(m.lab.c.stable_id)
+            .select_from(m.lab.join(m.lesson, m.lab.c.lesson_id == m.lesson.c.id))
+            .where(m.lesson.c.stable_id == stable_id, m.lab.c.archived_at.is_(None))
+            .order_by(m.lab.c.id)
+        )
         with self._engine.connect() as connection:
             row = connection.execute(statement).mappings().first()
+            lab_ids = tuple(connection.execute(labs_statement).scalars()) if row else ()
         if row is None:
             return None
         titles, bodies = self._content_source(stable_id) if self._content_source else ({}, {})
@@ -1401,6 +1425,7 @@ class Postgres_LessonRepository(_Base, LessonRepository):
             bodies=dict(bodies),
             quiz_id=row["quiz_stable_id"],
             content_version=row["content_version"],
+            lab_ids=lab_ids,
         )
 
 

@@ -30,11 +30,17 @@ from edu_it_infrastructure.fakes.idempotency import (
     In_Memory_IdempotencyStore,
     Sequential_IdGenerator,
 )
+from edu_it_infrastructure.fakes.lab_catalog import Fake_LabCatalog
 from edu_it_infrastructure.fakes.lab_check import Fake_LabCheck
+from edu_it_infrastructure.fakes.lab_repositories import (
+    In_Memory_GradingRunRepository,
+    In_Memory_LabSessionRepository,
+)
 from edu_it_infrastructure.fakes.learning_repositories import (
     In_Memory_AttemptRepository,
     In_Memory_CatalogRepository,
     In_Memory_EnrollmentRepository,
+    In_Memory_LessonRepository,
     In_Memory_MasteryRepository,
     In_Memory_ProgressRepository,
     In_Memory_ReviewRepository,
@@ -58,19 +64,25 @@ from edu_it_infrastructure.fakes.repositories import (
     In_Memory_UserRepository,
     In_Memory_VerificationLinkRepository,
 )
+from edu_it_infrastructure.fakes.sandbox_provider import Fake_SandboxProvider, ProvisionMode
 from edu_it_infrastructure.fakes.session_store import In_Memory_SessionStore
 from edu_it_infrastructure.fakes.task_queue import In_Memory_TaskQueue, QueuedJob
 
 __all__ = [
     "Console_Mailer",
     "Fake_LLMProvider",
+    "Fake_LabCatalog",
     "Fake_LabCheck",
     "Fake_ProjectReviewer",
+    "Fake_SandboxProvider",
     "In_Memory_AttemptRepository",
     "In_Memory_CatalogRepository",
     "In_Memory_CredentialStore",
     "In_Memory_EnrollmentRepository",
+    "In_Memory_GradingRunRepository",
     "In_Memory_IdempotencyStore",
+    "In_Memory_LabSessionRepository",
+    "In_Memory_LessonRepository",
     "In_Memory_MasteryRepository",
     "In_Memory_OAuthLinkRepository",
     "In_Memory_ObjectStorage",
@@ -87,6 +99,7 @@ __all__ = [
     "In_Memory_UserRepository",
     "In_Memory_VerificationLinkRepository",
     "PersonalDataDeletionFailure",
+    "ProvisionMode",
     "QueuedJob",
     "Sequential_IdGenerator",
     "Test_Clock",

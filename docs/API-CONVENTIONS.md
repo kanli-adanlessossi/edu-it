@@ -200,6 +200,21 @@ submissions) support an **idempotency key** so a retried request is processed at
 
 ---
 
+## 7. Mail Delivery Failure
+
+Any route that sends mail (sign-up, verification resend, and later password reset) maps a failed
+mail delivery to the same problem details response (Section 1):
+
+- HTTP status `502 Bad Gateway`, with `status` `502` in the body.
+- Problem slug `mail-delivery-failed`, so `type` is
+  `https://api.edu-it.example/problems/mail-delivery-failed`.
+- A translated, actionable `detail` in the request locale (French/English). Provider errors and
+  other diagnostics stay in logs, not in the response.
+
+New routes that send mail reuse this mapping rather than defining their own status or slug.
+
+---
+
 ## Summary of Normative Values
 
 | Topic | Normative value |
@@ -209,4 +224,5 @@ submissions) support an **idempotency key** so a retried request is processed at
 | Versioning | Major version in the path `/v{major}`; major bump only for breaking changes |
 | Stable ID | Immutable, opaque, prefixed URL-safe string; `stable_id` identity + `content_version` hash; idempotent upsert keyed by stable ID |
 | Idempotency | `Idempotency-Key` header on unsafe mutations; same key ⇒ processed at most once, stored result returned |
+| Mail failure | Failed mail delivery ⇒ `502` with slug `mail-delivery-failed` and a translated `detail` |
 | Failure 4.6 | Idempotency key dedupes; re-answering the same question within **24 hours** yields no additional mastery gain; best attempt still counts for completion |

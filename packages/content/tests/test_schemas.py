@@ -28,6 +28,10 @@ import pytest
 from edu_it_content.schemas import (
     Concept,
     Lab,
+    LabCheck,
+    LabCheckOutcome,
+    LabKind,
+    LabTask,
     Lesson,
     Localized,
     Module,
@@ -99,8 +103,64 @@ def test_valid_lesson_parses() -> None:
 
 
 def test_valid_lab_parses() -> None:
-    lab = Lab(provenance=_provenance(), lesson_stable_id="ls_1", title=_localized())
+    lab = Lab(
+        provenance=_provenance(),
+        lesson_stable_id="ls_1",
+        title=_localized(),
+        kind=LabKind.TERMINAL,
+        image="linux-base",
+        instructions=_localized("Consignes", "Instructions"),
+    )
     assert lab.lesson_stable_id == "ls_1"
+    assert lab.check_bundle_dest == "/grader"
+    assert lab.concept_stable_ids == ()
+
+
+def _outcome(code: str = "pass", key: str = "k.pass") -> LabCheckOutcome:
+    return LabCheckOutcome(code=code, exit_code=0, feedback_key=key, message=_localized())
+
+
+def test_valid_lab_task_and_check_parse() -> None:
+    task = LabTask(
+        stable_id="lt_1",
+        lab_stable_id="lb_1",
+        ordinal=0,
+        title=_localized(),
+        description=_localized("Desc", "Desc"),
+        hints=(_localized("Indice", "Hint"),),
+    )
+    assert task.required is True
+    check = LabCheck(
+        stable_id="lc_1",
+        lab_task_stable_id="lt_1",
+        timeout_seconds=5,
+        script="checks/one.sh",
+        outcomes=(_outcome(), _outcome("wrong-output", "k.wrong")),
+    )
+    assert [o.code for o in check.outcomes] == ["pass", "wrong-output"]
+
+
+def test_lab_check_without_pass_outcome_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        LabCheck(
+            stable_id="lc_1",
+            lab_task_stable_id="lt_1",
+            timeout_seconds=5,
+            script="checks/one.sh",
+            outcomes=(_outcome("wrong-output", "k.wrong"),),
+        )
+
+
+def test_lab_with_unknown_kind_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        Lab(
+            provenance=_provenance(),
+            lesson_stable_id="ls_1",
+            title=_localized(),
+            kind="vm",  # type: ignore[arg-type]
+            image="linux-base",
+            instructions=_localized(),
+        )
 
 
 def test_valid_project_parses() -> None:

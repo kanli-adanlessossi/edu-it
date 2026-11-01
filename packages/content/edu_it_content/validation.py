@@ -49,6 +49,7 @@ here as the validation contract until ``apps/web`` owns the render-time list.
 from __future__ import annotations
 
 import json
+import posixpath
 import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -91,6 +92,19 @@ _RULE_REFERENCE = "reference-resolution"
 _RULE_ACYCLIC = "prerequisite-acyclicity"
 _RULE_MDX = "mdx-allowlist"
 _RULE_REVIEWER = "ai-reviewer-present"
+_RULE_LAB_REFERENCE = "lab-reference"
+_RULE_LAB_TIMEOUT = "lab-check-timeout"
+_RULE_TIMEOUTS_FIT = "check-timeouts-fit-budget"
+_RULE_LAB_FEEDBACK = "lab-feedback-complete"
+_RULE_LAB_BUNDLE_LOCATION = "lab-bundle-location"
+
+#: Sandbox locations a learner can write to; a Check_Bundle must never live
+#: under them (Req 20.6).
+_LEARNER_WRITABLE_ROOTS: tuple[str, ...] = ("/workspace", "/home", "/tmp", "/var/tmp", "/dev/shm")
+
+#: Fallback Usable_Run_Budget in seconds (deadline 15 - freeze bound 1 - reserve 2),
+#: used only when the domain Config cannot be imported.
+_FALLBACK_USABLE_RUN_BUDGET_SECONDS = 12.0
 
 #: The vetted MDX components content bodies may reference (Req 13.5, ADR A5).
 #: This is the validation-time mirror of the ``apps/web`` render allowlist: a
@@ -270,6 +284,8 @@ def load_content(root: str | Path) -> LoadedContent:
         if track_dir.name in _NON_TRACK_DIRS:
             continue
         for json_file in sorted(track_dir.glob("*.json")):
+            if json_file.name == PENDING_REVIEW_FILE:
+                continue  # review bookkeeping, not a content type (Req 20.13)
             found_any = True
             type_key = _TYPE_BY_FILE_STEM.get(json_file.stem)
             if type_key is None:
@@ -289,7 +305,58 @@ def load_content(root: str | Path) -> LoadedContent:
     return LoadedContent(raw_items=merged, root=root_path)
 
 
-def validate_content(content: LoadedContent) -> list[ValidationFailure]:
+#: Per-track file listing Seed_Lab ``stable_id``s awaiting expert review.
+PENDING_REVIEW_FILE = "pending-review.json"
+
+
+def load_pending_review_list(root: str | Path) -> frozenset[str]:
+    """Load the Pending_Review_List from ``<root>/<track>/pending-review.json``.
+
+    Each file is ``{"stable_ids": [...]}``; ids from every track directory are
+    unioned. A missing file means an empty list. A malformed file raises
+    :class:`ContentLoadError` (the list is never silently ignored).
+    """
+    root_path = Path(root)
+    ids: set[str] = set()
+    if not root_path.is_dir():
+        return frozenset()
+    for track_dir in sorted(p for p in root_path.iterdir() if p.is_dir()):
+        path = track_dir / PENDING_REVIEW_FILE
+        if not path.is_file():
+            continue
+        label = f"{track_dir.name}/{PENDING_REVIEW_FILE}"
+        try:
+            parsed = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ContentLoadError(f"{label} is not valid JSON: {exc}") from exc
+        listed = parsed.get("stable_ids") if isinstance(parsed, dict) else None
+        if not isinstance(listed, list) or not all(isinstance(i, str) for i in listed):
+            raise ContentLoadError(f'{label} must be an object {{"stable_ids": [strings]}}')
+        ids.update(listed)
+    return frozenset(ids)
+
+
+def apply_pending_allowance(
+    failures: Sequence[ValidationFailure],
+    content: LoadedContent,
+    pending_ids: frozenset[str],
+) -> list[ValidationFailure]:
+    """Drop only ``ai-reviewer-present`` failures for listed labs (Req 20.13).
+
+    Every other failure, and any unreviewed item that is not a listed lab, is
+    kept.
+    """
+    lab_ids = {_raw_stable_id(lab) for lab in content.raw_items.get("lab", ())}
+    allowed = pending_ids & lab_ids
+    return [f for f in failures if not (f.rule == _RULE_REVIEWER and f.stable_id in allowed)]
+
+
+def validate_content(
+    content: LoadedContent,
+    *,
+    repo_root: Path | None = None,
+    usable_run_budget_seconds: float | None = None,
+) -> list[ValidationFailure]:
     """Run the six ordered checks over ``content`` and return every failure.
 
     Checks run in the design's order — schema, bilingual, reference, acyclicity,
@@ -323,6 +390,19 @@ def validate_content(content: LoadedContent) -> list[ValidationFailure]:
 
     # 6. AI reviewer present (Req 13.6).
     failures.extend(_check_reviewer(parsed_by_type))
+
+    # 7. Lab rules (Req 18.4, 20.1-20.8). The bilingual and reviewer rules
+    #    above already cover labs.
+    budget = (
+        usable_run_budget_seconds
+        if usable_run_budget_seconds is not None
+        else _usable_run_budget_seconds()
+    )
+    resolved_root = repo_root if repo_root is not None else _find_repo_root(content.root)
+    failures.extend(_check_lab_reference(parsed_by_type, resolved_root))
+    failures.extend(_check_lab_timeouts(content.raw_items, parsed_by_type, budget))
+    failures.extend(_check_lab_feedback(content.raw_items, parsed_by_type))
+    failures.extend(_check_lab_bundle_location(parsed_by_type))
 
     return failures
 
@@ -509,6 +589,172 @@ def _check_reviewer(parsed_by_type: Mapping[str, Sequence[BaseModel]]) -> list[V
                         rule=_RULE_REVIEWER,
                         stable_id=provenance.stable_id,
                         detail="origin is 'ai' but no reviewer is recorded in provenance",
+                    )
+                )
+    return failures
+
+
+def _usable_run_budget_seconds() -> float:
+    """Usable_Run_Budget from Config: deadline - freeze bound - reserve (12 s)."""
+    try:
+        from edu_it_domain.config import usable_run_budget
+    except ImportError:  # pragma: no cover - domain package is in the workspace
+        return _FALLBACK_USABLE_RUN_BUDGET_SECONDS
+    return usable_run_budget().total_seconds()
+
+
+def _find_repo_root(content_root: Path) -> Path:
+    """Nearest ancestor of the content root holding ``lab-images/`` (else its parent)."""
+    resolved = content_root.resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / "lab-images").is_dir():
+            return candidate
+    return resolved.parent
+
+
+def _labs_with_checks(
+    parsed_by_type: Mapping[str, Sequence[BaseModel]],
+) -> dict[str, list[LabCheck]]:
+    """Group parsed Checks by the stable_id of the lab they belong to."""
+    lab_of_task = {
+        task.stable_id: task.lab_stable_id
+        for task in parsed_by_type.get("lab_task", ())
+        if isinstance(task, LabTask)
+    }
+    by_lab: dict[str, list[LabCheck]] = {}
+    for check in parsed_by_type.get("lab_check", ()):
+        if isinstance(check, LabCheck) and check.lab_task_stable_id in lab_of_task:
+            by_lab.setdefault(lab_of_task[check.lab_task_stable_id], []).append(check)
+    return by_lab
+
+
+def _check_lab_reference(
+    parsed_by_type: Mapping[str, Sequence[BaseModel]],
+    repo_root: Path,
+) -> list[ValidationFailure]:
+    """Lab image, concepts, Check_Bundle and setup script must exist (Req 20.3)."""
+    concept_ids = {_model_stable_id(c) for c in parsed_by_type.get("concept", ())}
+    failures: list[ValidationFailure] = []
+    for lab in parsed_by_type.get("lab", ()):
+        if not isinstance(lab, Lab):
+            continue
+        lab_id = _model_stable_id(lab)
+        problems: list[str] = []
+        if not (repo_root / "lab-images" / lab.image).is_dir():
+            problems.append(f"image {lab.image!r} does not exist under lab-images/")
+        problems.extend(
+            f"concept {cid!r} does not exist"
+            for cid in lab.concept_stable_ids
+            if cid not in concept_ids
+        )
+        if lab.check_bundle is not None and not (repo_root / lab.check_bundle).exists():
+            problems.append(f"check_bundle {lab.check_bundle!r} does not exist")
+        if lab.setup_script is not None and not (repo_root / lab.setup_script).is_file():
+            problems.append(f"setup_script {lab.setup_script!r} does not exist")
+        failures.extend(ValidationFailure(_RULE_LAB_REFERENCE, lab_id, p) for p in problems)
+    return failures
+
+
+def _check_lab_timeouts(
+    raw_items: Mapping[str, Sequence[Mapping[str, object]]],
+    parsed_by_type: Mapping[str, Sequence[BaseModel]],
+    budget: float,
+) -> list[ValidationFailure]:
+    """Per-Check timeout present and within budget; per-lab sum within budget (Req 20.4, 20.8)."""
+    failures: list[ValidationFailure] = []
+    for raw in raw_items.get("lab_check", ()):
+        if raw.get("timeout_seconds") is None:
+            failures.append(
+                ValidationFailure(_RULE_LAB_TIMEOUT, _raw_stable_id(raw), "no per-Check timeout")
+            )
+    for lab_id, checks in _labs_with_checks(parsed_by_type).items():
+        for check in checks:
+            if check.timeout_seconds > budget:
+                failures.append(
+                    ValidationFailure(
+                        _RULE_TIMEOUTS_FIT,
+                        check.stable_id,
+                        f"timeout {check.timeout_seconds} s exceeds the "
+                        f"Usable_Run_Budget of {budget:g} s",
+                    )
+                )
+        total = sum(check.timeout_seconds for check in checks)
+        if total > budget:
+            failures.append(
+                ValidationFailure(
+                    _RULE_TIMEOUTS_FIT,
+                    lab_id,
+                    f"sum of Check timeouts {total} s exceeds the "
+                    f"Usable_Run_Budget of {budget:g} s",
+                )
+            )
+    return failures
+
+
+def _check_lab_feedback(
+    raw_items: Mapping[str, Sequence[Mapping[str, object]]],
+    parsed_by_type: Mapping[str, Sequence[BaseModel]],
+) -> list[ValidationFailure]:
+    """Every outcome has a bilingual Feedback_Key, unique within the lab (Req 20.5)."""
+    failures: list[ValidationFailure] = []
+    for raw in raw_items.get("lab_check", ()):
+        outcomes = raw.get("outcomes")
+        if not isinstance(outcomes, list):
+            continue
+        for outcome in outcomes:
+            if isinstance(outcome, Mapping) and not outcome.get("feedback_key"):
+                failures.append(
+                    ValidationFailure(
+                        _RULE_LAB_FEEDBACK,
+                        _raw_stable_id(raw),
+                        f"outcome {outcome.get('code')!r} has no feedback_key",
+                    )
+                )
+    for lab_id, checks in _labs_with_checks(parsed_by_type).items():
+        seen: set[str] = set()
+        for check in checks:
+            for outcome in check.outcomes:
+                if not outcome.message.fr.strip() or not outcome.message.en.strip():
+                    failures.append(
+                        ValidationFailure(
+                            _RULE_LAB_FEEDBACK,
+                            check.stable_id,
+                            f"feedback {outcome.feedback_key!r} lacks a French or English text",
+                        )
+                    )
+                if outcome.feedback_key in seen:
+                    failures.append(
+                        ValidationFailure(
+                            _RULE_LAB_FEEDBACK,
+                            lab_id,
+                            f"feedback_key {outcome.feedback_key!r} is not unique within the lab",
+                        )
+                    )
+                seen.add(outcome.feedback_key)
+    return failures
+
+
+def _check_lab_bundle_location(
+    parsed_by_type: Mapping[str, Sequence[BaseModel]],
+) -> list[ValidationFailure]:
+    """The Check_Bundle must not live in a learner-writable location (Req 20.6)."""
+    failures: list[ValidationFailure] = []
+    for lab in parsed_by_type.get("lab", ()):
+        if not isinstance(lab, Lab):
+            continue
+        for path in (lab.check_bundle_dest, lab.check_bundle):
+            if path is None:
+                continue
+            normalized = posixpath.normpath(path)
+            if any(
+                normalized == root or normalized.startswith(root + "/")
+                for root in _LEARNER_WRITABLE_ROOTS
+            ):
+                failures.append(
+                    ValidationFailure(
+                        _RULE_LAB_BUNDLE_LOCATION,
+                        _model_stable_id(lab),
+                        f"Check_Bundle path {path!r} is inside a learner-writable location",
                     )
                 )
     return failures

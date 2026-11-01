@@ -46,7 +46,7 @@ from typing import Final
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from edu_it_api.errors.catalog import CSRF
 from edu_it_api.errors.handlers import problem_response, request_locale
@@ -131,6 +131,18 @@ class CsrfProtectionMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Pass ``websocket`` (and lifespan) scopes through untouched.
+
+        A WebSocket handshake has no unsafe HTTP method to guard; the terminal
+        route authenticates the cookie session and checks ``Origin`` itself
+        (hands-on-labs Req 12.1, 12.2, 26.7).
+        """
+        if scope["type"] == "websocket":
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if is_safe_method(request.method):

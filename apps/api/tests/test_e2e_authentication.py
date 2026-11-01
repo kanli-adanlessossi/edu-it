@@ -96,6 +96,7 @@ from edu_it_infrastructure.fakes import (
     In_Memory_VerificationLinkRepository,
     Test_Clock,
 )
+from edu_it_infrastructure.link_builder import Web_LinkBuilder
 
 # A fixed, timezone-aware starting instant so the Test_Clock drives every
 # expiry (link TTLs, session duration, the OAuth window) deterministically.
@@ -223,21 +224,10 @@ class _AuthSystem:
         assert token is not None, f"mail to {recipient!r} carried no {header} header"
         return token
 
-    def register_credential_on_signup(self, email: str, raw_password: str) -> str:
-        """Store the credential a real sign-up adapter would persist, return the id.
-
-        The sign-up use case intentionally keeps the raw secret out of the domain
-        record and leaves credential persistence to the adapter, so for an
-        end-to-end flow we store the credential against the created user — the
-        same effect the production adapter has — and return the user's
-        ``stable_id``. The store verifies by equality against the raw password
-        sign-in submits, and the shared ``password_hasher`` (see the fixture) is
-        the identity, so storing ``_hash(raw_password)`` here and at reset keeps
-        the write and the later sign-in verify consistent.
-        """
+    def user_id_for(self, email: str) -> str:
+        """Return the stable_id of the user that sign-up created for ``email``."""
         user = self.users.get_by_email(email)
         assert user is not None, f"sign-up created no user for {email!r}"
-        self.credentials.set_password(user.stable_id, _hash(raw_password))
         return user.stable_id
 
 
@@ -283,7 +273,9 @@ def auth() -> _AuthSystem:
         pending_oauth_links=pending_oauth_links,
         sign_up=SignUpUseCase(
             users=users,
+            credentials=credentials,
             verification_links=verification_links,
+            link_builder=Web_LinkBuilder("https://web.test"),
             mailer=mailer,
             clock=clock,
             token_factory=_next(verification_tokens),
@@ -309,6 +301,7 @@ def auth() -> _AuthSystem:
         request_reset=RequestPasswordResetUseCase(
             users=users,
             reset_links=reset_links,
+            link_builder=Web_LinkBuilder("https://web.test"),
             mailer=mailer,
             clock=clock,
             token_factory=_next(reset_tokens),
@@ -474,7 +467,7 @@ def test_signup_verify_signin_signout_end_to_end(auth: _AuthSystem) -> None:
     result = auth.sign_up.execute(SignUpRequest(email=_EMAIL, password=_PASSWORD))
     assert result.accepted is True
     assert len(auth.users) == 1
-    user_id = auth.register_credential_on_signup(_EMAIL, _PASSWORD)
+    user_id = auth.user_id_for(_EMAIL)
 
     # An unverified learner cannot yet sign in (Req 8.3).
     with pytest.raises(SignInError) as not_verified:
@@ -513,7 +506,6 @@ def test_signup_verify_signin_signout_end_to_end(auth: _AuthSystem) -> None:
 def test_wrong_password_never_establishes_a_session_end_to_end(auth: _AuthSystem) -> None:
     # Sign up and verify so the account is otherwise sign-in-able.
     auth.sign_up.execute(SignUpRequest(email=_EMAIL, password=_PASSWORD))
-    auth.register_credential_on_signup(_EMAIL, _PASSWORD)
     token = auth.latest_token(_EMAIL, "X-Verification-Token")
     auth.verify_email.execute(VerifyEmailRequest(token=token))
 
@@ -547,7 +539,7 @@ def test_duplicate_signup_creates_no_second_user_and_notifies_owner(auth: _AuthS
 def test_password_reset_end_to_end(auth: _AuthSystem) -> None:
     # Arrange: a verified, signed-in learner with an active session.
     auth.sign_up.execute(SignUpRequest(email=_EMAIL, password=_PASSWORD))
-    user_id = auth.register_credential_on_signup(_EMAIL, _PASSWORD)
+    user_id = auth.user_id_for(_EMAIL)
     verify_token = auth.latest_token(_EMAIL, "X-Verification-Token")
     auth.verify_email.execute(VerifyEmailRequest(token=verify_token))
     old_session = auth.sign_in.execute(SignInRequest(email=_EMAIL, password=_PASSWORD))
@@ -597,7 +589,6 @@ def test_reset_request_for_unknown_email_is_non_disclosing(auth: _AuthSystem) ->
 
 def test_expired_reset_link_leaves_password_unchanged(auth: _AuthSystem) -> None:
     auth.sign_up.execute(SignUpRequest(email=_EMAIL, password=_PASSWORD))
-    auth.register_credential_on_signup(_EMAIL, _PASSWORD)
     verify_token = auth.latest_token(_EMAIL, "X-Verification-Token")
     auth.verify_email.execute(VerifyEmailRequest(token=verify_token))
 

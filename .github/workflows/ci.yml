@@ -41,9 +41,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Docker-marked tests (hands-on-labs). They need a Docker daemon and the locally built lab
+  # images, so they run on a Linux runner in their own job. The main job skips them.
+  docker-tests:
+    name: docker-marked tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv (pinned Python toolchain)
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install Python workspace (frozen to uv.lock)
+        run: uv sync --frozen --all-packages
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build lab images
+        run: docker buildx bake --load
+        working-directory: lab-images
+
+      - name: Docker tests
+        run: uv run --frozen pytest -m docker --no-cov
+
   ci:
     name: lint / typecheck / test / audit / secret-scan
     runs-on: ubuntu-latest
+
+    # PostgreSQL service container for the account-repository contract tests, including
+    # the concurrent mark_consumed case that is skipped without a PostgreSQL DATABASE_URL.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: edu_it
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: edu_it
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U edu_it"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout (full history for secret scanning)
@@ -106,13 +151,41 @@ jobs:
       - name: Test
         run: make test
 
+      # Account-repository contract suite against the PostgreSQL service container,
+      # so the concurrent mark_consumed case always runs in CI (api-route-wiring 2.3).
+      - name: Account repository contract tests (PostgreSQL)
+        run: >-
+          uv run --frozen pytest
+          packages/infrastructure/tests/test_account_repositories_contract.py
+          --no-cov -rs
+        env:
+          DATABASE_URL: postgresql+psycopg://edu_it:ci-password@localhost:5432/edu_it
+      # PostgreSQL variants of the content-store contract and the migration property test.
+      # The migration test resets the database it is given, so it reads only the dedicated
+      # EDU_IT_TEST_DATABASE_URL (never DATABASE_URL); this service container is throwaway.
+      - name: Content store and migration tests (PostgreSQL)
+        run: >-
+          uv run --frozen pytest
+          apps/api/tests/test_content_store_contract.py
+          packages/infrastructure/tests/test_migration_idempotent_properties.py
+          --no-cov -rs
+        env:
+          DATABASE_URL: postgresql+psycopg://edu_it:ci-password@localhost:5432/edu_it
+          EDU_IT_TEST_DATABASE_URL: postgresql+psycopg://edu_it:ci-password@localhost:5432/edu_it
+
       # -- Content validation (Req 14.5, 27.1, 27.2) ------------------------
       # Runs the ordered Content_Validator checks (`edu-it content validate`,
       # installed as the `edu-it-content` script) over ./content. Any validation
       # error exits non-zero, failing the job with this step reported by the name
       # `content`; when all content is valid it exits zero.
+      #
+      # Lab content (Req 20.12, 20.13): runs in pending mode (`--allow-pending`).
+      # Every rule still runs, but the only failure dropped is a missing AI
+      # reviewer (`ai-reviewer-present`) for Seed_Labs whose stable_id is in
+      # content/linux-fundamentals/pending-review.json. Any other failure, and any
+      # unreviewed lab not in that list, still exits non-zero and fails this step.
       - name: content
-        run: uv run --frozen edu-it-content validate --content-root content
+        run: uv run --frozen edu-it-content validate --allow-pending --content-root content
 
       # -- Step 4: dependency-audit (Req 21.1) ------------------------------
       # Audits both dependency trees for known vulnerabilities. pip-audit covers

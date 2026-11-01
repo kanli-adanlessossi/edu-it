@@ -1,0 +1,154 @@
+[
+  {
+    "stable_id": "lab-task.fix-the-shared-folder.1-create-dirs",
+    "lab_stable_id": "lab.fix-the-shared-folder",
+    "ordinal": 0,
+    "title": {
+      "fr": "Créer docs et scripts",
+      "en": "Create docs and scripts"
+    },
+    "description": {
+      "fr": "Créez les dossiers /workspace/team/docs et /workspace/team/scripts.",
+      "en": "Create the folders /workspace/team/docs and /workspace/team/scripts."
+    },
+    "required": true,
+    "hints": [
+      {
+        "fr": "Quelle commande crée un dossier ?",
+        "en": "Which command creates a folder?"
+      },
+      {
+        "fr": "mkdir accepte plusieurs noms à la fois.",
+        "en": "mkdir accepts several names at once."
+      },
+      {
+        "fr": "Essayez : mkdir /workspace/team/docs /workspace/team/scripts",
+        "en": "Try: mkdir /workspace/team/docs /workspace/team/scripts"
+      }
+    ]
+  },
+  {
+    "stable_id": "lab-task.fix-the-shared-folder.2-group-setgid",
+    "lab_stable_id": "lab.fix-the-shared-folder",
+    "ordinal": 1,
+    "title": {
+      "fr": "Groupe devs et setgid",
+      "en": "Group devs and setgid"
+    },
+    "description": {
+      "fr": "Donnez /workspace/team au groupe devs et activez le bit setgid sur ce dossier.",
+      "en": "Give /workspace/team to the group devs and set the setgid bit on that folder."
+    },
+    "required": true,
+    "hints": [
+      {
+        "fr": "Une commande change le groupe, une autre change les permissions.",
+        "en": "One command changes the group, another changes the permissions."
+      },
+      {
+        "fr": "chgrp change le groupe ; chmod accepte une notation symbolique comme g+s.",
+        "en": "chgrp changes the group; chmod accepts symbolic notation such as g+s."
+      },
+      {
+        "fr": "Essayez : chgrp devs /workspace/team puis chmod g+s /workspace/team",
+        "en": "Try: chgrp devs /workspace/team then chmod g+s /workspace/team"
+      }
+    ]
+  },
+  {
+    "stable_id": "lab-task.fix-the-shared-folder.3-no-world-write",
+    "lab_stable_id": "lab.fix-the-shared-folder",
+    "ordinal": 2,
+    "title": {
+      "fr": "Retirer l'écriture pour tous",
+      "en": "Remove world-write, keep the file"
+    },
+    "description": {
+      "fr": "Trouvez le fichier modifiable par tout le monde dans /workspace/team et retirez ce droit, sans supprimer le fichier ni changer son contenu.",
+      "en": "Find the world-writable file in /workspace/team and remove that permission, without deleting the file or changing its content."
+    },
+    "required": true,
+    "hints": [
+      {
+        "fr": "ls -l affiche les permissions ; cherchez un « w » dans le dernier groupe de trois.",
+        "en": "ls -l shows permissions; look for a \"w\" in the last group of three."
+      },
+      {
+        "fr": "ls -l /workspace/team liste chaque élément avec ses permissions : l'élément dont le dernier groupe de trois contient un w est celui à corriger.",
+        "en": "ls -l /workspace/team lists every entry with its permissions: the entry whose last group of three contains a w is the one to fix."
+      },
+      {
+        "fr": "chmod o-w retire l'écriture pour les autres, sans toucher au reste.",
+        "en": "chmod o-w removes write permission for others and leaves the rest alone."
+      },
+      {
+        "fr": "Essayez : chmod o-w /workspace/team/shared-notes.txt",
+        "en": "Try: chmod o-w /workspace/team/shared-notes.txt"
+      }
+    ]
+  },
+  {
+    "stable_id": "lab-task.world-writable-entries.1-basic-entries",
+    "lab_stable_id": "lab.world-writable-entries",
+    "ordinal": 0,
+    "title": {
+      "fr": "Fichiers, dossiers et liens symboliques",
+      "en": "Files, folders and symbolic links"
+    },
+    "description": {
+      "fr": "Signalez les fichiers et dossiers modifiables par tout le monde, et jamais les liens symboliques.",
+      "en": "Report world-writable files and folders, and never report symbolic links."
+    },
+    "required": true,
+    "hints": [
+      {
+        "fr": "Le premier caractère d'une ligne de ls -l donne le type : - fichier, d dossier, l lien symbolique.",
+        "en": "The first character of an ls -l line gives the type: - file, d folder, l symbolic link."
+      },
+      {
+        "fr": "Les neuf caractères suivants sont trois groupes rwx : propriétaire, groupe, autres. Le droit pour tout le monde est le 9e caractère du mode.",
+        "en": "The next nine characters are three rwx groups: owner, group, others. The permission for everyone is the 9th character of the mode."
+      },
+      {
+        "fr": "Découpez la ligne avec line.split(None, 8) : le mode est le premier champ et le nom est le dernier.",
+        "en": "Split the line with line.split(None, 8): the mode is the first field and the name is the last one."
+      },
+      {
+        "fr": "Passez les lignes dont le mode commence par l, et affichez le nom quand mode[8] vaut 'w'.",
+        "en": "Skip lines whose mode starts with l, and print the name when mode[8] is 'w'."
+      }
+    ]
+  },
+  {
+    "stable_id": "lab-task.world-writable-entries.2-edge-entries",
+    "lab_stable_id": "lab.world-writable-entries",
+    "ordinal": 1,
+    "title": {
+      "fr": "Sticky, en-tête total, espaces et entrée vide",
+      "en": "Sticky bit, total header, spaces and empty input"
+    },
+    "description": {
+      "fr": "Traitez aussi les entrées sticky, la ligne « total », les noms avec espaces et l'entrée vide.",
+      "en": "Also handle sticky entries, the \"total\" line, names with spaces and empty input."
+    },
+    "required": true,
+    "hints": [
+      {
+        "fr": "Le bit sticky apparaît à la place du dernier x : t (avec x) ou T (sans x). Il ne change pas le droit d'écriture, qui est le 9e caractère.",
+        "en": "The sticky bit replaces the last x: t (with x) or T (without x). It does not change the write permission, which is the 9th character."
+      },
+      {
+        "fr": "La ligne « total » n'a pas de mode : ignorez les lignes qui commencent par total et les lignes vides.",
+        "en": "The \"total\" line has no mode: ignore lines starting with total and blank lines."
+      },
+      {
+        "fr": "Avec split(None, 8), tout ce qui suit le 8e champ est le nom, espaces compris.",
+        "en": "With split(None, 8), everything after the 8th field is the name, spaces included."
+      },
+      {
+        "fr": "Une entrée vide n'affiche rien : la boucle sur sys.stdin ne s'exécute simplement pas.",
+        "en": "Empty input prints nothing: the loop over sys.stdin simply does not run."
+      }
+    ]
+  }
+]

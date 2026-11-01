@@ -1,0 +1,36 @@
+{
+  "cases": {
+    "sticky-world-writable": {
+      "stdout_b64": "dG1wCg==",
+      "exit_status": 0
+    },
+    "sticky-not-world-writable": {
+      "stdout_b64": "",
+      "exit_status": 0
+    },
+    "sticky-and-plain-mix": {
+      "stdout_b64": "c2NyYXRjaApvcGVuLnR4dAo=",
+      "exit_status": 0
+    },
+    "total-header-with-reported": {
+      "stdout_b64": "cmVwb3J0LnR4dAo=",
+      "exit_status": 0
+    },
+    "total-header-only": {
+      "stdout_b64": "",
+      "exit_status": 0
+    },
+    "space-name-reported": {
+      "stdout_b64": "bXkgbm90ZXMgZmluYWwudHh0CnNoYXJlZCBmaWxlcwo=",
+      "exit_status": 0
+    },
+    "space-name-not-reported": {
+      "stdout_b64": "",
+      "exit_status": 0
+    },
+    "empty-input": {
+      "stdout_b64": "",
+      "exit_status": 0
+    }
+  }
+}

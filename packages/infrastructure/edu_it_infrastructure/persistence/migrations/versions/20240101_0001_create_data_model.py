@@ -25,7 +25,13 @@ from collections.abc import Sequence
 
 from alembic import op
 
-from edu_it_infrastructure.persistence.metadata import metadata
+from edu_it_infrastructure.persistence.metadata import (
+    ACCOUNTS_OAUTH_RESET_TABLE_NAMES,
+    ACCOUNTS_RUNTIME_TABLE_NAMES,
+    metadata,
+)
+
+_LATER_TABLES = ACCOUNTS_RUNTIME_TABLE_NAMES | ACCOUNTS_OAUTH_RESET_TABLE_NAMES
 
 # revision identifiers, used by Alembic.
 revision: str = "0001_create_data_model"
@@ -34,13 +40,18 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _tables() -> list:  # type: ignore[type-arg]
+    """The tables this revision owns: every one except those added by ``0003`` and ``0004``."""
+    return [t for t in metadata.sorted_tables if t.name not in _LATER_TABLES]
+
+
 def upgrade() -> None:
     """Create every Data_Model table in foreign-key dependency order."""
     bind = op.get_bind()
     # create_all emits CREATE TABLE in topological order (parents first) and
     # includes each table's primary key, foreign keys, and stable_id unique
     # constraint as declared on the MetaData.
-    metadata.create_all(bind=bind, checkfirst=False)
+    metadata.create_all(bind=bind, tables=_tables(), checkfirst=False)
 
 
 def downgrade() -> None:
@@ -48,4 +59,4 @@ def downgrade() -> None:
     bind = op.get_bind()
     # drop_all emits DROP TABLE in reverse topological order (children first),
     # leaving no Data_Model table behind.
-    metadata.drop_all(bind=bind, checkfirst=False)
+    metadata.drop_all(bind=bind, tables=_tables(), checkfirst=False)

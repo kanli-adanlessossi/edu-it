@@ -61,6 +61,7 @@ from typing import Final
 from edu_it_domain.config import PASSWORD_POLICY, RESET_LINK_TTL, SESSION_DURATION, PasswordPolicy
 from edu_it_domain.ports.clock import Clock
 from edu_it_domain.ports.credential_store import CredentialStore
+from edu_it_domain.ports.link_builder import LinkBuilder
 from edu_it_domain.ports.mailer import Mailer, OutboundMail
 from edu_it_domain.ports.repository import (
     SessionRecord,
@@ -154,6 +155,7 @@ class RequestPasswordResetUseCase:
         *,
         users: UserRepository,
         reset_links: ResetLinkRepository,
+        link_builder: LinkBuilder,
         mailer: Mailer,
         clock: Clock,
         token_factory: Callable[[], str],
@@ -167,6 +169,7 @@ class RequestPasswordResetUseCase:
         """
         self._users = users
         self._reset_links = reset_links
+        self._link_builder = link_builder
         self._mailer = mailer
         self._clock = clock
         self._token_factory = token_factory
@@ -184,8 +187,11 @@ class RequestPasswordResetUseCase:
         request the reset again (Req 24.2, 24.3).
         """
         user = self._users.get_by_email(request.email)
-        if user is not None:
-            self._issue_and_send(user)
+        if user is None:
+            # Equal work (Req 5.6): mint one token and discard it.
+            _ = self._token_factory()
+            return ACCEPTED
+        self._issue_and_send(user)
         return ACCEPTED
 
     def _issue_and_send(self, user: UserRecord) -> None:
@@ -209,7 +215,8 @@ class RequestPasswordResetUseCase:
         self._reset_links.add(link)
 
         try:
-            self._mailer.send(_reset_mail(user, link))
+            url = self._link_builder.reset_url(link.token, user.locale)
+            self._mailer.send(_reset_mail(user, link, url))
         except Exception as error:
             _LOGGER.warning(
                 "password-reset email delivery failed",
@@ -425,18 +432,18 @@ class CompletePasswordResetUseCase:
         )
 
 
-def _reset_mail(user: UserRecord, link: ResetLink) -> OutboundMail:
+def _reset_mail(user: UserRecord, link: ResetLink, url: str) -> OutboundMail:
     """Build the single-use password-reset email for ``user`` (Req 9.1).
 
     The mail is locale-marked so the ``Mailer`` renders the FR/EN template; the
-    opaque token is carried so the reset-completion use case can resolve the link
-    the recipient opens.
+    absolute reset URL sits on a single line, and the opaque token is carried so
+    the reset-completion use case can resolve the link the recipient opens.
     """
     subject = "Réinitialisez votre mot de passe" if user.locale == "fr" else "Reset your password"
     body = (
-        f"Bonjour, réinitialisez votre mot de passe avec ce lien à usage unique : {link.token}"
+        f"Bonjour, réinitialisez votre mot de passe avec ce lien à usage unique : {url}"
         if user.locale == "fr"
-        else f"Hello, reset your password with this single-use link: {link.token}"
+        else f"Hello, reset your password with this single-use link: {url}"
     )
     return OutboundMail(
         to=user.email,

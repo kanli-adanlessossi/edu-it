@@ -4,7 +4,8 @@
 // is validated with Zod before it reaches a page.
 import type { ZodType } from 'zod';
 
-import { GeneratedClient } from './generated/api-client.js';
+import { createApiClient } from './create-api-client.js';
+import type { GeneratedClient } from './generated/api-client.js';
 import { routing } from './i18n/routing.js';
 import { isLocale } from './locale.js';
 import { SESSION_COOKIE } from './session.js';
@@ -12,17 +13,11 @@ import {
   enrollmentPageSchema,
   enrollmentSchema,
   progressSchema,
-  reviewScheduleSchema,
   type Enrollment,
   type LearningApi,
   type Progress,
   type ReviewScheduleEntry,
 } from './learning.js';
-
-function apiBaseUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
-  return fromEnv && fromEnv.length > 0 ? fromEnv : 'http://localhost:8000/v1';
-}
 
 /** Raised when the API answers with a non-2xx status or an unexpected payload. */
 export class LearningApiError extends Error {
@@ -42,7 +37,7 @@ export function createLearningApi(
   client?: GeneratedClient,
 ): LearningApi {
   const lang = isLocale(locale) ? locale : routing.defaultLocale;
-  const generated = client ?? new GeneratedClient({ baseUrl: apiBaseUrl() });
+  const generated = client ?? createApiClient();
   const headers = {
     accept: 'application/json',
     'accept-language': lang,
@@ -73,17 +68,11 @@ export function createLearningApi(
     getProgress(trackId: string): Promise<Progress> {
       return send('GET', `/progress?track_id=${encodeURIComponent(trackId)}`, progressSchema);
     },
-    async getReviewSchedule(): Promise<readonly ReviewScheduleEntry[]> {
-      try {
-        return (await send('GET', '/reviews/schedule', reviewScheduleSchema)).items;
-      } catch (error) {
-        // The API does not yet publish a schedule listing; show no due items
-        // rather than failing the whole dashboard.
-        if (error instanceof LearningApiError && (error.status === 404 || error.status === 405)) {
-          return [];
-        }
-        throw error;
-      }
+    getReviewSchedule(): Promise<readonly ReviewScheduleEntry[]> {
+      // The API publishes no schedule listing (GET /v1/reviews/schedule is out of scope for
+      // api-route-wiring, design decision 7; task 13.2). Do not call it: the route would 404.
+      // The dashboard shows no due items until a listing endpoint exists.
+      return Promise.resolve([]);
     },
     enroll(trackId: string): Promise<Enrollment> {
       return send('POST', '/enrollments', enrollmentSchema, { track_id: trackId });

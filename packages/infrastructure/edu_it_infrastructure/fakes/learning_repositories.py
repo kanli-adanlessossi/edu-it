@@ -51,6 +51,7 @@ from edu_it_domain.ports.catalog import (
     QuizRecord,
 )
 from edu_it_domain.ports.enrollment import EnrollmentRecord, EnrollmentRepository
+from edu_it_domain.ports.lessons import LessonRecord, LessonRepository
 from edu_it_domain.ports.mastery import HintRevealRecord, MasteryRepository
 from edu_it_domain.ports.progress import (
     LessonCompletionRecord,
@@ -63,6 +64,7 @@ __all__ = [
     "In_Memory_AttemptRepository",
     "In_Memory_CatalogRepository",
     "In_Memory_EnrollmentRepository",
+    "In_Memory_LessonRepository",
     "In_Memory_MasteryRepository",
     "In_Memory_ProgressRepository",
     "In_Memory_ReviewRepository",
@@ -555,3 +557,18 @@ class In_Memory_AttemptRepository(AttemptRepository):
             for sid, submission in self._submissions.items()
             if self._submission_users.get(sid) == user_id
         )
+
+
+class In_Memory_LessonRepository(LessonRepository):
+    """A :class:`LessonRepository` over a dictionary of lessons (api-route-wiring fakes)."""
+
+    def __init__(self) -> None:
+        self._lessons: dict[StableId, LessonRecord] = {}
+
+    def add(self, lesson: LessonRecord) -> None:
+        """Store ``lesson`` under its ``stable_id``."""
+        self._lessons[lesson.stable_id] = lesson
+
+    def get_lesson(self, stable_id: StableId) -> LessonRecord | None:
+        """Return the lesson with ``stable_id``, or ``None`` when absent."""
+        return self._lessons.get(stable_id)

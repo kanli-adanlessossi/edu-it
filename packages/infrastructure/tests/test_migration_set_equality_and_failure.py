@@ -55,13 +55,17 @@ from sqlalchemy import create_engine, inspect
 # ---------------------------------------------------------------------------
 
 _EXPECTED_ENTITIES_BY_GROUP: dict[str, frozenset[str]] = {
-    # Identity (D3 Section 2, 4 entities)
+    # Identity (D3 Section 2, 4 entities, plus 4 account runtime tables)
     "identity": frozenset(
         {
             "user",
             "session",
             "oauth_link",
             "role_assignment",
+            "credential",
+            "verification_link",
+            "reset_link",
+            "pending_oauth_link",
         }
     ),
     # Catalog (D3 Section 2, 14 entities)
@@ -129,15 +133,15 @@ _EXPECTED_ENTITIES_BY_GROUP: dict[str, frozenset[str]] = {
     ),
 }
 
-# The flattened expected set: the union of every group above (41 entities).
+# The flattened expected set: the union of every group above (45 entities).
 EXPECTED_DATA_MODEL_ENTITIES: frozenset[str] = frozenset().union(
     *_EXPECTED_ENTITIES_BY_GROUP.values()
 )
 
-# D3 states the model has 41 entities with no join tables beyond those listed; a
+# D3 states the model has 45 entities with no join tables beyond those listed; a
 # guard so the hand-written set below cannot silently gain or lose a name (e.g.
 # via a copy/paste duplicate across groups) without this count check catching it.
-_EXPECTED_ENTITY_COUNT = 41
+_EXPECTED_ENTITY_COUNT = 45
 
 
 def _test_database_url(tmp_path: Path) -> str:
@@ -174,7 +178,7 @@ def _created_table_names(database_url: str) -> frozenset[str]:
 
 def test_expected_entity_set_is_the_documented_41_with_no_duplicates() -> None:
     # Guards the hand-transcribed expectation itself: the groups partition into
-    # exactly the 41 entities D3 declares, with no name repeated across groups.
+    # exactly the 45 entities D3 declares, with no name repeated across groups.
     total_named = sum(len(group) for group in _EXPECTED_ENTITIES_BY_GROUP.values())
     assert total_named == _EXPECTED_ENTITY_COUNT, (
         "the per-group entity lists transcribed from D3 Section 2 contain a "
@@ -308,7 +312,13 @@ def test_mid_migration_failure_leaves_db_at_last_committed_version(
     assert runner.current() == "0001_create_data_model"
     # The committed 0001 schema is intact: the Data_Model tables exist.
     created = _created_table_names(database_url)
-    assert created == EXPECTED_DATA_MODEL_ENTITIES
+    # (0001 predates the two account runtime tables added by revision 0003.)
+    assert created == EXPECTED_DATA_MODEL_ENTITIES - {
+        "credential",
+        "verification_link",
+        "reset_link",
+        "pending_oauth_link",
+    }
 
 
 def test_cli_exits_non_zero_and_reports_the_failing_migration(

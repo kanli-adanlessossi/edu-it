@@ -60,11 +60,15 @@ PERSONAL_DATA_TABLES: Final[tuple[str, ...]] = (
     "path_recommendation",
     "placement",
     "final_assessment",
-    # Identity records (session/oauth_link/role_assignment reference user) then
-    # the user row itself, deleted last.
+    # Identity records (session/oauth_link/role_assignment/credential/
+    # verification_link reference user) then the user row itself, deleted last.
     "session",
     "oauth_link",
     "role_assignment",
+    "credential",
+    "verification_link",
+    "reset_link",
+    "pending_oauth_link",
     "user",
 )
 

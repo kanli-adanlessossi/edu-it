@@ -25,6 +25,15 @@ from edu_it_application.learning.errors import (
     ReviewNotAvailableError,
     ReviewNotDueError,
 )
+from edu_it_application.learning.get_content import (
+    GetProjectUseCase,
+    GetQuizUseCase,
+    ProjectView,
+    QuizOptionView,
+    QuizQuestionView,
+    QuizView,
+    RubricCriterionView,
+)
 from edu_it_application.learning.get_lesson import GetLessonUseCase, LessonView
 from edu_it_application.learning.progress import (
     EnrollResult,
@@ -55,6 +64,8 @@ __all__ = [
     "EnrollUseCase",
     "GetLessonUseCase",
     "GetProgressUseCase",
+    "GetProjectUseCase",
+    "GetQuizUseCase",
     "IdempotencyConflictError",
     "InsufficientReviewPoolError",
     "InvalidProjectSubmissionError",
@@ -64,12 +75,17 @@ __all__ = [
     "NotEnrolledError",
     "NotFoundError",
     "ProgressView",
+    "ProjectView",
     "QuizInCooldownError",
+    "QuizOptionView",
+    "QuizQuestionView",
+    "QuizView",
     "RequestInProgressError",
     "RevealHintResult",
     "RevealHintUseCase",
     "ReviewNotAvailableError",
     "ReviewNotDueError",
+    "RubricCriterionView",
     "StartReviewUseCase",
     "SubmissionStatus",
     "SubmitProjectRequest",

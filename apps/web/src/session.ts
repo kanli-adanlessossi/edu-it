@@ -10,17 +10,12 @@
 
 import { cookies } from 'next/headers';
 
-import { GeneratedClient } from './generated/api-client.js';
+import { createApiClient } from './create-api-client.js';
+import type { GeneratedClient } from './generated/api-client.js';
 import { type SessionState } from './dashboard-access.js';
 
 /** Cookie name holding the opaque session reference (enumerated in .env.example). */
 export const SESSION_COOKIE = 'edu_it_session';
-
-/** The API base URL the generated client targets, from the environment. */
-function apiBaseUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
-  return fromEnv && fromEnv.length > 0 ? fromEnv : 'http://localhost:8000/v1';
-}
 
 /**
  * Map the API's session-resolution response to a {@link SessionState}. A 2xx
@@ -47,7 +42,7 @@ export async function resolveSessionState(client?: GeneratedClient): Promise<Ses
     return 'none';
   }
 
-  const generated = client ?? new GeneratedClient({ baseUrl: apiBaseUrl() });
+  const generated = client ?? createApiClient();
   try {
     const response = await generated.call('GET', '/auth/session', {
       headers: { cookie: `${SESSION_COOKIE}=${reference}` },

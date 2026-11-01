@@ -13,11 +13,13 @@ dependencies = [
     "edu-it-domain",
     "edu-it-application",
     "edu-it-infrastructure",
+    "edu-it-content",
     # Minimal ASGI surface for the worker's Health_Endpoint / Readiness_Endpoint
     # (Req 18). Starlette is the same ASGI toolkit that backs the API's FastAPI,
     # so the worker adds no second web stack. Pinned exactly per
     # docs/adr/0001-versions.md.
     "starlette==1.10.0",
+    "uvicorn==0.54.0",
 ]
 
 [project.scripts]
@@ -37,3 +39,4 @@ packages = ["edu_it_worker"]
 edu-it-domain = { workspace = true }
 edu-it-application = { workspace = true }
 edu-it-infrastructure = { workspace = true }
+edu-it-content = { workspace = true }

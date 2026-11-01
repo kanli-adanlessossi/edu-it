@@ -22,6 +22,13 @@ a list of items that validate against the Pydantic v2 schemas in
 | `projects.json` | `project` | `project.harden-shared-directory` |
 | `rubrics.json` | `rubric` | `rubric.harden-shared-directory` |
 | `rubric_criteria.json` | `rubric_criterion` | correctness, least privilege, idempotency, explanation |
+| `labs.json` | `lab` | `lab.fix-the-shared-folder` (terminal, on `lesson.changing-permissions`) |
+| `lab_tasks.json` | `lab_task` | three tasks of the shared-folder lab, with progressive hints |
+| `lab_checks.json` | `lab_check` | `dirs-exist`, `group-setgid`, `no-world-writable`, `planted-intact`; `basic-entries`, `edge-entries` (lab 2) |
+| `pending-review.json` | (bookkeeping) | Seed_Lab `stable_id`s awaiting expert review |
+
+Lab bundles live under `lab-bundles/<lab-slug>/` (`setup/`, `sandbox/` copied to `/grader` at
+grading time, `expected/` read only by the worker).
 
 ## Structure (content tree)
 

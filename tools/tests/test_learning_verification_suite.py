@@ -29,6 +29,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+import shutil
 import tomllib
 from collections.abc import Mapping
 from dataclasses import replace
@@ -221,7 +222,26 @@ def _approved_raw(content: LoadedContent) -> dict[str, list[dict[str, Any]]]:
     return raw
 
 
+def _mirror_lab_files(raw: Mapping[str, Any], root: Path) -> None:
+    """Copy the repository files the seed labs reference under ``root``.
+
+    The validator resolves lab images, Check_Bundles and setup scripts against the nearest
+    ancestor of the content root holding ``lab-images/``; ``root`` becomes that ancestor.
+    """
+    for lab in raw.get("lab", ()):
+        (root / "lab-images" / lab["image"]).mkdir(parents=True, exist_ok=True)
+        if lab.get("check_bundle"):
+            shutil.copytree(
+                REPO / lab["check_bundle"], root / lab["check_bundle"], dirs_exist_ok=True
+            )
+        if lab.get("setup_script"):
+            target = root / lab["setup_script"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / lab["setup_script"], target)
+
+
 def _failures(raw: Mapping[str, Any], root: Path) -> list[ValidationFailure]:
+    _mirror_lab_files(raw, root)
     return validate_content(LoadedContent(raw_items=raw, root=root))
 
 

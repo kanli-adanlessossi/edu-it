@@ -81,6 +81,7 @@ from edu_it_infrastructure.fakes import (
     In_Memory_VerificationLinkRepository,
     Test_Clock,
 )
+from edu_it_infrastructure.link_builder import Web_LinkBuilder
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -194,7 +195,9 @@ def _check_sign_up_flow(*, email: str, locale: str, password: str) -> None:
     ids = (f"user-{n}" for n in count())
     use_case = SignUpUseCase(
         users=users,
+        credentials=In_Memory_CredentialStore(),
         verification_links=links,
+        link_builder=Web_LinkBuilder("https://web.test"),
         mailer=mailer,
         clock=clock,
         token_factory=lambda: next(tokens),
@@ -257,6 +260,7 @@ def _check_reset_request_flow(*, email: str, locale: str, password: str) -> None
     use_case = RequestPasswordResetUseCase(
         users=users,
         reset_links=reset_links,
+        link_builder=Web_LinkBuilder("https://web.test"),
         mailer=mailer,
         clock=clock,
         token_factory=lambda: next(tokens),

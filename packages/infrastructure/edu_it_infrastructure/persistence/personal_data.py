@@ -45,6 +45,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from edu_it_infrastructure.persistence.metadata import metadata as data_model_metadata
 from edu_it_infrastructure.persistence.metadata import user as user_table
+from edu_it_infrastructure.persistence.repositories import _EngineHandle
 
 __all__ = ["Postgres_PersonalDataGateway"]
 
@@ -64,13 +65,17 @@ class Postgres_PersonalDataGateway(PersonalDataGateway):
     it is atomic across all personal-data tables (Req 14.2, 14.4).
     """
 
-    def __init__(self, engine: Engine) -> None:
-        """Create the gateway over an existing ``engine``.
+    def __init__(self, engine: Engine | str) -> None:
+        """Create the gateway over an existing ``engine`` or a database URL.
 
-        Unlike the identity repositories this takes a ready engine: GDPR flows
-        always run against a live database, so there is no lazy-URL path.
+        A URL builds the engine lazily on first use, like the identity repositories.
         """
-        self._engine = engine
+        self._handle = _EngineHandle(engine)
+
+    @property
+    def _engine(self) -> Engine:
+        """The engine, created from the URL on first access."""
+        return self._handle.engine
 
     def export_user_data(self, user_stable_id: str) -> Mapping[str, Sequence[Mapping[str, Any]]]:
         """Return the User's rows across every personal-data table (Req 14.1).
@@ -91,7 +96,7 @@ class Postgres_PersonalDataGateway(PersonalDataGateway):
                     continue
                 predicate = _user_row_predicate(table, internal_id)
                 rows = connection.execute(select(table).where(predicate)).mappings().all()
-                export[name] = [_api_safe_row(dict(row)) for row in rows]
+                export[name] = [_api_safe_row(name, dict(row)) for row in rows]
         return export
 
     def delete_user_data(self, user_stable_id: str) -> int:
@@ -168,6 +173,23 @@ def _owning_foreign_key(table: Table) -> tuple[ColumnElement[Any], Table]:
     return table.c[column_name], data_model_metadata.tables[parent_name]
 
 
-def _api_safe_row(row: Mapping[str, Any]) -> dict[str, Any]:
-    """Return ``row`` without the internal numeric primary key (Req 4.4)."""
-    return {column: value for column, value in row.items() if column != _INTERNAL_PK}
+#: Columns holding authentication secrets (the stored password hash and the SHA-256
+#: digest of a link token). They are deleted with the User but never written to an
+#: export document (api-route-wiring Req 7.7); the rows are still exported, so the
+#: User sees that a credential or link exists.
+_SECRET_COLUMNS: dict[str, frozenset[str]] = {
+    "credential": frozenset({"secret"}),
+    "verification_link": frozenset({"token_digest"}),
+    "reset_link": frozenset({"token_digest"}),
+    "pending_oauth_link": frozenset({"token_digest"}),
+}
+
+
+def _api_safe_row(table_name: str, row: Mapping[str, Any]) -> dict[str, Any]:
+    """Return ``row`` without the internal primary key (Req 4.4) or any secret column."""
+    hidden = _SECRET_COLUMNS.get(table_name, frozenset())
+    return {
+        column: value
+        for column, value in row.items()
+        if column != _INTERNAL_PK and column not in hidden
+    }

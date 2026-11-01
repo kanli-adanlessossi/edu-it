@@ -45,7 +45,7 @@ _ALEMBIC_BOOKKEEPING = "alembic_version"
 # ``versions/`` directory (the failing-revision test uses an isolated
 # version_locations directory), so the ambient head equals this revision too;
 # naming it here keeps the property self-describing.
-_DATA_MODEL_HEAD = "0001_create_data_model"
+_DATA_MODEL_HEAD = "0004_accounts_oauth_reset"
 
 
 def _application_tables(database_url: str) -> frozenset[str]:

@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+import type { GeneratedClient } from './generated/api-client.js';
 import { resolveDashboardAccess } from './dashboard-access.js';
 import { createLearningApi } from './learning-api.js';
 import { type LearningApi } from './learning.js';
@@ -10,11 +11,14 @@ import { type Locale } from './locale.js';
 import { SESSION_COOKIE, resolveSessionState } from './session.js';
 
 /** Redirect visitors without an active Session; otherwise return the API port. */
-export async function requireLearningApi(locale: Locale): Promise<LearningApi> {
+export async function requireLearningApi(
+  locale: Locale,
+  client?: GeneratedClient,
+): Promise<LearningApi> {
   const access = resolveDashboardAccess(await resolveSessionState(), locale);
   if (access.kind === 'redirect') {
     redirect(access.to);
   }
   const reference = (await cookies()).get(SESSION_COOKIE)?.value ?? '';
-  return createLearningApi(locale, reference);
+  return createLearningApi(locale, reference, client);
 }

@@ -38,6 +38,9 @@ class LessonView:
 
     content_version: str
 
+    lab_ids: tuple[StableId, ...] = ()
+    """Labs the lesson references; the web app links to the Lab_View when non-empty."""
+
 
 class GetLessonUseCase:
     """Read a lesson in a locale, falling back to English."""
@@ -67,4 +70,5 @@ class GetLessonUseCase:
             body=lesson.bodies[served],
             locale=served,
             content_version=lesson.content_version,
+            lab_ids=tuple(lesson.lab_ids),
         )

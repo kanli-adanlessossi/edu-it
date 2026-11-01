@@ -18,6 +18,8 @@ export default tseslint.config(
       'dist/**',
       'coverage/**',
       'src/generated/**',
+      // Vendored Monaco assets copied by scripts/copy-monaco.mjs (gitignored).
+      'public/monaco/**',
       'openapi/**',
     ],
   },

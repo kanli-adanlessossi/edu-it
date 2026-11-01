@@ -21,6 +21,7 @@ __all__ = [
     "EnrollmentResponse",
     "HintRequest",
     "HintResponse",
+    "LabProgressResponse",
     "LessonCompletionResponse",
     "LessonResponse",
     "MasteryResponse",
@@ -98,6 +99,15 @@ class MasteryResponse(_Response):
     state: str
 
 
+class LabProgressResponse(_Response):
+    """A lab's completed tasks and the mastery of the concepts it covers."""
+
+    lab_id: str
+    completed_task_ids: list[str]
+    passed: bool
+    mastery: list[MasteryResponse]
+
+
 class ProgressResponse(_Response):
     """A learner's progress through a track."""
 
@@ -105,6 +115,7 @@ class ProgressResponse(_Response):
     track_id: str
     modules: list[ModuleProgressResponse]
     mastery: list[MasteryResponse]
+    labs: list[LabProgressResponse] = Field(default_factory=list)
 
 
 # --- lessons ---------------------------------------------------------------
@@ -120,6 +131,7 @@ class LessonResponse(_Response):
     body: str
     locale: str
     content_version: str
+    lab_ids: list[str] = Field(default_factory=list)
 
 
 # --- quiz attempts ---------------------------------------------------------

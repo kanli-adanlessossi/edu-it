@@ -52,11 +52,17 @@ class HintRevealRecord:
     user_id: StableId
     """The ``stable_id`` of the learner who revealed the hint."""
 
-    question_id: StableId
-    """The ``stable_id`` of the question the hint was revealed on."""
+    question_id: StableId | None
+    """The ``stable_id`` of the question the hint was revealed on (quiz hint).
+
+    ``None`` for a lab hint, where :attr:`lab_task_id` is set instead.
+    """
 
     revealed_at: datetime
     """The instant the hint was revealed, from the injected Clock (D3 §1.4)."""
+
+    lab_task_id: StableId | None = None
+    """The ``stable_id`` of the lab task for a lab hint; ``None`` for a quiz hint."""
 
 
 @runtime_checkable

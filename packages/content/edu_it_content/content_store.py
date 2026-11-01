@@ -121,6 +121,14 @@ class ContentStore(Protocol):
         """
         ...
 
+    def list_items(self, content_type: str) -> tuple[StoredItem, ...]:
+        """Return every stored item of ``content_type`` (any status), ordered by ``stable_id``.
+
+        A read-only listing for catalog adapters (for example the lab catalog, hands-on-labs
+        Req 19.3, 20.10); archived items are included so the adapter can flag them.
+        """
+        ...
+
     def upsert(self, item: StoredItem) -> None:
         """Insert ``item`` if new, or update the existing row for its ``stable_id``.
 
@@ -160,10 +168,24 @@ class ContentStore(Protocol):
         """
         ...
 
+    def review_of(self, stable_id: str) -> tuple[str, datetime] | None:
+        """Read back the recorded ``(reviewed_by, reviewed_at)`` of ``stable_id``, if any."""
+        ...
+
     def mark_golden(self, stable_ids: frozenset[str]) -> None:
         """Mark ``stable_ids`` as the ``Golden_Set`` for Phase 4 evals (Req 16.3).
 
         Called by the sync only on approval. Idempotent; never called on rejection.
+        """
+        ...
+
+    def orphan_progress(self, stable_id: str) -> None:
+        """Keep progress tied to a changed or removed lab item as orphaned data (Req 20.11).
+
+        Called by the sync for a lab, lab task, or lab Check whose structure
+        changed or that the authored set removed. The adapter flags the learner
+        progress rows referencing it (for example ``lab_task_completion``) as
+        orphaned; it never purges them. Idempotent.
         """
         ...
 
@@ -201,6 +223,7 @@ class In_Memory_ContentStore(ContentStore):
         self._versions: dict[tuple[str, str], str] = {}
         self._reviews: dict[str, tuple[str, datetime]] = {}
         self._golden: set[str] = set()
+        self._orphaned: set[str] = set()
 
     def get(self, stable_id: str) -> StoredItem | None:
         """Return the stored item with ``stable_id`` (any status), or ``None``."""
@@ -212,6 +235,15 @@ class In_Memory_ContentStore(ContentStore):
             stable_id
             for stable_id, item in self._items.items()
             if item.status is ContentStatus.ACTIVE
+        )
+
+    def list_items(self, content_type: str) -> tuple[StoredItem, ...]:
+        """Return every item of ``content_type`` (any status), ordered by ``stable_id``."""
+        return tuple(
+            sorted(
+                (i for i in self._items.values() if i.content_type == content_type),
+                key=lambda i: i.stable_id,
+            )
         )
 
     def upsert(self, item: StoredItem) -> None:
@@ -258,11 +290,19 @@ class In_Memory_ContentStore(ContentStore):
         """Add ``stable_ids`` to the Golden_Set (Req 16.3)."""
         self._golden |= stable_ids
 
+    def orphan_progress(self, stable_id: str) -> None:
+        """Flag progress tied to ``stable_id`` as orphaned; completions stay (Req 20.11)."""
+        self._orphaned.add(stable_id)
+
     # -- Test-only seams (not part of the ContentStore protocol) --------------
 
     def review_of(self, stable_id: str) -> tuple[str, datetime] | None:
         """Return ``(reviewed_by, reviewed_at)`` recorded for an item, or ``None``."""
         return self._reviews.get(stable_id)
+
+    def orphaned_ids(self) -> frozenset[str]:
+        """Return the ``stable_id`` of every item whose progress is orphaned (test read)."""
+        return frozenset(self._orphaned)
 
     def golden_ids(self) -> frozenset[str]:
         """Return the ``stable_id`` of every item in the Golden_Set (test read)."""

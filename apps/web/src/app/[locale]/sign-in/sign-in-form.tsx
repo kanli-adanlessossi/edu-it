@@ -4,13 +4,20 @@
 // adapter to the shared `AuthForm` and renders surrounding copy from next-intl
 // keys (Req 17.2, 17.3, 15.7).
 
+import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { createAuthApi } from '../../../api-client.js';
+import { apiBaseUrl } from '../../../create-api-client.js';
 import { AuthForm, type AuthFormField } from '../../../components/auth-form.js';
 import { Link } from '../../../i18n/navigation.js';
 import { type Locale } from '../../../locale.js';
+
+/** The GitHub link is offered only when the build enables it (Req 14.12). */
+function githubSignInEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_GITHUB_SIGN_IN_ENABLED === 'true';
+}
 
 interface SignInFormProps {
   readonly locale: Locale;
@@ -19,6 +26,7 @@ interface SignInFormProps {
 export function SignInForm({ locale }: SignInFormProps) {
   const t = useTranslations('Auth');
   const api = useMemo(() => createAuthApi(locale), [locale]);
+  const router = useRouter();
 
   const fields: AuthFormField[] = [
     {
@@ -40,7 +48,18 @@ export function SignInForm({ locale }: SignInFormProps) {
   return (
     <section>
       <h1>{t('signIn.title')}</h1>
-      <AuthForm page="sign-in" api={api} fields={fields} submitLabel={t('signIn.submit')} />
+      <AuthForm
+        page="sign-in"
+        api={api}
+        fields={fields}
+        submitLabel={t('signIn.submit')}
+        onSuccess={(redirectTo) => router.push(`/${locale}${redirectTo ?? '/dashboard'}`)}
+      />
+      {githubSignInEnabled() ? (
+        <p>
+          <a href={`${apiBaseUrl()}/auth/github/authorize`}>{t('signIn.githubLink')}</a>
+        </p>
+      ) : null}
       <p>
         <Link href="/reset-password">{t('signIn.forgotPassword')}</Link>
       </p>

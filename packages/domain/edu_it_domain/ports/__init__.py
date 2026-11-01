@@ -27,6 +27,12 @@ from edu_it_domain.ports.catalog import (
     QuizRecord,
 )
 from edu_it_domain.ports.clock import Clock
+from edu_it_domain.ports.content_text import (
+    ContentTextSource,
+    ProjectText,
+    QuestionText,
+    QuizText,
+)
 from edu_it_domain.ports.credential_store import CredentialStore
 from edu_it_domain.ports.enrollment import (
     EnrollmentRecord,
@@ -40,6 +46,7 @@ from edu_it_domain.ports.idempotency import (
     ReservationStatus,
 )
 from edu_it_domain.ports.lab_check import LabCheck
+from edu_it_domain.ports.link_builder import LinkBuilder
 from edu_it_domain.ports.llm_provider import (
     LLMCompletion,
     LLMProvider,
@@ -132,6 +139,7 @@ __all__ = [
     "CatalogRepository",
     "Clock",
     "ConceptRecord",
+    "ContentTextSource",
     "CredentialStore",
     "DependencyProbe",
     "EnrollmentRecord",
@@ -145,6 +153,7 @@ __all__ = [
     "LLMProvider",
     "LabCheck",
     "LessonCompletionRecord",
+    "LinkBuilder",
     "Mailer",
     "MasteryRepository",
     "ModuleProgressRecord",
@@ -159,8 +168,11 @@ __all__ = [
     "PersonalDataGateway",
     "ProgressRepository",
     "ProjectReviewer",
+    "ProjectText",
     "QuestionRecord",
+    "QuestionText",
     "QuizRecord",
+    "QuizText",
     "ReservationStatus",
     "ResetLink",
     "ResetLinkRepository",

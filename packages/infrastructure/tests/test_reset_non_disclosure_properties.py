@@ -57,6 +57,7 @@ from edu_it_infrastructure.fakes import (
     In_Memory_UserRepository,
     Test_Clock,
 )
+from edu_it_infrastructure.link_builder import Web_LinkBuilder
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -108,6 +109,7 @@ def _build_use_case() -> tuple[
     use_case = RequestPasswordResetUseCase(
         users=users,
         reset_links=reset_links,
+        link_builder=Web_LinkBuilder("https://web.test"),
         mailer=mailer,
         clock=clock,
         token_factory=lambda: _TOKEN,

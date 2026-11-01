@@ -663,7 +663,15 @@ def _seed_remaining_personal_data(w: _World, user: str) -> None:
             )
         )
         run_id = _pk(
-            c.execute(insert(_T["lab_run"]).values(lab_session_id=session_id, status="graded"))
+            c.execute(
+                insert(_T["lab_run"]).values(
+                    stable_id=f"lr-{user}",
+                    lab_session_id=session_id,
+                    status="graded",
+                    accepted_at=_T0,
+                    deadline_at=_T0 + timedelta(seconds=15),
+                )
+            )
         )
         c.execute(
             insert(_T["lab_task_completion"]).values(lab_run_id=run_id, lab_task_id=1, passed=True)
@@ -675,6 +683,36 @@ def _seed_remaining_personal_data(w: _World, user: str) -> None:
         )
         c.execute(insert(_T["oauth_link"]).values(user_id=uid, provider="github", subject=user))
         c.execute(insert(_T["role_assignment"]).values(user_id=uid, role="learner"))
+        c.execute(
+            insert(_T["credential"]).values(user_id=uid, secret="scrypt$hash", updated_at=_T0)
+        )
+        c.execute(
+            insert(_T["verification_link"]).values(
+                token_digest=f"digest-{user}",
+                user_id=uid,
+                issued_at=_T0,
+                expires_at=_T0 + timedelta(hours=24),
+            )
+        )
+        c.execute(
+            insert(_T["reset_link"]).values(
+                token_digest=f"reset-digest-{user}",
+                user_id=uid,
+                issued_at=_T0,
+                expires_at=_T0 + timedelta(hours=1),
+            )
+        )
+        c.execute(
+            insert(_T["pending_oauth_link"]).values(
+                token_digest=f"oauth-digest-{user}",
+                provider="github",
+                subject=f"subject-{user}",
+                user_id=uid,
+                email=f"{user}@example.test",
+                issued_at=_T0,
+                expires_at=_T0 + timedelta(minutes=15),
+            )
+        )
     w.assessments.save_placement(AssessmentRecord(user, _TRACK, AssessmentStatus.COMPLETED))
     w.assessments.save_final_assessment(AssessmentRecord(user, _TRACK, AssessmentStatus.PENDING))
 
@@ -739,3 +777,27 @@ def test_export_and_deletion_cover_every_personal_data_table(engine: Engine) -> 
     kept_after = {t: len(rows) for t, rows in gateway.export_user_data(_U2).items()}
     assert kept_after == kept_before
     assert w.session_store.resolve("ref-sam") is not None
+
+
+def test_progress_read_resolves_enrollment_when_learners_share_a_module(engine: Engine) -> None:
+    """Regression (task 13.1): the unbound repository the composition root wires must
+    not raise when several learners have progress on the same module.
+
+    **Validates: Requirements 17.2**
+    """
+    w = _World(engine)
+    e1, _e2 = w.enroll(_U1), w.enroll(_U2)
+    w.progress.for_enrollment(e1).add_lesson_completion(
+        LessonCompletionRecord("mod-1", "les-1", w.clock.now())
+    )
+    # ``w.progress`` is unbound, exactly as ``build_adapters`` wires it.
+    use_case = GetProgressUseCase(
+        catalog=w.catalog,
+        enrollments=w.enrollments,
+        progress=w.progress,
+        mastery=w.mastery,
+    )
+    first = use_case.execute(_U1, _TRACK)
+    second = use_case.execute(_U2, _TRACK)
+    assert [c.lesson_id for c in first.modules[0].completions] == ["les-1"]
+    assert second.modules[0].completions == ()

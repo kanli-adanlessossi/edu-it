@@ -6,7 +6,8 @@
 // become a `PracticeApiError` carrying only the translated learner-facing
 // `detail`, never internal diagnostics.
 
-import { GeneratedClient } from './generated/api-client.js';
+import { createApiClient } from './create-api-client.js';
+import type { GeneratedClient } from './generated/api-client.js';
 import { routing } from './i18n/routing.js';
 import { isLocale, type Locale } from './locale.js';
 import {
@@ -23,11 +24,6 @@ import {
   type ReviewQuestionView,
   type ReviewResult,
 } from './practice.js';
-
-function apiBaseUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
-  return fromEnv && fromEnv.length > 0 ? fromEnv : 'http://localhost:8000/v1';
-}
 
 function resolveLocale(locale: string): Locale {
   return isLocale(locale) ? locale : routing.defaultLocale;
@@ -67,7 +63,7 @@ interface Requester {
 }
 
 function requester(client?: GeneratedClient): Requester {
-  return client ?? new GeneratedClient({ baseUrl: apiBaseUrl() });
+  return client ?? createApiClient();
 }
 
 function jsonInit(locale: Locale, body: unknown, extra: Record<string, string> = {}): RequestInit {
