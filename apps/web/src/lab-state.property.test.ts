@@ -79,18 +79,13 @@ describe('Feature: hands-on-labs, Property 19: Lab_View derived state', () => {
   // **Validates: Requirements 15.5, 15.6, 15.8**
   it('Check my work is enabled iff no run is running and more than the minimum interval has passed', () => {
     fc.assert(
-      fc.property(
-        runStatus,
-        fc.option(instant, { nil: null }),
-        instant,
-        (status, last, now) => {
-          const expected =
-            status !== 'running' && (last === null || now - last > config.gradingMinIntervalMs);
-          expect(canCheckWork({ runStatus: status, lastAcceptedAtMs: last, nowMs: now }, config)).toBe(
-            expected,
-          );
-        },
-      ),
+      fc.property(runStatus, fc.option(instant, { nil: null }), instant, (status, last, now) => {
+        const expected =
+          status !== 'running' && (last === null || now - last > config.gradingMinIntervalMs);
+        expect(
+          canCheckWork({ runStatus: status, lastAcceptedAtMs: last, nowMs: now }, config),
+        ).toBe(expected);
+      }),
       { numRuns: NUM_RUNS },
     );
   });
@@ -144,7 +139,9 @@ describe('Feature: hands-on-labs, Property 19: Lab_View derived state', () => {
         'could-not-complete',
       )
       .map((s): LabViewEvent => ({ type: 'grading-finished', runStatus: s })),
-    fc.string({ maxLength: 10 }).map((detail): LabViewEvent => ({ type: 'grading-failed', detail })),
+    fc
+      .string({ maxLength: 10 })
+      .map((detail): LabViewEvent => ({ type: 'grading-failed', detail })),
     fc.constant<LabViewEvent>({ type: 'connection-lost' }),
     fc.constant<LabViewEvent>({ type: 'reconnect-attempted' }),
     fc.constant<LabViewEvent>({ type: 'connection-restored' }),

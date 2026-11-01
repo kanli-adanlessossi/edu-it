@@ -242,7 +242,7 @@ describe('Lab_View: ready state', () => {
     expect(button('Check my work')).toBeTruthy();
   });
 
-  it('offers to end another lab\'s running session after a 409 and then starts this lab (Req 30.1)', async () => {
+  it("offers to end another lab's running session after a 409 and then starts this lab (Req 30.1)", async () => {
     await mount({ session: null });
     const other = session({ stableId: 'sess-other', labId: 'lab-other' });
     mocked.startLabSession.mockRejectedValueOnce(

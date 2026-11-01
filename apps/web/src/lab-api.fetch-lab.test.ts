@@ -16,7 +16,13 @@ function recordingClient(seen: Headers[]) {
       const authed = (headers.get('cookie') ?? '').includes('edu_it_session=abc');
       return authed
         ? new Response(
-            JSON.stringify({ lab_id: 'lab.x', kind: 'terminal', title: 'X', locale: 'en', tasks: [] }),
+            JSON.stringify({
+              lab_id: 'lab.x',
+              kind: 'terminal',
+              title: 'X',
+              locale: 'en',
+              tasks: [],
+            }),
             { status: 200, headers: { 'content-type': 'application/json' } },
           )
         : new Response(JSON.stringify({ detail: 'Sign in required' }), { status: 401 });

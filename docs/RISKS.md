@@ -79,6 +79,7 @@ quadrantChart
 | 9 | R-09 | Abuse of the mail-sending endpoints (sign-up, resend, reset request) | Medium | Medium | `api-route-wiring` spec (Requirement 3, 16.8); later rate-limit change |
 | 10 | R-11 | Account deletion without fresh authentication | Low-Medium | High | `api-route-wiring` design open decision 9; change to Foundations 14 |
 | 11 | R-10 | Residual account-existence timing from mail delivery latency | Medium | Low-Medium | `api-route-wiring` spec (Requirement 3, 16.8); later asynchronous mail delivery |
+| 12 | R-12 | DOMPurify 3.4.15 inlined in the self-hosted Monaco bundle | Low | Medium | ADR 0001 security overrides; next `monaco-editor` release with DOMPurify 3.4.17+ |
 
 ---
 
@@ -249,6 +250,24 @@ quadrantChart
   #[[file:.kiro/steering/auth-privacy.md]].
 - **Owner / Resolution path:** A follow-up change to Foundations 14 that records the chosen option
   (design decision 9 of the `api-route-wiring` spec, Requirement 16.8).
+
+### R-12 — DOMPurify 3.4.15 inlined in the self-hosted Monaco bundle (Rank 12)
+
+- **Statement:** `monaco-editor` 0.57.0 (the latest release) pins `dompurify` 3.4.15, which has
+  five advisories (GHSA-p98j-92pf-mc4p, GHSA-6688-9rhm-gjv2, GHSA-cg2g-xh64-v4q7,
+  GHSA-mrv2-3pqr-j5jr, GHSA-c6gr-qvv4-5v3f). An exact `overrides` entry forces the installed
+  `dompurify` package to 3.4.17, so `npm audit` passes. Monaco's prebuilt `min/vs/editor-*.js`
+  bundle has DOMPurify 3.4.15 inlined, though, and that bundle is what `scripts/copy-monaco.mjs`
+  self-hosts under `public/monaco` for the code-lab editor. The override does not change it.
+- **Likelihood / Impact:** Low / Medium. The advisories need specific DOMPurify modes or hooks
+  (`IN_PLACE` with node-removing hooks, `SAFE_FOR_TEMPLATES`, the `application/xhtml+xml` parser);
+  whether Monaco's markdown-hover rendering uses any of them was not verified. The editor shows
+  only the learner's own files and lab content from the reviewed catalog.
+- **Recommendation (accepted risk, then upgrade):** Keep the override so the audit gate stays
+  meaningful for every other path. Move to the first `monaco-editor` release that bundles
+  DOMPurify 3.4.17 or later, then drop the `dompurify` override.
+- **Owner / Resolution path:** The `monaco-editor` upgrade, recorded in
+  `docs/adr/0001-versions.md` (Hands-on labs table and Security overrides).
 
 ---
 

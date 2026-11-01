@@ -161,6 +161,30 @@ Notes:
   Dockerfiles (Requirements 4.5 to 4.7), and `docker buildx bake` ships with the Docker installation
   already used by CI, so it adds no separately versioned dependency.
 
+### Security overrides (`apps/web`) — transitive versions forced by `npm audit`
+
+CI runs `npm audit --audit-level=low` and fails on any finding. When an advisory affects a
+transitive dependency and no release of the parent that depends on it has the fix yet, the fixed
+version is forced with an exact entry under `overrides` in `apps/web/package.json`. Each override
+is recorded here first and removed once the parent releases a fixed range.
+
+| Dependency | Version | Registry | Manifest / location | Forced under | Advisories fixed |
+| --- | --- | --- | --- | --- | --- |
+| `dompurify` | 3.4.17 | npm | `apps/web/package.json` `overrides` | `monaco-editor` 0.57.0 (pins `dompurify` 3.4.15 exactly) | GHSA-p98j-92pf-mc4p, GHSA-6688-9rhm-gjv2, GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr, GHSA-c6gr-qvv4-5v3f |
+| `minimatch` | 11.0.3 | npm | `apps/web/package.json` `overrides` | `eslint` 10.13.0, `@eslint/config-array` 0.23.5, `@typescript-eslint/typescript-estree` 8.72.1 (all `^10`) | GHSA-g3hv-75wg-m249 |
+
+Notes:
+
+- `minimatch` 11 keeps the 10.x API (`minimatch`, `Minimatch`, CommonJS and ESM entry points) and
+  supports Node 18, 20 and 22+. It is used by the lint toolchain only, never shipped to browsers;
+  `npm run lint` passes with the override.
+- **Residual (not fixed by the override):** `monaco-editor` 0.57.0 ships a prebuilt
+  `min/vs/editor-*.js` bundle with DOMPurify 3.4.15 inlined, and that bundle is what
+  `scripts/copy-monaco.mjs` self-hosts under `public/monaco`. The override fixes the
+  `node_modules/dompurify` package the audit inspects, not the code inside that bundle. Recorded as
+  a risk in `docs/RISKS.md` (`R-12`); the fix is to move to the first `monaco-editor` release that
+  bundles DOMPurify 3.4.17 or later and drop the `dompurify` override.
+
 ## Consequences
 
 Pinning current stable versions makes builds reproducible and gives every downstream spec a
