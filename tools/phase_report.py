@@ -240,7 +240,7 @@ def read_review_outcome(repo: Path, *, strict_validation: str, approval_flow: st
         items = []
     for item in items if isinstance(items, list) else []:
         provenance = item.get("provenance") or {}
-        stable_id = str(item.get("stable_id", "?"))
+        stable_id = str(provenance.get("stable_id") or item.get("stable_id") or "?")
         reviewer = provenance.get("reviewed_by")
         if reviewer:
             labs[stable_id] = {
@@ -326,13 +326,16 @@ def render_phase_report(
     review: ReviewOutcome,
     *,
     generated_at: datetime | None = None,
+    procedure: str | None = None,
 ) -> str:
     """Render the report. Callers must have passed the gate (``report_blockers`` empty)."""
     stamp = (generated_at or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")
     out: list[str] = [
         "# Phase 3 Report: Hands-on labs",
         "",
-        f"Generated {stamp} by `tools/run_verification.py --suite labs --phase-report`. The report "
+        f"Generated {stamp} by "
+        + (procedure or "`tools/run_verification.py --suite labs --phase-report`")
+        + ". The report "
         "is written only when every acceptance check ran and passed and the final performance "
         "attempt met every target (Requirements 35.1, 35.3).",
         "",
@@ -453,6 +456,7 @@ def write_phase_report(
     required_check_ids: Sequence[str] = (),
     mapping_error: str = "",
     generated_at: datetime | None = None,
+    procedure: str | None = None,
 ) -> Path:
     """Write ``path`` iff the gate passes; otherwise raise and leave the filesystem untouched."""
     blockers = report_blockers(
@@ -465,7 +469,9 @@ def write_phase_report(
     )
     if blockers or perf is None:
         raise PhaseReportRefused(blockers)
-    text = render_phase_report(checks, perf, rule_map, groups, review, generated_at=generated_at)
+    text = render_phase_report(
+        checks, perf, rule_map, groups, review, generated_at=generated_at, procedure=procedure
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return path

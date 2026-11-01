@@ -499,9 +499,26 @@ def run_check(check: Check, worker_probe: Callable[[int], bool] | None = None) -
             check.status, check.detail = "not-run", f"could not start: {exc}"
             return
         check.status = "passed" if result.returncode == 0 else "failed"
-        tail = (result.stdout + result.stderr).strip().splitlines()
-        check.detail = tail[-1] if tail else ""
+        check.detail = summarize_output(result.stdout + result.stderr)
     check.seconds = round(time.monotonic() - started, 1)
+
+
+_RESULT_LINE = re.compile(
+    r"^\s*(Tests\s+)?\d+ (passed|failed)\b|^\s*=+ .*\b(passed|failed)\b.* =+$"
+)
+
+
+def summarize_output(output: str) -> str:
+    """One-line outcome summary: the last test-count result line, else the last line.
+
+    pytest, vitest and Playwright may print warnings or hints after their result line, so the
+    plain last line can be noise (for example a ``PytestUnraisableExceptionWarning``).
+    """
+    lines = [line.strip() for line in output.strip().splitlines() if line.strip()]
+    for line in reversed(lines):
+        if _RESULT_LINE.match(line):
+            return line.strip("= ").strip()
+    return lines[-1] if lines else ""
 
 
 def _run_groups(checks: list[Check]) -> tuple[dict[str, phase_report.GroupRecord], str]:
@@ -560,9 +577,7 @@ def _to_record(check: Check) -> phase_report.CheckRecord:
     )
 
 
-def perf_output_lines(
-    ran: bool, perf_log: Path, started: float, perf: dict | None
-) -> list[str]:
+def perf_output_lines(ran: bool, perf_log: Path, started: float, perf: dict | None) -> list[str]:
     """Attempt lines to print: only those from a log written by this run (api-route-wiring 14.5).
 
     ``labs-performance`` not run in this invocation: nothing. Run, but the log is missing or older
