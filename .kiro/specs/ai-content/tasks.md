@@ -597,7 +597,7 @@ Implementation language is Python (the design uses concrete Python modules, so n
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 28. Live_Run: generate the Networking track outline and first lesson on an unmerged branch (USD 20 cap)
-  - [~] 28.1 Confirm the Live_Run prerequisites
+  - [x] 28.1 Confirm the Live_Run prerequisites
     - Confirm decision D1: the ADR 0007 addendum exists in `docs/adr` and the vendor adapter of task 4.4 is implemented with its contract tests green. If either is missing, stop and ask the owner. Do not choose a vendor
     - Set `LLM_PROVIDER_ENDPOINT`, `LLM_PROVIDER_ALLOWED_HOSTS`, `LLM_MODEL_GENERATION`, `LLM_MODEL_VERIFIER`, `LLM_PRICES` and the key outside the repository (production reads the secret that task 4.14 refreshes)
     - Confirm `content/networking-basics/brief.json` exists on the base ref (the owner merges it; the Generator never merges) and the Docker daemon is available for sandbox checks
