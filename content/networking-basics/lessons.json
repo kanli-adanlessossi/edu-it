@@ -3,11 +3,11 @@
     "module_stable_id": "module.addresses-and-networks",
     "ordinal": 4,
     "provenance": {
-      "content_version": "sha256:d714cdbf4f32b8d2524e58bb5ffea464904671a449f19f5f6908f39e74800d3e",
-      "generation_date": "2026-11-03T09:38:28Z",
+      "content_version": "sha256:2ea6460a99ed015eff7a19b5c11a3c39633f70e532922bbda06e4fe7f94f2537",
+      "generation_date": "2026-11-03T09:46:28Z",
       "model": "eu.anthropic.claude-sonnet-4-6",
       "origin": "ai",
-      "prompt_id": "outline",
+      "prompt_id": "lesson",
       "prompt_version": "1",
       "stable_id": "lesson.automatic-address-assignment-with-dhcp"
     },

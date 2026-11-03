@@ -1,0 +1,71 @@
+# Attribution automatique d'adresses avec DHCP
+
+## Qu'est-ce que le DHCP ?
+
+Chaque appareil sur un réseau a besoin d'une adresse IP pour communiquer. Attribuer ces adresses manuellement sur chaque appareil est fastidieux et source d'erreurs. Le DHCP (Dynamic Host Configuration Protocol) est un protocole qui automatise cette tâche. Lorsqu'un appareil rejoint un réseau, il demande une adresse IP à un serveur DHCP, et le serveur lui en fournit une, accompagnée d'autres paramètres dont l'appareil a besoin.
+
+## Quelles informations le DHCP fournit-il ?
+
+Un serveur DHCP fait plus que distribuer une adresse IP. Dans une seule réponse, il fournit généralement :
+
+- **Adresse IP** – une adresse unique attribuée à l'interface réseau de l'appareil sur le sous-réseau.
+- **Masque de sous-réseau** – indique à l'appareil quelle partie de l'adresse IP identifie le sous-réseau et quelle partie identifie l'appareil.
+- **Passerelle** – l'adresse IP du routeur que l'appareil doit utiliser pour atteindre d'autres réseaux.
+- Adresse du serveur **DNS** – pour que l'appareil puisse résoudre les noms d'hôte en adresses IP.
+- **Durée du bail** – combien de temps l'appareil peut conserver l'adresse IP avant de devoir renouveler l'attribution.
+
+Tout cela se produit automatiquement, généralement en une fraction de seconde après la connexion au réseau.
+
+## Comment fonctionne l'échange DHCP
+
+Le processus DHCP suit quatre étapes, souvent mémorisées sous l'acronyme DORA :
+
+1. **Discover (Découverte)** – L'appareil diffuse un paquet sur le réseau pour demander si un serveur DHCP est disponible. Comme l'appareil n'a pas encore d'adresse IP, il envoie ce paquet depuis l'adresse 0.0.0.0 vers l'adresse de diffusion 255.255.255.255.
+2. **Offer (Offre)** – Un serveur DHCP reçoit la diffusion et répond avec une offre contenant une adresse IP proposée et les autres paramètres mentionnés ci-dessus.
+3. **Request (Demande)** – L'appareil diffuse un message indiquant qu'il souhaite accepter l'adresse IP proposée. La diffusion à cette étape permet aux autres serveurs DHCP du même sous-réseau de savoir que leurs offres n'ont pas été retenues.
+4. **Acknowledge (Confirmation)** – Le serveur confirme l'attribution. L'appareil peut maintenant configurer son interface réseau avec l'adresse IP, le masque de sous-réseau, la passerelle et les paramètres DNS fournis.
+
+DHCP utilise le protocole UDP, sur le port 67 (serveur) et le port 68 (client).
+
+## Afficher vos paramètres actuellement attribués par DHCP
+
+Sur un système Linux, vous pouvez inspecter l'adresse IP et les autres paramètres réseau que le DHCP a attribués à votre interface réseau en utilisant la ligne de commande. La commande `ip` affiche la configuration actuelle de chaque interface réseau, y compris l'adresse IP et le masque de sous-réseau. La commande `ip route` affiche la table de routage, où vous pouvez trouver la passerelle. Le fichier `/etc/resolv.conf` stocke les adresses des serveurs DNS utilisés par le système.
+
+```bash
+$ ip address show
+```
+
+```text
+(no output)
+```
+
+```bash
+$ ip route show
+```
+
+```text
+(no output)
+```
+
+```bash
+$ cat /etc/resolv.conf
+```
+
+```text
+(no output)
+```
+
+## Baux DHCP et renouvellement
+
+L'adresse IP qu'un serveur DHCP attribue n'est pas permanente. Elle est accordée pour une durée fixe appelée bail. Avant l'expiration du bail, l'appareil contacte automatiquement le serveur DHCP pour le renouveler. Si l'appareil quitte le réseau ou si le bail n'est pas renouvelé, l'adresse IP est restituée au pool du serveur et peut être attribuée ultérieurement à un autre appareil.
+
+Ce mécanisme de bail signifie que le même appareil peut recevoir une adresse IP différente à chaque connexion, sauf si le serveur DHCP est configuré pour toujours attribuer la même adresse à une adresse MAC spécifique. Une telle attribution fixe est appelée une réservation DHCP.
+
+## Points clés à retenir
+
+- Le DHCP est un protocole qui attribue automatiquement une adresse IP et d'autres paramètres réseau à un appareil lorsqu'il rejoint un réseau.
+- En un seul échange, le DHCP fournit l'adresse IP, le masque de sous-réseau, la passerelle et l'adresse du serveur DNS.
+- Le processus en quatre étapes est : Discover, Offer, Request, Acknowledge (DORA).
+- Le DHCP utilise UDP sur le port 67 (serveur) et le port 68 (client).
+- Les attributions sont des baux temporaires ; les appareils les renouvellent automatiquement avant leur expiration.
+- Une réservation DHCP associe une adresse IP fixe à une adresse MAC spécifique.

@@ -1,0 +1,71 @@
+# Automatic address assignment with DHCP
+
+## What is DHCP?
+
+Every device on a network needs an IP address to communicate. Assigning these addresses by hand on every device is tedious and error-prone. DHCP (Dynamic Host Configuration Protocol) is a protocol that automates this task. When a device joins a network, it asks a DHCP server for an IP address, and the server replies with one, along with other settings the device needs.
+
+## What information does DHCP provide?
+
+A DHCP server does more than hand out an IP address. In a single reply it typically provides:
+
+- **IP address** – a unique address assigned to the device's network interface on the subnet.
+- **Subnet mask** – tells the device which part of the IP address identifies the subnet and which part identifies the device.
+- **Gateway** – the IP address of the router the device should use to reach other networks.
+- **DNS** server address – so the device can resolve hostnames to IP addresses.
+- **Lease time** – how long the device may keep the IP address before it must renew the assignment.
+
+All of this happens automatically, usually within a fraction of a second of connecting to the network.
+
+## How the DHCP exchange works
+
+The DHCP process follows four steps, often remembered as DORA:
+
+1. **Discover** – The device broadcasts a packet on the network asking if any DHCP server is available. Because the device has no IP address yet, it sends this packet from address 0.0.0.0 to the broadcast address 255.255.255.255.
+2. **Offer** – A DHCP server receives the broadcast and replies with an offer containing a proposed IP address and the other settings listed above.
+3. **Request** – The device broadcasts a message saying it would like to accept the offered IP address. Broadcasting at this stage lets other DHCP servers on the same subnet know their offers were not chosen.
+4. **Acknowledge** – The server confirms the assignment. The device can now configure its network interface with the provided IP address, subnet mask, gateway, and DNS settings.
+
+DHCP uses the UDP protocol, on port 67 (server) and port 68 (client).
+
+## Viewing your current DHCP-assigned settings
+
+On a Linux system you can inspect the IP address and other network settings that DHCP has assigned to your network interface using the command line. The `ip` command shows the current configuration of every network interface, including the IP address and subnet mask. The `ip route` command shows the routing table, where you can find the gateway. The file `/etc/resolv.conf` stores the DNS server addresses the system is using.
+
+```bash
+$ ip address show
+```
+
+```text
+(no output)
+```
+
+```bash
+$ ip route show
+```
+
+```text
+(no output)
+```
+
+```bash
+$ cat /etc/resolv.conf
+```
+
+```text
+(no output)
+```
+
+## DHCP leases and renewal
+
+The IP address a DHCP server assigns is not permanent. It is granted for a fixed period called a lease. Before the lease expires, the device automatically contacts the DHCP server to renew it. If the device leaves the network or the lease is not renewed, the IP address is returned to the server's pool and can be assigned to another device later.
+
+This lease mechanism means that the same device may receive a different IP address each time it connects, unless the DHCP server is configured to always give the same address to a specific MAC address. Such a fixed assignment is called a DHCP reservation.
+
+## Key takeaways
+
+- DHCP is a protocol that automatically assigns an IP address and other network settings to a device when it joins a network.
+- In a single exchange, DHCP provides the IP address, subnet mask, gateway, and DNS server address.
+- The four-step process is: Discover, Offer, Request, Acknowledge (DORA).
+- DHCP uses UDP on port 67 (server) and port 68 (client).
+- Assignments are temporary leases; devices renew them automatically before they expire.
+- A DHCP reservation ties a fixed IP address to a specific MAC address.
