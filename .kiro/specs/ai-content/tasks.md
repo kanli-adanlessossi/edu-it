@@ -615,12 +615,12 @@ Implementation language is Python (the design uses concrete Python modules, so n
     - Keep the second branch name, Generation_Report, total cost, tokens and models
     - _Requirements: 5.3, 5.13, 5.14, 5.15, 5.16, 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 24.8, 24.9, 24.10, 24.11, 24.12_
 
-- [ ] 29. Phase 4 report
-  - [~] 29.1 Run the Eval_Suite for the current Prompt versions
+- [x] 29. Phase 4 report
+  - [x] 29.1 Run the Eval_Suite for the current Prompt versions
     - Run `edu-it-eval` on the Replay_Provider and keep the Eval_Report
     - _Requirements: 11.1, 11.2, 25.3_
 
-  - [~] 29.2 Write `docs/reports/phase-4.md`
+  - [x] 29.2 Write `docs/reports/phase-4.md`
     - Run the `ai-content` verification suite and `tools/phase_report.py` with the Live_Run cost in USD, the Cost_Cap, the models, the Generation_Branch names, the Eval_Report results, the command and outcome of each acceptance check, and what was not verified
     - If any check did not run or pass, the tool must not write a passing report and the missing check is named in the report
     - _Requirements: 23.2, 25.1, 25.2, 25.3, 25.4, 25.5, 25.6_
