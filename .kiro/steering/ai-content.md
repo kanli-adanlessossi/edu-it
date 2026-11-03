@@ -53,6 +53,8 @@ END INTERFACE
   - `PendingReview` → `Rejected`: reviewer rejects.
   - `Approved` → `Served`: only approved variants are served.
   - `Served` → `Withdrawn`: abnormal correct-rate/time or reported.
+  - `Withdrawn` → `Approved`: a reviewer approves the flag review (reinstatement; amendment D3).
+  - `Flagged` and `Rejected` are terminal. `Withdrawn` is terminal except for reviewer reinstatement.
 
 ## Reviewer Roles and Project Review
 

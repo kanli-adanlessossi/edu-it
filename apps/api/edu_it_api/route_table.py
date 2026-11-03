@@ -88,4 +88,23 @@ ROUTE_TABLE: Final[list[RouteEntry]] = [
     _e("GET", "/lab-sessions/{session_id}/grading-runs/{run_id}", "cookie", _LAB),
     _e("GET", "/lab-sessions/{session_id}/grading-runs/{run_id}/events", "cookie", _LAB),
     _e("WS", "/lab-sessions/{session_id}/terminal", "cookie", _LAB),
+    _e("GET", "/review-tasks", "cookie", "ListReviewTasks"),
+    _e("GET", "/review-tasks/{task_id}", "cookie", "ReviewTaskActions.get"),
+    _e("POST", "/review-tasks/{task_id}/approve", "cookie", "ReviewTaskActions.approve"),
+    _e("POST", "/review-tasks/{task_id}/reject", "cookie", "ReviewTaskActions.reject"),
+    _e(
+        "POST",
+        "/review-tasks/{task_id}/request-changes",
+        "cookie",
+        "ReviewTaskActions.request_changes",
+    ),
+    _e("POST", "/review-tasks/{task_id}/edit", "cookie", "ReviewTaskActions.edit"),
+    _e("POST", "/problem-reports", "cookie", "SubmitProblemReport"),
+    _e("GET", "/path-recommendation", "cookie", "GetRecommendation"),
+    _e(
+        "POST",
+        "/path-recommendation/{recommendation_id}/dismissal",
+        "cookie",
+        "DismissRecommendation",
+    ),
 ]

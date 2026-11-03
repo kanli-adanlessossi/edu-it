@@ -22,6 +22,8 @@ def _lab_config_names() -> list[str]:
     """Constants defined in config.py's hands-on-labs section (public names only)."""
     source = CONFIG_PY.read_text(encoding="utf-8")
     section = source[source.index(LAB_SECTION_MARKER) :]
+    # The labs section ends where the next spec's section (AI content) begins.
+    section = section.split("AI-content business numbers", 1)[0]
     section = section.split("__all__", 1)[0]
     pattern = re.compile(r"^([A-Z][A-Z0-9_]*)\s*:\s*Final", re.MULTILINE)
     return [n for n in pattern.findall(section) if not n.startswith("_")]

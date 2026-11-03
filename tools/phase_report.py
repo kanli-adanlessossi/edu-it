@@ -475,3 +475,215 @@ def write_phase_report(
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return path
+
+
+# --------------------------------------------------------------------------------------------
+# Phase 4 report (ai-content task 26.2; Requirements 25.1 to 25.6)
+# --------------------------------------------------------------------------------------------
+
+PHASE4_REPORT = REPO / "docs" / "reports" / "phase-4.md"
+PASSING_MARK = "Status: PASSING"
+NOT_PASSING_MARK = "Status: NOT PASSING"
+
+
+@dataclass
+class Phase4Inputs:
+    """What the owner supplies after the Live_Run (Requirements 25.2, 25.3, 25.5)."""
+
+    live_run_cost_usd: str | None  # decimal text, e.g. "1.2345"
+    cost_cap_usd: str | None
+    models: list[str]
+    branches: list[str]  # Generation_Branch name(s)
+    eval_report: Mapping[str, Any] | None  # parsed Eval_Report JSON (EvalReport.to_json)
+    not_verified: list[str]
+
+
+@dataclass
+class Phase4Result:
+    passing: bool
+    blockers: list[str]
+    path: Path
+
+
+def _money(text: str | None) -> str | None:
+    """Validate a USD amount; None when absent or not a non-negative decimal."""
+    from decimal import Decimal, InvalidOperation
+
+    if text is None or not str(text).strip():
+        return None
+    try:
+        value = Decimal(str(text).strip())
+    except InvalidOperation:
+        return None
+    return str(value) if value.is_finite() and value >= 0 else None
+
+
+def phase4_blockers(
+    checks: Sequence[CheckRecord],
+    inputs: Phase4Inputs,
+    *,
+    required_check_ids: Sequence[str] = (),
+) -> list[str]:
+    """Every reason the Phase_4_Report is not passing; each failing check is named (25.6)."""
+    blockers: list[str] = []
+    seen = {c.check_id for c in checks}
+    for check_id in required_check_ids:
+        if check_id not in seen:
+            blockers.append(f"acceptance check {check_id} did not run")
+    for check in checks:
+        if check.status == "passed":
+            continue
+        if check.status == "failed":
+            blockers.append(f"acceptance check {check.check_id} did not pass: {check.detail}")
+        else:
+            blockers.append(f"acceptance check {check.check_id} did not run: {check.detail}")
+    if _money(inputs.live_run_cost_usd) is None:
+        blockers.append("Live_Run cost in USD is missing or invalid")
+    if _money(inputs.cost_cap_usd) is None:
+        blockers.append("Cost_Cap is missing or invalid")
+    if not [m for m in inputs.models if m.strip()]:
+        blockers.append("models used are missing")
+    if not [b for b in inputs.branches if b.strip()]:
+        blockers.append("Generation_Branch name is missing")
+    report = inputs.eval_report
+    if not isinstance(report, Mapping) or not isinstance(report.get("outcomes"), list):
+        blockers.append("Eval_Report results are missing")
+    return blockers
+
+
+def render_phase4_report(
+    checks: Sequence[CheckRecord],
+    inputs: Phase4Inputs,
+    blockers: Sequence[str],
+    *,
+    generated_at: datetime | None = None,
+) -> str:
+    """Render the report; a non-passing one says so and names every blocker."""
+    stamp = (generated_at or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    out: list[str] = [
+        "# Phase 4 Report: AI content generation",
+        "",
+        NOT_PASSING_MARK if blockers else PASSING_MARK,
+        "",
+        f"Generated {stamp} by `tools/phase_report.py` after the Live_Run. The report is "
+        "passing only when every required acceptance check ran and passed (Requirement 25.6).",
+        "",
+    ]
+    if blockers:
+        out += ["## Blocking issues", ""]
+        out += [f"- {_cell(b)}" for b in blockers]
+        out.append("")
+    cost = _money(inputs.live_run_cost_usd)
+    cap = _money(inputs.cost_cap_usd)
+    out += [
+        "## 1. Live_Run (Requirement 25.2)",
+        "",
+        f"- Live_Run cost (USD): {cost if cost is not None else 'not recorded'}",
+        f"- Cost_Cap (USD): {cap if cap is not None else 'not recorded'}",
+        f"- Models used: {', '.join(inputs.models) if inputs.models else 'not recorded'}",
+        "- Generation_Branch: "
+        + (", ".join(f"`{b}`" for b in inputs.branches) if inputs.branches else "not recorded"),
+        "",
+        "## 2. Eval_Report (Requirement 25.3)",
+        "",
+    ]
+    report = inputs.eval_report
+    if isinstance(report, Mapping) and isinstance(report.get("outcomes"), list):
+        out += [
+            f"- Suite: `{report.get('suite', '?')}`",
+            f"- Passed: {report.get('passed', '?')} of {report.get('total', '?')} "
+            f"(pass rate {report.get('pass_rate', '?')})",
+            "",
+            "| Prompt | Version |",
+            "|--------|---------|",
+        ]
+        versions = report.get("prompt_versions") or {}
+        for name in sorted(versions):
+            out.append(f"| `{_cell(str(name))}` | `{_cell(str(versions[name]))}` |")
+        out += ["", "| Case | Kind | Outcome | Detail |", "|------|------|---------|--------|"]
+        for o in report["outcomes"]:
+            out.append(
+                f"| `{_cell(str(o.get('id', '?')))}` | {_cell(str(o.get('kind', '')))} | "
+                f"{'PASSED' if o.get('passed') else 'FAILED'} | {_cell(str(o.get('detail', '')))} |"
+            )
+    else:
+        out.append("Eval_Report results not provided.")
+    out += [
+        "",
+        "## 3. Acceptance checks: commands and outcomes (Requirement 25.4)",
+        "",
+        "| # | Check | Requirement | Description | Command | Outcome |",
+        "|---|-------|-------------|-------------|---------|---------|",
+    ]
+    for number, check in enumerate(checks, start=1):
+        outcome = check.status.upper() + (f": {check.detail}" if check.detail else "")
+        out.append(
+            f"| {number} | `{check.check_id}` | {check.requirement} | {_cell(check.description)} | "
+            f"`{_cell(check.command)}` | {_cell(outcome)} |"
+        )
+    out += ["", "## 4. Not verified (Requirement 25.5)", ""]
+    out += [f"- {_cell(item)}" for item in inputs.not_verified] or ["- Nothing declared."]
+    out.append("")
+    return "\n".join(out)
+
+
+def write_phase4_report(
+    path: Path,
+    checks: Sequence[CheckRecord],
+    inputs: Phase4Inputs,
+    *,
+    required_check_ids: Sequence[str] = (),
+    generated_at: datetime | None = None,
+) -> Phase4Result:
+    """Write ``path``. The passing marker appears only if there are no blockers (25.6).
+
+    When blocked, the file is still written (replacing any older passing report) but is marked
+    NOT PASSING and names every check that did not run or did not pass.
+    """
+    blockers = phase4_blockers(checks, inputs, required_check_ids=required_check_ids)
+    text = render_phase4_report(checks, inputs, blockers, generated_at=generated_at)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return Phase4Result(not blockers, blockers, path)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """CLI: ``phase_report.py --input phase4.json [--out docs/reports/phase-4.md]``.
+
+    The input JSON holds ``checks`` (list of CheckRecord fields), ``required_check_ids``,
+    ``live_run_cost_usd``, ``cost_cap_usd``, ``models``, ``branches``, ``eval_report`` (a path
+    or the parsed report) and ``not_verified``. Exit 0 only for a passing report.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Write the phase-4 report.")
+    parser.add_argument("--input", required=True, type=Path)
+    parser.add_argument("--out", type=Path, default=PHASE4_REPORT)
+    args = parser.parse_args(argv)
+    data = json.loads(args.input.read_text(encoding="utf-8"))
+    eval_report = data.get("eval_report")
+    if isinstance(eval_report, str):
+        try:
+            eval_report = json.loads(Path(eval_report).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            eval_report = None
+    checks = [CheckRecord(**c) for c in data.get("checks", [])]
+    inputs = Phase4Inputs(
+        live_run_cost_usd=data.get("live_run_cost_usd"),
+        cost_cap_usd=data.get("cost_cap_usd"),
+        models=list(data.get("models", [])),
+        branches=list(data.get("branches", [])),
+        eval_report=eval_report,
+        not_verified=list(data.get("not_verified", [])),
+    )
+    result = write_phase4_report(
+        args.out, checks, inputs, required_check_ids=data.get("required_check_ids", [])
+    )
+    for blocker in result.blockers:
+        print(f"NOT PASSING: {blocker}", file=sys.stderr)
+    print(f"{'PASSING' if result.passing else 'NOT PASSING'} -> {result.path}")
+    return 0 if result.passing else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,6 @@
+# Reviewers by track (ai-content decision D11, Requirement 5.7).
+# The team handles below are PLACEHOLDERS: the project owner replaces each
+# with the real GitHub team that holds expertise in that track.
+
+/content/linux-fundamentals/ @REPLACE-ME-ORG/linux-fundamentals-reviewers
+/content/networking-basics/  @REPLACE-ME-ORG/networking-basics-reviewers

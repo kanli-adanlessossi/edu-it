@@ -34,6 +34,8 @@ from urllib.parse import urlsplit
 
 from edu_it_domain.config import LAB_ALLOWED_WEB_ORIGINS
 from edu_it_domain.ports.clock import Clock
+from edu_it_domain.ports.generation_ledger import GenerationLedger
+from edu_it_domain.ports.llm_provider import LLMProvider
 from edu_it_domain.ports.mailer import Mailer
 from edu_it_domain.ports.object_storage import ObjectStorage
 from edu_it_domain.ports.rate_limiter import SignInRateLimiter
@@ -41,7 +43,7 @@ from edu_it_domain.ports.repository import SessionRepository, UserRepository
 from edu_it_domain.ports.role_assignment import RoleAssignmentRepository
 from edu_it_domain.ports.sandbox import SandboxProvider
 from edu_it_domain.ports.session_store import SessionStore
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, SecretStr, ValidationInfo, field_validator
 
 from edu_it_infrastructure.adapters.object_storage import FileSystem_ObjectStorage
 from edu_it_infrastructure.adapters.rate_limiter import Redis_SignInRateLimiter
@@ -49,9 +51,26 @@ from edu_it_infrastructure.adapters.redis_support import redis_from_url
 from edu_it_infrastructure.adapters.session_store import Redis_SessionStore
 from edu_it_infrastructure.clock import System_Clock
 from edu_it_infrastructure.fakes.clock import Test_Clock
+from edu_it_infrastructure.fakes.llm_provider import Fake_LLMProvider
 from edu_it_infrastructure.fakes.mailer import Console_Mailer
 from edu_it_infrastructure.fakes.object_storage import In_Memory_ObjectStorage
 from edu_it_infrastructure.fakes.sandbox_provider import Fake_SandboxProvider
+from edu_it_infrastructure.llm.credentials import (
+    CredentialSource,
+    EnvironmentCredentialSource,
+    SecretsManagerCredentialSource,
+)
+from edu_it_infrastructure.llm.engine import LLMEngine, ProviderBinding
+from edu_it_infrastructure.llm.fixture_store import FixtureStore
+from edu_it_infrastructure.llm.ledger_binding import (
+    JobScope,
+    LedgerAttemptGate,
+    LedgerUsageSink,
+)
+from edu_it_infrastructure.llm.live import LiveTransport, ModelPrice
+from edu_it_infrastructure.llm.registry import get_vendor, load_vendors, registered_vendors
+from edu_it_infrastructure.llm.replay import ReplayTransport
+from edu_it_infrastructure.llm.transport import PromptRenderer
 from edu_it_infrastructure.mailer import SMTP_Mailer, SMTPConfig
 from edu_it_infrastructure.persistence.repositories import (
     Postgres_RoleAssignmentRepository,
@@ -62,11 +81,15 @@ from edu_it_infrastructure.persistence.repositories import (
 __all__ = [
     "CompositionSettings",
     "Environment",
+    "LLMBackend",
+    "LLMRole",
     "MailerBackend",
     "Ports",
     "ProviderSelectionError",
     "SandboxBackend",
     "build_fake_clock",
+    "build_generation_ledger",
+    "build_llm_provider",
     "build_mailer",
     "build_object_storage",
     "build_ports",
@@ -106,8 +129,50 @@ class SandboxBackend(StrEnum):
     FAKE = "fake"
 
 
+class LLMBackend(StrEnum):
+    """The ``LLMProvider`` selection (``LLM_PROVIDER_BACKEND``)."""
+
+    FAKE = "fake"
+    REPLAY = "replay"
+    LIVE = "live"
+
+
+class LLMRole(StrEnum):
+    """Which configured model a provider is built for."""
+
+    GENERATION = "generation"
+    VERIFIER = "verifier"
+
+
 class ProviderSelectionError(ValueError):
-    """Raised at composition when the configured sandbox provider is not allowed."""
+    """Raised at composition when the configured sandbox or LLM provider is not allowed."""
+
+
+def _parse_csv(value: object) -> object:
+    if isinstance(value, str):
+        return tuple(part.strip() for part in value.split(",") if part.strip())
+    return value
+
+
+def _parse_prices(value: object) -> object:
+    """Parse ``model=input:output,...`` (cents per million tokens) into a mapping."""
+    if not isinstance(value, str):
+        return value
+    prices: dict[str, tuple[int, int]] = {}
+    for part in (p.strip() for p in value.split(",")):
+        if not part:
+            continue
+        try:
+            model, rates = part.split("=", 1)
+            cents_in, cents_out = rates.split(":", 1)
+            prices[model.strip()] = (int(cents_in), int(cents_out))
+        except ValueError:
+            raise ValueError(
+                "LLM_PRICES entries must look like model=input_cents:output_cents"
+            ) from None
+        if not model.strip() or min(prices[model.strip()]) < 0:
+            raise ValueError("LLM_PRICES needs a model name and non-negative prices")
+    return prices
 
 
 class CompositionSettings(BaseModel):
@@ -164,6 +229,70 @@ class CompositionSettings(BaseModel):
     #: Root directory of the ``filesystem`` backend (``OBJECT_STORAGE_ROOT``).
     object_storage_root: str | None = None
 
+    #: ``LLMProvider`` backend (``LLM_PROVIDER_BACKEND``): ``fake``, ``replay`` or ``live``.
+    llm_provider_backend: LLMBackend = LLMBackend.FAKE
+    #: Registered vendor adapter name (``LLM_PROVIDER_VENDOR``); optional if only one exists.
+    llm_provider_vendor: str | None = None
+    #: HTTPS endpoint of the live provider (``LLM_PROVIDER_ENDPOINT``).
+    llm_provider_endpoint: str | None = None
+    #: Credential of the live provider (``LLM_PROVIDER_API_KEY``); never printed.
+    llm_provider_api_key: SecretStr | None = None
+    #: Secrets Manager secret holding the key (``LLM_PROVIDER_API_KEY_SECRET_ID``, production).
+    #: Mutually exclusive with ``LLM_PROVIDER_API_KEY``.
+    llm_provider_api_key_secret_id: str | None = None
+    #: Hosts a response may come from, EU only (``LLM_PROVIDER_ALLOWED_HOSTS``, comma-separated).
+    llm_provider_allowed_hosts: tuple[str, ...] = ()
+    #: Model for drafting (``LLM_MODEL_GENERATION``) and for the Verifier (``LLM_MODEL_VERIFIER``).
+    llm_model_generation: str | None = None
+    llm_model_verifier: str | None = None
+    #: Cents per million tokens, ``model=input:output`` pairs (``LLM_PRICES``).
+    llm_prices: dict[str, tuple[int, int]] = {}
+    #: Root directory of recorded fixtures (``LLM_FIXTURE_DIR``).
+    llm_fixture_dir: str = "evals/fixtures"
+    #: Record live exchanges as fixtures (``LLM_RECORD``).
+    llm_record: bool = False
+    #: Secret key of the pseudonymous advisor handles (``ADVISOR_HANDLE_KEY``).
+    advisor_handle_key: SecretStr | None = None
+
+    @field_validator("llm_provider_allowed_hosts", mode="before")
+    @classmethod
+    def _split_allowed_hosts(cls, value: object) -> object:
+        return _parse_csv(value)
+
+    @field_validator("llm_prices", mode="before")
+    @classmethod
+    def _split_prices(cls, value: object) -> object:
+        return _parse_prices(value)
+
+    @field_validator(
+        "llm_provider_vendor",
+        "llm_provider_endpoint",
+        "llm_model_generation",
+        "llm_model_verifier",
+        "llm_provider_api_key",
+        "llm_provider_api_key_secret_id",
+        "advisor_handle_key",
+    )
+    @classmethod
+    def _empty_llm_setting_is_none(cls, value: object) -> object:
+        if isinstance(value, SecretStr):
+            return value if value.get_secret_value() else None
+        return value or None
+
+    @field_validator("llm_model_generation", "llm_model_verifier")
+    @classmethod
+    def _model_id_is_not_global_profile(cls, value: str | None, info: ValidationInfo) -> str | None:
+        # Startup guard (Req 1.10, 1.11, ADR 0007): a ``global.`` inference profile can route
+        # outside the EU. The same rule lives in the vendor adapter's ``validate_model_id`` as a
+        # request-time guard; it is repeated here so composition names no vendor module.
+        if value is not None and value.strip().casefold().startswith("global."):
+            name = cls._ENV_ALIASES.get(info.field_name or "", info.field_name)
+            raise ValueError(
+                f"{name} must not be a global. inference profile "
+                "(it can route outside the EU); use an eu. profile or a single-region model id"
+            )
+        return value
+
     @field_validator("github_client_id", "github_client_secret", "github_callback_url")
     @classmethod
     def _empty_github_setting_is_none(cls, value: str | None) -> str | None:
@@ -209,6 +338,18 @@ class CompositionSettings(BaseModel):
         "github_callback_url": "GITHUB_OAUTH_CALLBACK_URL",
         "object_storage_backend": "OBJECT_STORAGE_BACKEND",
         "object_storage_root": "OBJECT_STORAGE_ROOT",
+        "llm_provider_backend": "LLM_PROVIDER_BACKEND",
+        "llm_provider_vendor": "LLM_PROVIDER_VENDOR",
+        "llm_provider_endpoint": "LLM_PROVIDER_ENDPOINT",
+        "llm_provider_api_key": "LLM_PROVIDER_API_KEY",
+        "llm_provider_api_key_secret_id": "LLM_PROVIDER_API_KEY_SECRET_ID",
+        "llm_provider_allowed_hosts": "LLM_PROVIDER_ALLOWED_HOSTS",
+        "llm_model_generation": "LLM_MODEL_GENERATION",
+        "llm_model_verifier": "LLM_MODEL_VERIFIER",
+        "llm_prices": "LLM_PRICES",
+        "llm_fixture_dir": "LLM_FIXTURE_DIR",
+        "llm_record": "LLM_RECORD",
+        "advisor_handle_key": "ADVISOR_HANDLE_KEY",
     }
 
     @classmethod
@@ -322,6 +463,167 @@ def build_sandbox_provider(
 
         return DockerSandboxProvider(image_tag=settings.lab_image_tag)
     return Fake_SandboxProvider(clock if clock is not None else Test_Clock())
+
+
+def build_generation_ledger(
+    settings: CompositionSettings | None = None,
+    *,
+    clock: Clock | None = None,
+) -> GenerationLedger:
+    """Select the ``GenerationLedger`` (ai-content Req 10.1, 12.1).
+
+    ``EDU_IT_ENV=test`` uses the in-memory ledger; every other environment uses the
+    PostgreSQL ledger over ``DATABASE_URL`` (the engine connects on first use, so
+    building the ledger needs no reachable database).
+    """
+    from sqlalchemy import create_engine
+
+    from edu_it_infrastructure.fakes.generation_ledger import In_Memory_GenerationLedger
+    from edu_it_infrastructure.persistence.generation_ledger import Postgres_GenerationLedger
+
+    settings = settings if settings is not None else CompositionSettings.from_env()
+    clock = clock if clock is not None else System_Clock()
+    if settings.environment is Environment.TEST:
+        return In_Memory_GenerationLedger(clock)
+    return Postgres_GenerationLedger(create_engine(settings.database_url), clock)
+
+
+def build_credential_source(settings: CompositionSettings) -> CredentialSource:
+    """Select where the live provider key comes from (ai-content Req 1.7, 1.10).
+
+    Exactly one of ``LLM_PROVIDER_API_KEY`` (local development) and
+    ``LLM_PROVIDER_API_KEY_SECRET_ID`` (AWS Secrets Manager, production) must be
+    set. Nothing is read here: the key is read on first use.
+    """
+    key = settings.llm_provider_api_key
+    secret_id = settings.llm_provider_api_key_secret_id
+    if key is not None and secret_id is not None:
+        raise ProviderSelectionError(
+            "LLM_PROVIDER_API_KEY and LLM_PROVIDER_API_KEY_SECRET_ID are both set; set only one"
+        )
+    if key is None and secret_id is None:
+        raise ProviderSelectionError(
+            "LLM_PROVIDER_BACKEND=live needs LLM_PROVIDER_API_KEY or "
+            "LLM_PROVIDER_API_KEY_SECRET_ID; neither is set"
+        )
+    if secret_id is not None:
+        return SecretsManagerCredentialSource(secret_id)
+    assert key is not None
+    return EnvironmentCredentialSource(key.get_secret_value())
+
+
+def build_llm_provider(
+    settings: CompositionSettings | None,
+    job_scope: JobScope,
+    *,
+    role: LLMRole = LLMRole.GENERATION,
+    prompt_renderer: PromptRenderer | None = None,
+) -> LLMProvider:
+    """Select the ``LLMProvider`` from configuration (ai-content Req 1.7, 2.1).
+
+    Selection table (``EDU_IT_ENV`` by ``LLM_PROVIDER_BACKEND``):
+
+    ============= ======= ======= =======
+    environment   fake    replay  live
+    ============= ======= ======= =======
+    test          yes     yes     refused
+    development   yes     yes     yes
+    production    refused refused yes
+    ============= ======= ======= =======
+
+    A refusal raises :class:`ProviderSelectionError` before anything is
+    constructed. Every provider is bound to ``job_scope``: the budget gate runs
+    before each attempt and each attempt is recorded in the scope's ledger. The
+    live backend resolves its vendor adapter through the registry; this module
+    names no vendor.
+
+    ``prompt_renderer`` renders a pinned prompt (the worker passes a ``PromptStore``-backed
+    one; infrastructure does not import the worker). The live backend requires it, so the
+    vendor adapter always receives the rendered prompt text (Req 1.7, 1.10).
+    """
+    settings = settings if settings is not None else CompositionSettings.from_env()
+    backend = settings.llm_provider_backend
+    env = settings.environment
+    if backend is LLMBackend.LIVE and env is Environment.TEST:
+        raise ProviderSelectionError(
+            "refusing to start: LLM_PROVIDER_BACKEND=live cannot be used with EDU_IT_ENV=test"
+        )
+    if backend is not LLMBackend.LIVE and env.is_production:
+        raise ProviderSelectionError(
+            f"refusing to start: LLM_PROVIDER_BACKEND={backend.value} cannot be used "
+            "with EDU_IT_ENV=production"
+        )
+
+    gate = LedgerAttemptGate(job_scope)
+    sink = LedgerUsageSink(job_scope)
+    is_verifier = role is LLMRole.VERIFIER
+    model = settings.llm_model_verifier if is_verifier else settings.llm_model_generation
+
+    if backend is LLMBackend.FAKE:
+        return Fake_LLMProvider(gate=gate, sink=sink)
+    if backend is LLMBackend.REPLAY:
+        store = FixtureStore(Path(settings.llm_fixture_dir))
+        return LLMEngine(
+            ReplayTransport(store),
+            model=model or "replay-model",
+            gate=gate,
+            sink=sink,
+        )
+
+    # Live: every setting it needs must be present; none is guessed.
+    missing = [
+        name
+        for name, value in (
+            ("LLM_PROVIDER_ENDPOINT", settings.llm_provider_endpoint),
+            ("LLM_PROVIDER_ALLOWED_HOSTS", settings.llm_provider_allowed_hosts),
+            ("LLM_MODEL_VERIFIER" if is_verifier else "LLM_MODEL_GENERATION", model),
+            ("LLM_PRICES", settings.llm_prices),
+        )
+        if not value
+    ]
+    if missing:
+        raise ProviderSelectionError("LLM_PROVIDER_BACKEND=live needs " + ", ".join(missing))
+    credentials = build_credential_source(settings)  # exactly one of key and secret id
+    assert settings.llm_provider_endpoint is not None  # narrowed by `missing`
+    assert model is not None
+
+    vendor_name = settings.llm_provider_vendor
+    if vendor_name is None:
+        load_vendors()
+        names = registered_vendors()
+        if len(names) != 1:
+            raise ProviderSelectionError(
+                "LLM_PROVIDER_VENDOR must name one registered vendor "
+                f"(registered: {', '.join(names) or 'none'})"
+            )
+        vendor_name = names[0]
+    try:
+        adapter = get_vendor(vendor_name)
+    except LookupError as err:
+        raise ProviderSelectionError(str(err)) from err
+
+    if prompt_renderer is None:
+        raise ProviderSelectionError(
+            "LLM_PROVIDER_BACKEND=live needs a prompt renderer (prompt_renderer)"
+        )
+    allowed_hosts = frozenset(settings.llm_provider_allowed_hosts)
+    store = FixtureStore(Path(settings.llm_fixture_dir))
+    transport = LiveTransport(
+        adapter=adapter,
+        endpoint=settings.llm_provider_endpoint,
+        credentials=credentials,
+        allowed_hosts=allowed_hosts,
+        prices={m: ModelPrice(i, o) for m, (i, o) in settings.llm_prices.items()},
+        record_to=store if settings.llm_record else None,
+    )
+    return LLMEngine(
+        transport,
+        model=model,
+        gate=gate,
+        sink=sink,
+        binding=ProviderBinding(allowed_hosts, lambda: transport.credential_id),
+        prompt_renderer=prompt_renderer,
+    )
 
 
 def build_fake_clock() -> Clock:

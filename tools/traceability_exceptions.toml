@@ -1,0 +1,15 @@
+# Requirements verified without an automated test (ai-content, Req 23.5).
+# Each entry needs an `id` (criterion, e.g. "1.11") and a non-empty `reason`.
+# The project owner reviews this file; add an entry only when no test can claim
+# the requirement.
+
+[[exception]]
+id = "1.11"
+reason = "Owner action: the project owner records the vendor choice in the ADR 0007 addendum before any Live_Provider call."
+
+[[exception]]
+id = "24.13"
+reason = "Owner action: the project owner hand-authors and merges the Networking_Track brief before the Live_Run."
+[[exception]]
+id = "24.4"
+reason = "Verified only by the Live_Run itself (task 28): it needs the Live_Provider and a real model call, which no automated test may make (Requirement 22.4). The Verification_Checks are covered by the Requirement 7 tests on the Replay_Provider."

@@ -196,6 +196,17 @@ jobs:
       - name: content
         run: uv run --frozen edu-it-content validate --allow-pending --content-root content
 
+      # -- Prompt immutability (ai-content Req 4.2, 4.3) --------------------
+      # An existing file under prompts/ must never be modified, renamed or
+      # deleted; a text change needs a new version file. The diff runs against
+      # the merge base with origin/main, so it needs history: the checkout above
+      # uses fetch-depth: 0, and the base branch is fetched explicitly in case
+      # the checkout was narrowed to the pushed branch.
+      - name: Prompt immutability
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          uv run --frozen python tools/check_prompt_immutability.py --base origin/main
+
       # -- Step 4: dependency-audit (Req 21.1) ------------------------------
       # Audits both dependency trees for known vulnerabilities. pip-audit covers
       # the resolved Python workspace; `npm audit` covers apps/web. Either tool

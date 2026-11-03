@@ -81,7 +81,7 @@ derived from the injected `Clock`; the domain never reads the wall clock directl
 | Provenance | `content_provenance` (shared `origin`/`model`/`prompt_id`/`prompt_version`/`generation_date`/`reviewed_by`/`reviewed_at` + `content_version` + `stable_id`) |
 | Progress | `enrollment`, `module_progress` (incl. `tested_out`), `lesson_completion`, `lab_session`, `lab_run`, `lab_task_completion`, `quiz_attempt`, `answer`, `project_submission` |
 | Mastery and review | `mastery` (0–100 per user × concept), `mastery_event`, `review_schedule`, `review_attempt`, `hint_reveal` |
-| AI/review ops | `review_queue_item`, `variant`, `generation_job`, `item_statistic`, `path_recommendation`, `budget_ledger` |
+| AI/review ops | `review_queue_item` (review columns added by `0005_ai_content`), `variant` (review columns added by `0005_ai_content`), `variant_revision` (created by `0005_ai_content`), `item_flag` (created by `0005_ai_content`), `item_observation` (created by `0005_ai_content`, personal data), `ai_cursor` (created by `0005_ai_content`), `problem_report` (created by `0005_ai_content`, personal data), `advisor_audit_log` (created by `0005_ai_content`, personal data), `generation_job` (job identity, stage, prompt and cost-cap columns added by revision `0005_ai_content`), `item_statistic`, `path_recommendation` (`stable_id`, `created_at`, `dismissed_at` and `run_id` added by `0005_ai_content`, personal data), `budget_ledger` (per-attempt columns added by `0005_ai_content`) |
 | Assessments | `placement`, `final_assessment` (schema and interfaces only for now) |
 
 ---
@@ -143,6 +143,10 @@ erDiagram
     concept ||--o{ mastery : measured_by
     concept ||--o{ review_schedule : reviewed_on
     concept ||--o{ item_statistic : summarized_by
+    user ||--o{ item_observation : answers
+    user ||--o{ problem_report : files
+    user ||--o{ advisor_audit_log : audited
+    item_observation }o--|| item_statistic : folded_into
 
     enrollment ||--o{ module_progress : spans
     module_progress ||--o{ lesson_completion : includes
@@ -158,7 +162,8 @@ erDiagram
     review_schedule ||--o{ review_attempt : attempted_in
     hint_reveal }o--|| question : on
 
-    review_queue_item }o--|| variant : targets
+    review_queue_item }o--o| variant : targets
+    variant ||--o{ variant_revision : has_revisions
     generation_job ||--o{ variant : produces
     generation_job ||--o{ budget_ledger : charges
     user ||--o{ path_recommendation : recommended_for
@@ -405,9 +410,19 @@ erDiagram
 
     review_queue_item {
         int id PK
-        int variant_id FK
+        string stable_id UK
+        int variant_id FK "nullable"
         string state
         int reviewer_id FK
+        string kind
+        string target_kind
+        string target_stable_id
+        string revision_content_version
+        string track_stable_id
+        string reason
+        string comment
+        datetime decided_at
+        datetime created_at
     }
     variant {
         int id PK
@@ -415,6 +430,37 @@ erDiagram
         int question_id FK
         int generation_job_id FK
         string lifecycle_state
+        string parent_question_stable_id
+        string track_stable_id
+        string approved_content_version
+        string withdrawn_reason
+        datetime created_at
+    }
+    variant_revision {
+        int id PK
+        int variant_id FK
+        string content_version
+        string body_json
+        string state
+        string origin
+        string model
+        string prompt_id
+        string prompt_version
+        datetime generation_date
+        int reviewed_by FK
+        datetime reviewed_at
+        string findings_json
+        datetime created_at
+    }
+    item_flag {
+        int id PK
+        string item_kind
+        string item_stable_id
+        string reason_kind
+        string detail
+        datetime flagged_at
+        datetime cleared_at
+        int cleared_by_task FK
     }
     generation_job {
         int id PK
@@ -422,6 +468,18 @@ erDiagram
         string model
         int tokens
         int cost_cents
+        string stable_id UK
+        string kind
+        string track_stable_id
+        string stage
+        string unit_key
+        string prompt_id
+        string prompt_version
+        int cost_cap_cents
+        string branch
+        datetime started_at
+        datetime finished_at
+        text findings_json
     }
     item_statistic {
         int id PK
@@ -429,18 +487,73 @@ erDiagram
         int variant_id FK
         float correct_rate
         float avg_time_ms
+        string item_kind
+        string item_stable_id
+        int sample_count
+        int correct_count
+        int timed_count
+        bigint total_time_ms
+        datetime updated_at
+    }
+    item_observation {
+        int id PK
+        int user_id FK
+        string item_kind
+        string item_stable_id
+        string variant_ref
+        boolean correct
+        int elapsed_ms
+        datetime observed_at
+    }
+    ai_cursor {
+        string name PK
+        bigint value
+    }
+    problem_report {
+        int id PK
+        string stable_id UK
+        int user_id FK
+        string item_kind
+        string item_stable_id
+        string content_version
+        string category
+        text comment
+        datetime created_at
     }
     path_recommendation {
         int id PK
+        string stable_id UK
         int user_id FK
         string source
         string ordering
+        datetime created_at
+        datetime dismissed_at
+        string run_id
+    }
+    advisor_audit_log {
+        int id PK
+        string stable_id UK
+        int user_id FK
+        string run_id
+        string handle
+        string source
+        string outcome
+        text reason
+        text returned_ids_json
+        datetime recorded_at
     }
     budget_ledger {
         int id PK
         int generation_job_id FK
         int tokens
         int cost_cents
+        int attempt_no
+        string model
+        int input_tokens
+        int output_tokens
+        string outcome
+        string track_stable_id
+        datetime recorded_at
     }
 
     placement {
@@ -627,12 +740,42 @@ level the schema enforces the following normative behavior:
 
 | Entity | Purpose |
 |--------|---------|
-| `review_queue_item` | A variant awaiting reviewer action (`state`, `reviewer_id`). |
-| `variant` | A generated question variant with a `lifecycle_state` (Generated → Verified → PendingReview → Approved → Served → Withdrawn, with Flagged/Rejected terminal states). Only approved variants are served. |
+| `review_queue_item` | A Review_Task: a variant, an edited revision or a flagged item awaiting reviewer action (`state`, `reviewer_id`). |
+| `variant_revision` | One reviewable text of a variant (FR and EN prompt, options, key) keyed by `(variant_id, content_version)`. A reviewer edit of an Approved or Served variant adds a revision and leaves the variant state alone; `variant.approved_content_version` names the revision that is served. |
+| `item_flag` | An active or cleared flag on a question, variant, lesson or lab, addressed by `(item_kind, item_stable_id)`. An item with an active flag is never served. |
+| `variant` | A generated question variant with a `lifecycle_state` (Generated → Verified → PendingReview → Approved → Served → Withdrawn, Withdrawn → Approved on reviewer reinstatement, with Flagged/Rejected terminal states). Only approved variants are served. |
 | `generation_job` | An AI generation job recording `status`, `model`, `tokens`, and `cost_cents` — recorded even when output is invalid (scenario 4.4, D6). |
-| `item_statistic` | Per-concept / per-variant `correct_rate` and `avg_time_ms` used to withdraw variants with abnormal statistics. |
-| `path_recommendation` | A learner path recommendation with its `source` (LLM advisor or the rule-based fallback) and the resulting `ordering`. |
+| `item_statistic` | Per-item aggregate `correct_rate` and `avg_time_ms` (addressed by `(item_kind, item_stable_id)`) used to flag items with abnormal statistics. It holds the integer sums the fold keeps and no learner link. |
+| `item_observation` | One answer to a question, lesson or lab, appended by the quiz and review use cases and folded into `item_statistic` by the worker. Holds the learner, so it is personal data. |
+| `ai_cursor` | A named position of an AI worker job (`item_quality`: the last `item_observation` id folded). |
+| `problem_report` | A learner's report on a question, lesson or lab, with the `content_version` the learner saw, a `category` and an optional free-text `comment`. Holds the learner and the comment, so it is personal data. |
+| `path_recommendation` | A learner path recommendation with its `source` (LLM advisor or the rule-based fallback), the resulting `ordering`, the `run_id` of the advisor run, `created_at` and the learner's `dismissed_at`. Holds the learner, so it is personal data. |
+| `advisor_audit_log` | One row per advisor run: the per-run Pseudonymous_Handle, `source`, `outcome`, the `reason` a model order was discarded and the identifiers the model returned. Holds the learner, so it is personal data. |
 | `budget_ledger` | The token/cost ledger charged by each generation job. |
+
+Revision `0005_ai_content` (additive, inspect-then-add, like `0002_labs_runtime`) adds these columns:
+
+| Table | Added columns |
+|-------|---------------|
+| `generation_job` | `stable_id` (unique), `kind` (`stage`, `refill`, `advisor`, `eval`), `track_stable_id`, `stage`, `unit_key`, `prompt_id`, `prompt_version`, `cost_cap_cents`, `branch`, `started_at`, `finished_at`, `findings_json`. `status`, `model`, `tokens` and `cost_cents` stay as the job totals. |
+| `budget_ledger` | `attempt_no`, `model`, `input_tokens`, `output_tokens`, `outcome` (`ok`, `invalid`, `timeout`, `unavailable`, `binding`), `track_stable_id`, `recorded_at`. `tokens` and `cost_cents` hold the attempt's totals. One row per attempt. |
+
+| `variant` | `parent_question_stable_id`, `track_stable_id`, `approved_content_version`, `withdrawn_reason`, `created_at`. All nullable so earlier rows survive. `lifecycle_state` keeps the D6 state names. Index `ix_variant_parent_state` serves the pool-size queries. |
+| `item_statistic` | `item_kind`, `item_stable_id` (unique together, both nullable so earlier rows survive), `sample_count`, `correct_count`, `timed_count` (answers that had an elapsed time), `total_time_ms` (sum of clamped elapsed times; NOT NULL, default 0) and `updated_at`. `correct_rate` and `avg_time_ms` stay as the derived columns written with each fold. Index `uq_item_statistic_item`. |
+| `review_queue_item` | `stable_id` (unique, backfilled as `task-<id>` for earlier rows), `kind` (`new_variant`, `edited_revision`, `flagged_item`), `target_kind` (`variant`, `question`, `lesson`, `lab`), `target_stable_id`, `revision_content_version`, `track_stable_id`, `reason`, `comment`, `decided_at`, `created_at`. `variant_id` becomes nullable. `state` is `open` until decided, then `approved`, `rejected` or `changes_requested`. Indexes `ix_review_queue_item_page` (keyset page of open tasks per track) and `ix_review_queue_item_target`. |
+
+The revision also creates `variant_revision` (columns in the ER diagram above; unique `(variant_id, content_version)`; `state` is `PendingReview`, `Approved` or `Rejected`; `reviewed_by` references a reviewer account like `content_provenance.reviewed_by`). `downgrade` drops the table, the indexes and the added columns, restores `review_queue_item.variant_id` as NOT NULL and deletes the tasks without a variant, which cannot exist before this revision.
+
+The revision also creates `item_flag`: an item (`item_kind` is `question`, `variant`, `lesson` or `lab`, with `item_stable_id`; no foreign key because the kind varies) that serving must skip, with `reason_kind` (`reports` or `statistics`), `detail`, `flagged_at`, and `cleared_at` and `cleared_by_task` (references `review_queue_item.id`) once a reviewer clears it. The partial unique index `uq_item_flag_active` on `(item_kind, item_stable_id)` where `cleared_at` is null allows at most one active flag per item and any number of cleared ones. The read port `ItemFlagReader.active_flags(keys)` lets approved-only serving exclude flagged items; the write side (`flag`, `clear_flag`) is part of the `ItemQualityRepository` of the quality loop (Milestone C).
+
+The revision also creates `item_observation`: `id` (monotonic), `user_id` (references `user`), `item_kind` and `item_stable_id` (no foreign key, like `item_flag`; a served variant is observed as `variant`), `variant_ref` (set for a variant), `correct`, `elapsed_ms` (optional, client reported, clamped to `ITEM_ELAPSED_MS_MAX` before it is stored) and `observed_at` (injected clock). It is append-only. Indexes `ix_item_observation_user` and `ix_item_observation_observed_at` serve deletion and retention. It also creates `ai_cursor` (`name` primary key, `value`). `ItemQualityRepository.apply` writes the statistics and the cursor in one transaction, so the cursor never drifts from the statistics it describes.
+
+The revision also creates `problem_report`: `id`, `stable_id` (unique), `user_id` (references `user`), `item_kind` and `item_stable_id` (no foreign key, like `item_flag`), `content_version` (the version the learner saw), `category` (one of `PROBLEM_REPORT_CATEGORIES`), `comment` (optional, at most `PROBLEM_REPORT_COMMENT_MAX_CHARS`, never sent to an LLM) and `created_at` (injected clock). Indexes `ix_problem_report_user`, `ix_problem_report_item` (item and version, for counting distinct reporters) and `ix_problem_report_created_at` serve deletion, the threshold count and retention. `ProblemReportRepository` offers `add`, `get`, `reporters_for(item, version)` and `delete_for_user`.
+
+The revision also adds to the existing `path_recommendation`: `stable_id` (unique, backfilled as `rec-<id>` for rows that predate the revision), `created_at`, `dismissed_at` (set once by the learner's dismissal; a repeat keeps the first value) and `run_id`; `source` stays `llm` or `rule-based` and `ordering` holds a JSON list of concept ids. It creates `advisor_audit_log`: `id`, `stable_id` (unique), `user_id` (references `user`), `run_id`, `handle` (the per-run Pseudonymous_Handle), `source`, `outcome`, `reason`, `returned_ids_json` and `recorded_at` (injected clock). Indexes `ix_path_recommendation_user_created` (latest undismissed), `ix_path_recommendation_created_at`, `ix_advisor_audit_log_user` and `ix_advisor_audit_log_recorded_at` serve reading, deletion and retention. `PathRecommendationRepository` offers `record_run` (the recommendation and its audit row in one transaction), `get`, `latest_undismissed`, `dismiss` (idempotent), `audit_entries` and `delete_for_user`.
+
+None of these tables holds personal data beyond the reviewer reference, except `item_observation` (the learner), `problem_report` (the learner and the comment), `advisor_audit_log` and `path_recommendation` (the learner), which are registered in Section 13. Later ai-content tasks extend this revision and this section for the
+tables they introduce.
 
 The variant lifecycle and the generation gates are authoritative in
 `docs/AI-CONTENT-DESIGN.md` (D6); this group captures only the persisted state.
@@ -680,12 +823,16 @@ personal data are out of scope for export/deletion/retention and are listed as "
 | `review_schedule` | Yes | ✓ | ✓ | ✓ |
 | `review_attempt` | Yes | ✓ | ✓ | ✓ |
 | `hint_reveal` | Yes | ✓ | ✓ | ✓ |
-| `path_recommendation` | Yes (per-user recommendation) | ✓ | ✓ | ✓ |
+| `item_observation` | Yes (a learner's answer to an item: `user_id`, item, correctness, elapsed time) | ✓ | ✓ (deleted with the user; aggregates in `item_statistic` are kept and carry no learner link) | ✓ (`AI_RETENTION_OBSERVATION`, 90 days) |
+| `problem_report` | Yes (a learner's report: `user_id`, item, version, category, free-text `comment`) | ✓ | ✓ (deleted with the user) | ✓ (`AI_RETENTION_PROBLEM_REPORT`, 365 days) |
+| `advisor_audit_log` | Yes (one row per advisor run: `user_id`, the per-run `handle`, source, outcome, reason and the identifiers the model returned) | ✓ | ✓ (deleted with the user) | ✓ (`AI_RETENTION_AUDIT`, 90 days) |
+| `path_recommendation` | Yes (per-user recommendation: `user_id`, `ordering`, `source`, `run_id`, `created_at` and the learner's `dismissed_at`) | ✓ (dismissals included) | ✓ (deleted with the user, dismissals with it) | ✓ (`AI_RETENTION_RECOMMENDATION`, 90 days) |
 | `placement` | Yes | ✓ | ✓ | ✓ |
 | `final_assessment` | Yes | ✓ | ✓ | ✓ |
 | `track`, `module`, `lesson`, `lab`, `lab_task`, `lab_check`, `project`, `rubric`, `rubric_criterion`, `quiz`, `question`, `question_option`, `concept`, `prerequisite` | No (catalog) | not personal data | not personal data | not personal data |
 | `content_provenance` | No (provenance; `reviewed_by` references a reviewer account, covered via `user`) | not personal data | not personal data | not personal data |
-| `review_queue_item`, `variant`, `generation_job`, `item_statistic`, `budget_ledger` | No (AI/review ops) | not personal data | not personal data | not personal data |
+| `variant_revision` | No (AI/review ops; `reviewed_by` references a reviewer account, covered via `user`) | not personal data | not personal data | not personal data |
+| `review_queue_item`, `variant`, `generation_job`, `item_statistic`, `budget_ledger`, `item_flag`, `ai_cursor` | No (AI/review ops) | not personal data | not personal data | not personal data |
 
 Lab tables (additive columns): added columns are covered by the same export, deletion, and retention paths as their parent rows; no lab column is excluded.
 

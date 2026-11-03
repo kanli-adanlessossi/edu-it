@@ -1,0 +1,229 @@
+{
+  "outcomes": [
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.1-chmod-symbolic.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.1-chmod-symbolic.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.2-chmod-octal.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.2-chmod-octal.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.3-chown-chgrp.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.3-chown-chgrp.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.4-setgid-umask.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.4-setgid-umask.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.5-command-output.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.cp.5-command-output.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.1-ls-l-fields.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.1-ls-l-fields.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.2-rwx-meaning.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.2-rwx-meaning.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.3-octal-from-symbolic.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.3-octal-from-symbolic.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.4-group-read-true-false.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.4-group-read-true-false.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.5-command-output.en",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "selected [0]",
+      "id": "answer-key.question.rp.5-command-output.fr",
+      "kind": "answer-key",
+      "passed": true
+    },
+    {
+      "detail": "2 term pair(s)",
+      "id": "glossary-terms.concept.changing-permissions",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "2 term pair(s)",
+      "id": "glossary-terms.concept.processes",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "3 term pair(s)",
+      "id": "glossary-terms.concept.reading-permissions",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "2 term pair(s)",
+      "id": "glossary-terms.lab.fix-the-shared-folder",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "2 term pair(s)",
+      "id": "glossary-terms.lab.world-writable-entries",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "2 term pair(s)",
+      "id": "glossary-terms.question.cp.2-chmod-octal",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "2 term pair(s)",
+      "id": "glossary-terms.question.cp.3-chown-chgrp",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "3 term pair(s)",
+      "id": "glossary-terms.question.cp.4-setgid-umask",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "1 term pair(s)",
+      "id": "glossary-terms.question.cp.5-command-output",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "1 term pair(s)",
+      "id": "glossary-terms.question.rp.1-ls-l-fields",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "3 term pair(s)",
+      "id": "glossary-terms.question.rp.2-rwx-meaning",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "1 term pair(s)",
+      "id": "glossary-terms.question.rp.3-octal-from-symbolic",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "2 term pair(s)",
+      "id": "glossary-terms.question.rp.4-group-read-true-false",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "4 term pair(s)",
+      "id": "glossary-terms.question.rp.5-command-output",
+      "kind": "glossary-terms",
+      "passed": true
+    },
+    {
+      "detail": "output validates",
+      "id": "schema-conformance.quiz.changing-permissions",
+      "kind": "schema-conformance",
+      "passed": true
+    },
+    {
+      "detail": "output validates",
+      "id": "schema-conformance.quiz.reading-permissions",
+      "kind": "schema-conformance",
+      "passed": true
+    }
+  ],
+  "pass_rate": "1.0000",
+  "passed": 36,
+  "prompt_versions": {
+    "glossary": "1",
+    "quiz": "1",
+    "verify_answer": "1"
+  },
+  "suite": "golden",
+  "total": 36
+}

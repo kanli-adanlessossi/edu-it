@@ -140,6 +140,7 @@ Approved by a reviewer, and that only approved variants are served.
 - `PendingReview` → `Rejected`: reviewer rejects.
 - `Approved` → `Served`: only approved variants are served.
 - `Served` → `Withdrawn`: abnormal correct-rate/time or reported.
+- `Withdrawn` → `Approved`: a reviewer approves the flag review (reinstatement; amendment D3).
 
 ### State diagram
 
@@ -155,10 +156,11 @@ stateDiagram-v2
     Served --> Withdrawn: abnormal correct-rate/time or reported
     Flagged --> [*]
     Rejected --> [*]
-    Withdrawn --> [*]
+    Withdrawn --> Approved: reviewer approves the flag review (reinstatement)
 ```
 
-`Flagged`, `Rejected`, and `Withdrawn` are terminal. A `Flagged` variant is never served; it
+`Flagged` and `Rejected` are terminal. `Withdrawn` is terminal except for reviewer
+reinstatement back to `Approved`. A `Flagged` variant is never served; it
 waits for review disposition. A `Withdrawn` variant was previously `Served` but is pulled from
 the pool on abnormal correct-rate/time or when reported. The variant pool is refilled ahead of
 time by `apps/worker` (variant-pool refill) so there is always a supply of approved variants to

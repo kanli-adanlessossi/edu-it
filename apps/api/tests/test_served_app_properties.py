@@ -109,6 +109,23 @@ def _requests(served: Any) -> dict[tuple[str, str], dict[str, Any]]:
         ("POST", "/lab-sessions/{session_id}/grading-runs"): {"body": {}, "headers": _KEY},
         ("GET", "/lab-sessions/{session_id}/grading-runs/{run_id}"): {},
         ("GET", "/lab-sessions/{session_id}/grading-runs/{run_id}/events"): {},
+        ("GET", "/review-tasks"): {},
+        ("GET", "/review-tasks/{task_id}"): {},
+        ("POST", "/review-tasks/{task_id}/approve"): {"body": {}},
+        ("POST", "/review-tasks/{task_id}/reject"): {"body": {}},
+        ("POST", "/review-tasks/{task_id}/request-changes"): {"body": {"comment": "fix"}},
+        ("POST", "/review-tasks/{task_id}/edit"): {"body": {"body": {"prompt": {"en": "x"}}}},
+        ("POST", "/problem-reports"): {
+            "body": {
+                "item_kind": "lesson",
+                "item_id": "l",
+                "content_version": "v1",
+                "category": "unclear",
+            },
+            "headers": _KEY,
+        },
+        ("GET", "/path-recommendation"): {},
+        ("POST", "/path-recommendation/{recommendation_id}/dismissal"): {"body": {}},
         # Public routes that are still unsafe, for the CSRF property.
         ("POST", "/auth/sign-up"): {
             "body": {"email": "csrf@example.test", "password": _H.PASSWORD}

@@ -63,6 +63,7 @@ class LabResponse(_Response):
     concept_ids: list[str]
     tasks: list[LabTaskResponse]
     learner_files: list[str]
+    content_version: str = ""
 
 
 class StartLabRequest(_Request):

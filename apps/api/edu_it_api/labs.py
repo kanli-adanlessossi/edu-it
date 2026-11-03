@@ -172,6 +172,7 @@ def build_labs_router(services: LabServices) -> APIRouter:
                 for t in lab.tasks
             ],
             learner_files=list(lab.learner_files),
+            content_version=lab.content_version,
         )
 
     @router.post(

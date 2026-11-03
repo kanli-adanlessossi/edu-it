@@ -34,9 +34,23 @@ def _maxmem(n: int, r: int) -> int:
     return 128 * n * r + 1024 * 1024 * 2
 
 
+def _password_bytes(raw: str) -> bytes:
+    """Encode ``raw`` for scrypt.
+
+    OpenSSL's scrypt gives the empty password and ``"\x00"`` the same key, so a password made
+    of NUL bytes could sign in as an empty one. A password with a NUL byte is therefore replaced
+    by a fixed-length digest of itself. Passwords without NUL keep their plain encoding, so
+    every existing stored hash still verifies.
+    """
+    data = raw.encode("utf-8")
+    if b"\x00" in data:
+        return b"nul-sha256:" + hashlib.sha256(data).hexdigest().encode("ascii")
+    return data
+
+
 def _derive(raw: str, salt: bytes, n: int, r: int, p: int, key_len: int) -> bytes:
     return hashlib.scrypt(
-        raw.encode("utf-8"),
+        _password_bytes(raw),
         salt=salt,
         n=n,
         r=r,

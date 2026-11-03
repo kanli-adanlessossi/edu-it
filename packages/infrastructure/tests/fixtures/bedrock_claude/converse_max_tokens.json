@@ -1,0 +1,6 @@
+{
+  "metrics": {"latencyMs": 4100},
+  "output": {"message": {"role": "assistant", "content": [{"text": "{\"title\": \"Netw"}]}},
+  "stopReason": "max_tokens",
+  "usage": {"inputTokens": 1000, "outputTokens": 4096, "totalTokens": 5096}
+}

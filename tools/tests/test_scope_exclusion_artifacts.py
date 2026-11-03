@@ -160,6 +160,11 @@ _INFRA_PKG = REPO_ROOT / "packages" / "infrastructure" / "edu_it_infrastructure"
 _ALLOWED_AI_PATHS = {
     _DOMAIN_PKG / "ports" / "llm_provider.py",
     _INFRA_PKG / "fakes" / "llm_provider.py",
+    # ai-content spec: pure domain generation rules (stage order, unit planning).
+    _DOMAIN_PKG / "ai" / "generation.py",
+    # ai-content spec, task 12.2: the VariantRepository port and its in-memory fake.
+    _DOMAIN_PKG / "ports" / "variants.py",
+    _INFRA_PKG / "fakes" / "variants.py",
 }
 
 

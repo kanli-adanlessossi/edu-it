@@ -223,6 +223,10 @@ _TYPE_BY_FILE_STEM: Mapping[str, str] = {
     "quizzes": "quiz",
 }
 
+#: Per-track brief (a ``BriefDraft`` object, the brief Stage marker; ai-content
+#: Req 5.7, 24.13). It is not a per-type item list, so the loader skips it.
+BRIEF_FILE = "brief.json"
+
 #: Subdirectories of the content root that never hold per-type catalog files.
 _NON_TRACK_DIRS: frozenset[str] = frozenset({"mdx"})
 
@@ -286,6 +290,8 @@ def load_content(root: str | Path) -> LoadedContent:
         for json_file in sorted(track_dir.glob("*.json")):
             if json_file.name == PENDING_REVIEW_FILE:
                 continue  # review bookkeeping, not a content type (Req 20.13)
+            if json_file.name == BRIEF_FILE:
+                continue  # hand-authored track brief (BriefDraft), not a catalog list
             found_any = True
             type_key = _TYPE_BY_FILE_STEM.get(json_file.stem)
             if type_key is None:
@@ -356,6 +362,7 @@ def validate_content(
     *,
     repo_root: Path | None = None,
     usable_run_budget_seconds: float | None = None,
+    include_review_rule: bool = True,
 ) -> list[ValidationFailure]:
     """Run the six ordered checks over ``content`` and return every failure.
 
@@ -388,8 +395,10 @@ def validate_content(
     # 5. MDX allowlist (Req 13.5, ADR A5).
     failures.extend(_check_mdx(parsed_by_type, content.root))
 
-    # 6. AI reviewer present (Req 13.6).
-    failures.extend(_check_reviewer(parsed_by_type))
+    # 6. AI reviewer present (Req 13.6). Only the Generator skips it, so a
+    #    Generation_Branch of fresh ``ai`` items is rejected by the CLI and CI.
+    if include_review_rule:
+        failures.extend(_check_reviewer(parsed_by_type))
 
     # 7. Lab rules (Req 18.4, 20.1-20.8). The bilingual and reviewer rules
     #    above already cover labs.
@@ -576,19 +585,36 @@ def _check_mdx(
 
 
 def _check_reviewer(parsed_by_type: Mapping[str, Sequence[BaseModel]]) -> list[ValidationFailure]:
-    """Report any ``origin == ai`` item without a recorded reviewer (Req 13.6)."""
+    """Report any ``origin == ai`` item missing ``reviewed_by`` or ``reviewed_at``.
+
+    Req 13.6, tightened by ai-content Req 6.1: both reviewer fields are required.
+    """
     failures: list[ValidationFailure] = []
     for items in parsed_by_type.values():
         for item in items:
             provenance = getattr(item, "provenance", None)
             if provenance is None:
                 continue
-            if provenance.origin is Origin.AI and not provenance.reviewed_by:
+            if provenance.origin is not Origin.AI:
+                continue
+            missing = [
+                name
+                for name, value in (
+                    ("reviewed_by", provenance.reviewed_by),
+                    ("reviewed_at", provenance.reviewed_at),
+                )
+                if not value
+            ]
+            if missing:
                 failures.append(
                     ValidationFailure(
                         rule=_RULE_REVIEWER,
                         stable_id=provenance.stable_id,
-                        detail="origin is 'ai' but no reviewer is recorded in provenance",
+                        detail=(
+                            "origin is 'ai' but provenance has no "
+                            + " or ".join(missing)
+                            + " recorded"
+                        ),
                     )
                 )
     return failures

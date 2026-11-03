@@ -123,6 +123,8 @@ class Content_LabCatalog:
                 archived=_is_archived(item),
                 text=_localized(payload.get("title")),
                 learner_files=tuple(str(f) for f in payload.get("learner_files", ())),
+                content_version=str(getattr(item, "content_version", "") or ""),
+                lesson_id=str(payload.get("lesson_stable_id") or ""),
             )
         return labs
 

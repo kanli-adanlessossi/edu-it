@@ -1,0 +1,626 @@
+{
+  "cases": [
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.1-chmod-symbolic.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "`chmod u+x script.sh`",
+        "`chmod +x script.sh`",
+        "`chmod a+x script.sh`",
+        "`chmod u=x script.sh`"
+      ],
+      "question": "Which `chmod` command uses symbolic notation to add execute permission for the owner only, leaving all other bits unchanged?",
+      "source": "question.cp.1-chmod-symbolic"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.1-chmod-symbolic.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "`chmod u+x script.sh`",
+        "`chmod +x script.sh`",
+        "`chmod a+x script.sh`",
+        "`chmod u=x script.sh`"
+      ],
+      "question": "Quelle commande `chmod` utilise la notation symbolique pour ajouter la permission d'exécution au propriétaire uniquement, sans modifier les autres bits ?",
+      "source": "question.cp.1-chmod-symbolic"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.2-chmod-octal.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "`chmod 755 program`",
+        "`chmod 775 program`",
+        "`chmod 711 program`",
+        "`chmod 644 program`"
+      ],
+      "question": "You want a file to be readable, writable, and executable by its owner, and readable and executable by group and others. Which octal `chmod` argument sets exactly that?",
+      "source": "question.cp.2-chmod-octal"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.2-chmod-octal.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "`chmod 755 program`",
+        "`chmod 775 program`",
+        "`chmod 711 program`",
+        "`chmod 644 program`"
+      ],
+      "question": "Vous voulez qu'un fichier soit lisible, modifiable et exécutable par son propriétaire, et lisible et exécutable par le groupe et les autres. Quel argument octal de `chmod` règle exactement cela ?",
+      "source": "question.cp.2-chmod-octal"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.3-chown-chgrp.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "`chown deploy:www app.conf`",
+        "`chgrp deploy www app.conf`",
+        "`chown deploy www app.conf`",
+        "`chmod deploy:www app.conf`"
+      ],
+      "question": "Which single command changes both the owner to `deploy` and the group to `www` for the file `app.conf`?",
+      "source": "question.cp.3-chown-chgrp"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.3-chown-chgrp.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "`chown deploy:www app.conf`",
+        "`chgrp deploy www app.conf`",
+        "`chown deploy www app.conf`",
+        "`chmod deploy:www app.conf`"
+      ],
+      "question": "Quelle commande unique change à la fois le propriétaire en `deploy` et le groupe en `www` pour le fichier `app.conf` ?",
+      "source": "question.cp.3-chown-chgrp"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.4-setgid-umask.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "New files and subdirectories created inside it inherit the directory's group, so teammates keep shared access.",
+        "It makes every program in the directory run as root.",
+        "It prevents anyone except the owner from deleting files, like the sticky bit does.",
+        "It encrypts the contents of the directory at rest."
+      ],
+      "question": "Why is the setgid bit useful on a shared project directory?",
+      "source": "question.cp.4-setgid-umask"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.4-setgid-umask.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "Les nouveaux fichiers et sous-répertoires créés à l'intérieur héritent du groupe du répertoire, afin que les coéquipiers conservent un accès partagé.",
+        "Il fait exécuter en tant que root tous les programmes du répertoire.",
+        "Il empêche quiconque sauf le propriétaire de supprimer des fichiers, comme le fait le sticky bit.",
+        "Il chiffre le contenu du répertoire au repos."
+      ],
+      "question": "Pourquoi le bit setgid est-il utile sur un répertoire de projet partagé ?",
+      "source": "question.cp.4-setgid-umask"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.5-command-output.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "`-rw-r--r-- 1 user user 0 Jan  2 10:00 newfile`",
+        "`-rwxr-xr-x 1 user user 0 Jan  2 10:00 newfile`",
+        "`-rw-rw-rw- 1 user user 0 Jan  2 10:00 newfile`",
+        "`-rw------- 1 user user 0 Jan  2 10:00 newfile`"
+      ],
+      "question": "Command-output question. The current umask is `022`. You run `touch newfile && ls -l newfile`. Which permission string appears for the new regular file?",
+      "source": "question.cp.5-command-output"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.cp.5-command-output.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "`-rw-r--r-- 1 user user 0 Jan  2 10:00 newfile`",
+        "`-rwxr-xr-x 1 user user 0 Jan  2 10:00 newfile`",
+        "`-rw-rw-rw- 1 user user 0 Jan  2 10:00 newfile`",
+        "`-rw------- 1 user user 0 Jan  2 10:00 newfile`"
+      ],
+      "question": "Question de sortie de commande. Le umask courant est `022`. Vous exécutez `touch newfile && ls -l newfile`. Quelle chaîne de permissions apparaît pour le nouveau fichier ordinaire ?",
+      "source": "question.cp.5-command-output"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.1-ls-l-fields.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "`d`",
+        "`-` (a dash)",
+        "`l`",
+        "`x`"
+      ],
+      "question": "In the output of `ls -l`, which character at the very start of a line tells you the entry is a directory?",
+      "source": "question.rp.1-ls-l-fields"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.1-ls-l-fields.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "`d`",
+        "`-` (un tiret)",
+        "`l`",
+        "`x`"
+      ],
+      "question": "Dans la sortie de `ls -l`, quel caractère au tout début d'une ligne indique que l'entrée est un répertoire ?",
+      "source": "question.rp.1-ls-l-fields"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.2-rwx-meaning.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "The right to run the file as a program.",
+        "The right to read the file's contents.",
+        "The right to modify the file's contents.",
+        "The right to delete the file regardless of the directory's permissions."
+      ],
+      "question": "For a regular file, what does the `x` permission grant to the user it applies to?",
+      "source": "question.rp.2-rwx-meaning"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.2-rwx-meaning.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "Le droit d'exécuter le fichier en tant que programme.",
+        "Le droit de lire le contenu du fichier.",
+        "Le droit de modifier le contenu du fichier.",
+        "Le droit de supprimer le fichier quelles que soient les permissions du répertoire."
+      ],
+      "question": "Pour un fichier ordinaire, qu'accorde la permission `x` à l'utilisateur à qui elle s'applique ?",
+      "source": "question.rp.2-rwx-meaning"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.3-octal-from-symbolic.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "`644`",
+        "`664`",
+        "`755`",
+        "`600`"
+      ],
+      "question": "A file shows the permission string `rw-r--r--`. What is the equivalent octal notation?",
+      "source": "question.rp.3-octal-from-symbolic"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.3-octal-from-symbolic.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "`644`",
+        "`664`",
+        "`755`",
+        "`600`"
+      ],
+      "question": "Un fichier affiche la chaîne de permissions `rw-r--r--`. Quelle est la notation octale équivalente ?",
+      "source": "question.rp.3-octal-from-symbolic"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.4-group-read-true-false.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "False — the group bits are `r-x`, so the group can read and execute but not write.",
+        "True — the group can write to the file."
+      ],
+      "question": "True or false: in the permission string `-rwxr-x---`, members of the file's group are allowed to write to the file.",
+      "source": "question.rp.4-group-read-true-false"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.4-group-read-true-false.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "Faux — les bits du groupe sont `r-x`, donc le groupe peut lire et exécuter mais pas écrire.",
+        "Vrai — le groupe peut écrire dans le fichier."
+      ],
+      "question": "Vrai ou faux : dans la chaîne de permissions `-rwxr-x---`, les membres du groupe du fichier sont autorisés à écrire dans le fichier.",
+      "source": "question.rp.4-group-read-true-false"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.5-command-output.en",
+      "kind": "answer-key",
+      "locale": "en",
+      "options": [
+        "`-rw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`",
+        "`-rw-r--r-- 1 amina staff  128 Jan  2 10:00 report.txt`",
+        "`-rw-rw---- 1 amina staff  128 Jan  2 10:00 report.txt`",
+        "`drw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`"
+      ],
+      "question": "Command-output question. You run `ls -l report.txt` on a file owned by user `amina` and group `staff`, with read and write for the owner, read for the group, and nothing for others. Which line of output matches?",
+      "source": "question.rp.5-command-output"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "id": "answer-key.question.rp.5-command-output.fr",
+      "kind": "answer-key",
+      "locale": "fr",
+      "options": [
+        "`-rw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`",
+        "`-rw-r--r-- 1 amina staff  128 Jan  2 10:00 report.txt`",
+        "`-rw-rw---- 1 amina staff  128 Jan  2 10:00 report.txt`",
+        "`drw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`"
+      ],
+      "question": "Question de sortie de commande. Vous exécutez `ls -l report.txt` sur un fichier appartenant à l'utilisateur `amina` et au groupe `staff`, avec lecture et écriture pour le propriétaire, lecture pour le groupe, et rien pour les autres. Quelle ligne de sortie correspond ?",
+      "source": "question.rp.5-command-output"
+    },
+    {
+      "id": "glossary-terms.concept.changing-permissions",
+      "kind": "glossary-terms",
+      "source": "concept.changing-permissions",
+      "terms": [
+        [
+          "Changing permissions and ownership",
+          "Modifier les permissions et la propriété"
+        ],
+        [
+          "ownership",
+          "propriété"
+        ]
+      ],
+      "texts": {
+        "en": "Changing permissions and ownership",
+        "fr": "Modifier les permissions et la propriété"
+      }
+    },
+    {
+      "id": "glossary-terms.concept.processes",
+      "kind": "glossary-terms",
+      "source": "concept.processes",
+      "terms": [
+        [
+          "Understanding processes",
+          "Comprendre les processus"
+        ],
+        [
+          "process",
+          "processus"
+        ]
+      ],
+      "texts": {
+        "en": "Understanding processes",
+        "fr": "Comprendre les processus"
+      }
+    },
+    {
+      "id": "glossary-terms.concept.reading-permissions",
+      "kind": "glossary-terms",
+      "source": "concept.reading-permissions",
+      "terms": [
+        [
+          "Reading file permissions",
+          "Lire les permissions des fichiers"
+        ],
+        [
+          "file permissions",
+          "permissions des fichiers"
+        ],
+        [
+          "file",
+          "fichier"
+        ]
+      ],
+      "texts": {
+        "en": "Reading file permissions",
+        "fr": "Lire les permissions des fichiers"
+      }
+    },
+    {
+      "id": "glossary-terms.lab.fix-the-shared-folder",
+      "kind": "glossary-terms",
+      "source": "lab.fix-the-shared-folder",
+      "terms": [
+        [
+          "file",
+          "fichier"
+        ],
+        [
+          "group",
+          "groupe"
+        ]
+      ],
+      "texts": {
+        "en": "Fix the shared folder Your team shares the folder /workspace/team. It is not ready yet: sub-folders are missing, its group is wrong, and one file in it can be modified by everyone. In the terminal, create the docs and scripts folders, give the folder to the group devs with the setgid bit, then remove write permission for others on the planted file, without deleting it or changing its content. Select \"Check my work\" when you are done.",
+        "fr": "Réparer le dossier partagé Votre équipe partage le dossier /workspace/team. Il n'est pas encore prêt : il manque des sous-dossiers, son groupe n'est pas le bon et un fichier y est modifiable par tout le monde. Dans le terminal, créez les dossiers docs et scripts, donnez le dossier au groupe devs avec le bit setgid, puis retirez le droit d'écriture pour tous sur le fichier planté, sans le supprimer ni changer son contenu. Cliquez sur « Vérifier mon travail » quand vous avez terminé."
+      }
+    },
+    {
+      "id": "glossary-terms.lab.world-writable-entries",
+      "kind": "glossary-terms",
+      "source": "lab.world-writable-entries",
+      "terms": [
+        [
+          "file",
+          "fichier"
+        ],
+        [
+          "group",
+          "groupe"
+        ]
+      ],
+      "texts": {
+        "en": "World-writable entries Write a Python program in solution.py. It reads the output of \"ls -l\" on standard input and prints, one per line and in input order, the name of every world-writable entry (the write permission w in the last group of three). A symbolic link is never reported, because its mode bits are not enforced. A directory with the sticky bit and world-write (drwxrwxrwt) is reported; a sticky entry without world-write (drwxr-xr-t) is not. Ignore the \"total\" line. Names may contain spaces. The starter file holds the program skeleton. Select \"Check my work\" when you are done.",
+        "fr": "Entrées modifiables par tout le monde Écrivez un programme Python dans solution.py. Il lit la sortie de « ls -l » sur l'entrée standard et affiche, un par ligne et dans l'ordre de l'entrée, le nom de chaque entrée modifiable par tout le monde (le droit d'écriture w dans le dernier groupe de trois). Un lien symbolique n'est jamais signalé, car ses bits de mode ne sont pas appliqués. Un dossier avec le bit sticky et l'écriture pour tous (drwxrwxrwt) est signalé ; une entrée sticky sans écriture pour tous (drwxr-xr-t) ne l'est pas. Ignorez la ligne « total ». Les noms peuvent contenir des espaces. Le fichier de départ contient le squelette du programme. Cliquez sur « Vérifier mon travail » quand vous avez terminé."
+      }
+    },
+    {
+      "id": "glossary-terms.question.cp.2-chmod-octal",
+      "kind": "glossary-terms",
+      "source": "question.cp.2-chmod-octal",
+      "terms": [
+        [
+          "file",
+          "fichier"
+        ],
+        [
+          "group",
+          "groupe"
+        ]
+      ],
+      "texts": {
+        "en": "You want a file to be readable, writable, and executable by its owner, and readable and executable by group and others. Which octal `chmod` argument sets exactly that? `chmod 755 program` `chmod 775 program` `chmod 711 program` `chmod 644 program`",
+        "fr": "Vous voulez qu'un fichier soit lisible, modifiable et exécutable par son propriétaire, et lisible et exécutable par le groupe et les autres. Quel argument octal de `chmod` règle exactement cela ? `chmod 755 program` `chmod 775 program` `chmod 711 program` `chmod 644 program`"
+      }
+    },
+    {
+      "id": "glossary-terms.question.cp.3-chown-chgrp",
+      "kind": "glossary-terms",
+      "source": "question.cp.3-chown-chgrp",
+      "terms": [
+        [
+          "file",
+          "fichier"
+        ],
+        [
+          "group",
+          "groupe"
+        ]
+      ],
+      "texts": {
+        "en": "Which single command changes both the owner to `deploy` and the group to `www` for the file `app.conf`? `chown deploy:www app.conf` `chgrp deploy www app.conf` `chown deploy www app.conf` `chmod deploy:www app.conf`",
+        "fr": "Quelle commande unique change à la fois le propriétaire en `deploy` et le groupe en `www` pour le fichier `app.conf` ? `chown deploy:www app.conf` `chgrp deploy www app.conf` `chown deploy www app.conf` `chmod deploy:www app.conf`"
+      }
+    },
+    {
+      "id": "glossary-terms.question.cp.4-setgid-umask",
+      "kind": "glossary-terms",
+      "source": "question.cp.4-setgid-umask",
+      "terms": [
+        [
+          "directory",
+          "répertoire"
+        ],
+        [
+          "file",
+          "fichier"
+        ],
+        [
+          "group",
+          "groupe"
+        ]
+      ],
+      "texts": {
+        "en": "Why is the setgid bit useful on a shared project directory? New files and subdirectories created inside it inherit the directory's group, so teammates keep shared access. It makes every program in the directory run as root. It prevents anyone except the owner from deleting files, like the sticky bit does. It encrypts the contents of the directory at rest.",
+        "fr": "Pourquoi le bit setgid est-il utile sur un répertoire de projet partagé ? Les nouveaux fichiers et sous-répertoires créés à l'intérieur héritent du groupe du répertoire, afin que les coéquipiers conservent un accès partagé. Il fait exécuter en tant que root tous les programmes du répertoire. Il empêche quiconque sauf le propriétaire de supprimer des fichiers, comme le fait le sticky bit. Il chiffre le contenu du répertoire au repos."
+      }
+    },
+    {
+      "id": "glossary-terms.question.cp.5-command-output",
+      "kind": "glossary-terms",
+      "source": "question.cp.5-command-output",
+      "terms": [
+        [
+          "file",
+          "fichier"
+        ]
+      ],
+      "texts": {
+        "en": "Command-output question. The current umask is `022`. You run `touch newfile && ls -l newfile`. Which permission string appears for the new regular file? `-rw-r--r-- 1 user user 0 Jan  2 10:00 newfile` `-rwxr-xr-x 1 user user 0 Jan  2 10:00 newfile` `-rw-rw-rw- 1 user user 0 Jan  2 10:00 newfile` `-rw------- 1 user user 0 Jan  2 10:00 newfile`",
+        "fr": "Question de sortie de commande. Le umask courant est `022`. Vous exécutez `touch newfile && ls -l newfile`. Quelle chaîne de permissions apparaît pour le nouveau fichier ordinaire ? `-rw-r--r-- 1 user user 0 Jan  2 10:00 newfile` `-rwxr-xr-x 1 user user 0 Jan  2 10:00 newfile` `-rw-rw-rw- 1 user user 0 Jan  2 10:00 newfile` `-rw------- 1 user user 0 Jan  2 10:00 newfile`"
+      }
+    },
+    {
+      "id": "glossary-terms.question.rp.1-ls-l-fields",
+      "kind": "glossary-terms",
+      "source": "question.rp.1-ls-l-fields",
+      "terms": [
+        [
+          "directory",
+          "répertoire"
+        ]
+      ],
+      "texts": {
+        "en": "In the output of `ls -l`, which character at the very start of a line tells you the entry is a directory? `d` `-` (a dash) `l` `x`",
+        "fr": "Dans la sortie de `ls -l`, quel caractère au tout début d'une ligne indique que l'entrée est un répertoire ? `d` `-` (un tiret) `l` `x`"
+      }
+    },
+    {
+      "id": "glossary-terms.question.rp.2-rwx-meaning",
+      "kind": "glossary-terms",
+      "source": "question.rp.2-rwx-meaning",
+      "terms": [
+        [
+          "directory",
+          "répertoire"
+        ],
+        [
+          "file",
+          "fichier"
+        ],
+        [
+          "user",
+          "utilisateur"
+        ]
+      ],
+      "texts": {
+        "en": "For a regular file, what does the `x` permission grant to the user it applies to? The right to run the file as a program. The right to read the file's contents. The right to modify the file's contents. The right to delete the file regardless of the directory's permissions.",
+        "fr": "Pour un fichier ordinaire, qu'accorde la permission `x` à l'utilisateur à qui elle s'applique ? Le droit d'exécuter le fichier en tant que programme. Le droit de lire le contenu du fichier. Le droit de modifier le contenu du fichier. Le droit de supprimer le fichier quelles que soient les permissions du répertoire."
+      }
+    },
+    {
+      "id": "glossary-terms.question.rp.3-octal-from-symbolic",
+      "kind": "glossary-terms",
+      "source": "question.rp.3-octal-from-symbolic",
+      "terms": [
+        [
+          "file",
+          "fichier"
+        ]
+      ],
+      "texts": {
+        "en": "A file shows the permission string `rw-r--r--`. What is the equivalent octal notation? `644` `664` `755` `600`",
+        "fr": "Un fichier affiche la chaîne de permissions `rw-r--r--`. Quelle est la notation octale équivalente ? `644` `664` `755` `600`"
+      }
+    },
+    {
+      "id": "glossary-terms.question.rp.4-group-read-true-false",
+      "kind": "glossary-terms",
+      "source": "question.rp.4-group-read-true-false",
+      "terms": [
+        [
+          "file",
+          "fichier"
+        ],
+        [
+          "group",
+          "groupe"
+        ]
+      ],
+      "texts": {
+        "en": "True or false: in the permission string `-rwxr-x---`, members of the file's group are allowed to write to the file. False — the group bits are `r-x`, so the group can read and execute but not write. True — the group can write to the file.",
+        "fr": "Vrai ou faux : dans la chaîne de permissions `-rwxr-x---`, les membres du groupe du fichier sont autorisés à écrire dans le fichier. Faux — les bits du groupe sont `r-x`, donc le groupe peut lire et exécuter mais pas écrire. Vrai — le groupe peut écrire dans le fichier."
+      }
+    },
+    {
+      "id": "glossary-terms.question.rp.5-command-output",
+      "kind": "glossary-terms",
+      "source": "question.rp.5-command-output",
+      "terms": [
+        [
+          "file",
+          "fichier"
+        ],
+        [
+          "user",
+          "utilisateur"
+        ],
+        [
+          "group",
+          "groupe"
+        ],
+        [
+          "port",
+          "port"
+        ]
+      ],
+      "texts": {
+        "en": "Command-output question. You run `ls -l report.txt` on a file owned by user `amina` and group `staff`, with read and write for the owner, read for the group, and nothing for others. Which line of output matches? `-rw-r----- 1 amina staff  128 Jan  2 10:00 report.txt` `-rw-r--r-- 1 amina staff  128 Jan  2 10:00 report.txt` `-rw-rw---- 1 amina staff  128 Jan  2 10:00 report.txt` `drw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`",
+        "fr": "Question de sortie de commande. Vous exécutez `ls -l report.txt` sur un fichier appartenant à l'utilisateur `amina` et au groupe `staff`, avec lecture et écriture pour le propriétaire, lecture pour le groupe, et rien pour les autres. Quelle ligne de sortie correspond ? `-rw-r----- 1 amina staff  128 Jan  2 10:00 report.txt` `-rw-r--r-- 1 amina staff  128 Jan  2 10:00 report.txt` `-rw-rw---- 1 amina staff  128 Jan  2 10:00 report.txt` `drw-r----- 1 amina staff  128 Jan  2 10:00 report.txt`"
+      }
+    },
+    {
+      "fields": {
+        "concept": "Changing permissions and ownership",
+        "difficulty": "beginner",
+        "lesson": "Changing permissions and ownership",
+        "locale": "en",
+        "module": "Files & Permissions",
+        "track": "linux-fundamentals"
+      },
+      "id": "schema-conformance.quiz.changing-permissions",
+      "kind": "schema-conformance",
+      "prompt_id": "quiz",
+      "schema": "QuizDraft",
+      "source": "quiz.changing-permissions"
+    },
+    {
+      "fields": {
+        "concept": "Reading permissions",
+        "difficulty": "beginner",
+        "lesson": "Reading permissions",
+        "locale": "en",
+        "module": "Files & Permissions",
+        "track": "linux-fundamentals"
+      },
+      "id": "schema-conformance.quiz.reading-permissions",
+      "kind": "schema-conformance",
+      "prompt_id": "quiz",
+      "schema": "QuizDraft",
+      "source": "quiz.reading-permissions"
+    }
+  ],
+  "suite": "golden",
+  "track": "linux-fundamentals"
+}

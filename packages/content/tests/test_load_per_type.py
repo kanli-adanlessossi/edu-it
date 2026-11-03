@@ -132,3 +132,31 @@ def test_cli_validate_loads_per_type_layout(tmp_path: Path, capsys: Any) -> None
 
     assert main(["validate", "--content-root", str(tmp_path)]) == 0
     assert "content valid" in capsys.readouterr().out
+
+
+def test_brief_json_is_skipped_by_the_loader(tmp_path: Path) -> None:
+    """A hand-authored ``brief.json`` object is not a per-type list.
+
+    Validates: Requirements 5.7, 24.13
+    """
+    (tmp_path / "t").mkdir()
+    (tmp_path / "t" / "brief.json").write_text(
+        json.dumps({"title": _loc(), "description": _loc(), "learning_outcomes": [_loc()]}),
+        encoding="utf-8",
+    )
+    _write(tmp_path / "t" / "tracks.json", [])
+
+    assert load_content(tmp_path).raw_items == {"track": []}
+
+
+def test_networking_seed_brief_matches_the_brief_draft_schema() -> None:
+    """The seed brief validates as a BriefDraft with the required titles.
+
+    Validates: Requirements 24.7
+    """
+    from edu_it_content.schemas import BriefDraft
+
+    path = Path(__file__).resolve().parents[3] / "content" / "networking-basics" / "brief.json"
+    brief = BriefDraft.model_validate_json(path.read_text(encoding="utf-8"))
+    assert brief.title.en == "Networking basics"
+    assert brief.title.fr == "Bases du réseau"

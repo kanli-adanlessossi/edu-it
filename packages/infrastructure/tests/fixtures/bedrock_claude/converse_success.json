@@ -1,0 +1,11 @@
+{
+  "metrics": {"latencyMs": 1893},
+  "output": {
+    "message": {
+      "role": "assistant",
+      "content": [{"text": "{\"title\": "}, {"text": "\"Networking basics\"}"}]
+    }
+  },
+  "stopReason": "end_turn",
+  "usage": {"inputTokens": 1000, "outputTokens": 500, "totalTokens": 1500}
+}

@@ -211,6 +211,7 @@ class ReviewQuestionResponse(_Response):
 
     stable_id: str
     options: list[ReviewOptionResponse]
+    variant_ref: str | None = None
 
 
 class ReviewSessionResponse(_Response):
@@ -225,6 +226,7 @@ class ReviewSubmissionRequest(_Request):
 
     concept_id: str = _ID
     selections: dict[str, int | None]
+    variant_refs: dict[str, str] = {}
 
 
 class ReviewResultResponse(_Response):

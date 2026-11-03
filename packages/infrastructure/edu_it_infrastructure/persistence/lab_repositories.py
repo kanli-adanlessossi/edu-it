@@ -51,6 +51,7 @@ from sqlalchemy import and_, delete, func, insert, or_, select, update
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError
 
+from edu_it_infrastructure.persistence._ordering import code_point_order
 from edu_it_infrastructure.persistence.learning_repositories import _Base, _internal_id
 from edu_it_infrastructure.persistence.repositories import _as_aware
 
@@ -275,21 +276,18 @@ class Postgres_LabSessionRepository(_Base):
     def list_for_user_page(
         self, user_id: StableId, *, after: Keyset | None = None, limit: int
     ) -> tuple[LabSession, ...]:
+        # Ties on the instant break by stable_id in code-point order, as the fake does.
+        tie_break = code_point_order(m.lab_session.c.stable_id, self._engine)
         statement = self._select().where(m.user.c.stable_id == user_id)
         if after is not None:
-            started_at, stable_id = after
+            started_at, after_id = after
             statement = statement.where(
                 or_(
                     m.lab_session.c.started_at > started_at,
-                    and_(
-                        m.lab_session.c.started_at == started_at,
-                        m.lab_session.c.stable_id > stable_id,
-                    ),
+                    and_(m.lab_session.c.started_at == started_at, tie_break > after_id),
                 )
             )
-        statement = statement.order_by(m.lab_session.c.started_at, m.lab_session.c.stable_id).limit(
-            limit
-        )
+        statement = statement.order_by(m.lab_session.c.started_at, tie_break).limit(limit)
         with self._engine.begin() as connection:
             rows = connection.execute(statement).all()
         return tuple(self._to_domain(r) for r in rows)

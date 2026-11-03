@@ -18,6 +18,8 @@ dependencies = [
     "redis==8.1.0",
     # Docker SDK for Python: dev-only DockerSandboxProvider (ADR 0001, hands-on-labs).
     "docker==7.2.0",
+    # AWS SDK: reads the Live_Provider key from Secrets Manager (ai-content 4.13, ADR 0007).
+    "boto3==1.43.123",
 ]
 
 [project.scripts]

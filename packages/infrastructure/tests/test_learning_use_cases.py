@@ -14,9 +14,13 @@ and submit-project (rejections record nothing, pending vs reviewed).
 
 from __future__ import annotations
 
+import json
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
+from edu_it_application.ai import NoServableQuestionError, ServableCatalog
 from edu_it_application.learning import (
     AttemptQuizRequest,
     AttemptQuizUseCase,
@@ -39,6 +43,7 @@ from edu_it_application.learning import (
     SubmitReviewRequest,
     SubmitReviewUseCase,
 )
+from edu_it_domain.ai.lifecycle import VariantState
 from edu_it_domain.config import (
     ANTI_FARMING_WINDOW,
     COOLDOWN_INTERVAL,
@@ -62,7 +67,9 @@ from edu_it_domain.learning.models import (
 from edu_it_domain.learning.scoring import ForeignOptionError
 from edu_it_domain.ports.catalog import ModuleRecord, QuestionRecord, QuizRecord
 from edu_it_domain.ports.idempotency import ReservationStatus
+from edu_it_domain.ports.item_flags import FlagReason, FlagReasonKind, ItemKey, ItemKind
 from edu_it_domain.ports.progress import MODULE_STATE_LOCKED, MODULE_STATE_UNLOCKED
+from edu_it_domain.ports.variants import NewRevision, NewVariant, RevisionState
 from edu_it_infrastructure.fakes import (
     Fake_ProjectReviewer,
     In_Memory_AttemptRepository,
@@ -72,9 +79,11 @@ from edu_it_infrastructure.fakes import (
     In_Memory_MasteryRepository,
     In_Memory_ProgressRepository,
     In_Memory_ReviewRepository,
+    In_Memory_VariantRepository,
     Sequential_IdGenerator,
     Test_Clock,
 )
+from edu_it_infrastructure.fakes.item_flags import In_Memory_ItemFlagRepository
 
 _T0 = datetime(2024, 6, 1, 9, 0, 0, tzinfo=UTC)
 _USER = "usr-lea"
@@ -662,3 +671,65 @@ def test_submission_for_a_project_without_a_rubric_is_not_found() -> None:
     _, use_case = _project_world(pending=False)
     with pytest.raises(NotFoundError):
         use_case.execute(_project_request(project_id="prj-missing"))
+
+
+# --- approved-only serving (ai-content 14.1, 14.5, 20.4) ----------------------
+
+
+def _servable_review(w: _World) -> tuple[StartReviewUseCase, SubmitReviewUseCase, Any, Any]:
+    flags = In_Memory_ItemFlagRepository()
+    variants = In_Memory_VariantRepository(w.clock)
+    servable = ServableCatalog(w.catalog, flags, variants)
+    return (
+        StartReviewUseCase(catalog=servable, reviews=w.reviews, clock=w.clock, resolver=servable),
+        SubmitReviewUseCase(
+            catalog=servable,
+            reviews=w.reviews,
+            mastery=w.mastery,
+            clock=w.clock,
+            resolver=servable,
+        ),
+        flags,
+        variants,
+    )
+
+
+def test_review_serves_an_approved_variant_and_pins_it_through_submit() -> None:
+    """**Validates: Requirements 14.1, 14.5**"""
+    w = _practiced_world(questions=MIN_ELIGIBLE_QUESTION_COUNT)
+    w.clock.advance(INITIAL_REVIEW_INTERVAL)
+    start, submit, _flags, variants = _servable_review(w)
+    body = json.dumps({"options": [{"is_correct": False}, {"is_correct": True}]})
+    for parent in (_Q1, _Q2, "qn-3", "qn-4", "qn-5", "qn-6")[:MIN_ELIGIBLE_QUESTION_COUNT]:
+        variants.add(NewVariant(f"v-{parent}", parent, _TRACK, VariantState.APPROVED))
+        variants.add_revision(NewRevision(f"v-{parent}", "c1", body, state=RevisionState.APPROVED))
+        stored = variants.get(f"v-{parent}")
+        assert stored is not None
+        variants.save(replace(stored, approved_content_version="c1"))
+
+    resolved = start.execute_resolved(_USER, _CONCEPT)
+    assert resolved
+    assert all(r.variant_ref == f"v-{r.question.stable_id}@c1" for r in resolved)
+    refs = {r.question.stable_id: r.variant_ref or "" for r in resolved}
+    correct = {r.question.stable_id: 1 for r in resolved}  # variant key is option 1
+
+    result = submit.execute(SubmitReviewRequest(_USER, _CONCEPT, correct, refs))
+    assert result.passed and result.score == 100
+
+
+def test_review_with_every_question_flagged_raises_no_servable_question() -> None:
+    """**Validates: Requirement 20.4**"""
+    w = _practiced_world(questions=MIN_ELIGIBLE_QUESTION_COUNT)
+    w.clock.advance(INITIAL_REVIEW_INTERVAL)
+    start, submit, flags, _variants = _servable_review(w)
+    for question in w.catalog.list_questions_for_concept(_CONCEPT):
+        flags.flag(
+            ItemKey(ItemKind.QUESTION, question.stable_id), FlagReason(FlagReasonKind.REPORTS)
+        )
+    before = w.reviews.get(_USER, _CONCEPT)
+
+    with pytest.raises(NoServableQuestionError):
+        start.execute_resolved(_USER, _CONCEPT)
+    with pytest.raises(NoServableQuestionError):
+        submit.execute(SubmitReviewRequest(_USER, _CONCEPT, {}))
+    assert w.reviews.get(_USER, _CONCEPT) == before

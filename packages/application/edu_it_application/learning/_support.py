@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+from datetime import datetime
 from typing import Final
 
+from edu_it_domain.ai.quality import clamp_elapsed_ms
 from edu_it_domain.learning.models import (
     Mastery,
     MasteryState,
@@ -12,6 +15,8 @@ from edu_it_domain.learning.models import (
 )
 from edu_it_domain.learning.review import schedule_on_practiced
 from edu_it_domain.ports.clock import Clock
+from edu_it_domain.ports.item_flags import ItemKey, ItemKind
+from edu_it_domain.ports.item_quality import NewObservation, ObservationRecorder
 from edu_it_domain.ports.mastery import MasteryRepository
 from edu_it_domain.ports.review import ReviewRepository
 
@@ -67,3 +72,40 @@ def ensure_review_scheduled(
             clock=clock,
         )
     )
+
+
+_LOG = logging.getLogger(__name__)
+
+
+def record_observation(
+    recorder: ObservationRecorder | None,
+    *,
+    user_id: StableId,
+    kind: ItemKind,
+    item_stable_id: StableId,
+    correct: bool,
+    observed_at: datetime,
+    elapsed_ms: int | None = None,
+    variant_ref: str | None = None,
+) -> None:
+    """Append one ``item_observation`` for an answer (ai-content Req 19.1, decision D7).
+
+    Elapsed time is optional and clamped to ``ITEM_ELAPSED_MS_MAX``. The
+    observation only feeds item statistics, so a failure to store it is logged
+    and never fails the learner's answer, which is already recorded.
+    """
+    if recorder is None:
+        return
+    try:
+        recorder.record(
+            NewObservation(
+                user_id=user_id,
+                key=ItemKey(kind, item_stable_id),
+                correct=correct,
+                observed_at=observed_at,
+                elapsed_ms=clamp_elapsed_ms(elapsed_ms),
+                variant_ref=variant_ref,
+            )
+        )
+    except Exception:
+        _LOG.exception("item observation not recorded for %s %s", kind.value, item_stable_id)

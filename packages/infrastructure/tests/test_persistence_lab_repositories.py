@@ -478,7 +478,7 @@ def test_run_deadline_round_trip_preserves_instants(repos: Pair) -> None:
 # Personal-data coverage (Req 24.5): no new personal table escapes the registry.
 # --------------------------------------------------------------------------
 
-_PRE_LAB_UNREGISTERED = frozenset({"content_provenance", "review_queue_item"})
+_PRE_LAB_UNREGISTERED = frozenset({"content_provenance", "review_queue_item", "variant_revision"})
 _LAB_PERSONAL = ("lab_session", "lab_run", "lab_task_completion")
 
 
