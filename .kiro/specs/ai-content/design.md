@@ -717,9 +717,9 @@ The Live_Run is a manual procedure for the project owner, and the outline stays 
 
 1. The owner hand-authors and merges the Networking_Track brief (Requirement 24.13). The brief is not
    generated, so no model call is needed for it.
-2. `edu-it-generate --track networking-basics --stage outline --live --record --cost-cap-usd 20` creates
+2. `edu-it-generate --track networking-basics --stage outline --record --cost-cap-usd 20` (`--record` implies the Live_Provider) creates
    the outline Generation_Branch, left unmerged.
-3. `edu-it-generate --track networking-basics --stage lessons --limit-units 1 --live --record
+3. `edu-it-generate --track networking-basics --stage lessons --limit-units 1 --record
    --cost-cap-usd 20 --base-ref <outline Generation_Branch>` reads the outline Stage_Markers from that
    branch (Requirements 5.14, 24.12). Nothing is merged and the stage gate is not bypassed: with the
    branch absent or without the markers, the run is refused as in Requirement 5.3.

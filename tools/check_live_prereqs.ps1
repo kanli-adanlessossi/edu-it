@@ -7,10 +7,13 @@
     1. ADR 0007 addendum "Vendor selection (decision D1)" exists and is Status Accepted.
     2. Vendor adapter bedrock_claude.py exists and its contract tests pass (skip with -SkipTests).
     3. content/networking-basics/brief.json exists on the base ref (git ls-tree; optional -Fetch).
-    4. Docker daemon reachable (docker info).
-    5. Environment valid per tools/live-run-env.ps1 (dot-sourced, no duplicated rules, no prompt;
+    4. Generator base branch resolved as the generator does (GENERATOR_BASE_BRANCH, else
+       origin/HEAD, else init.defaultBranch if that local branch exists) and the brief is on the
+       LOCAL ref the generator reads.
+    5. Docker daemon reachable (docker info).
+    6. Environment valid per tools/live-run-env.ps1 (dot-sourced, no duplicated rules, no prompt;
        stored credential lookup via SecretManagement / Credential Manager still applies).
-    6. Working tree clean (WARN only; task 28.2 needs a clean tree).
+    7. Working tree clean (WARN only; task 28.2 needs a clean tree).
   Exits 1 if any item is FAIL, otherwise 0.
 
       .\tools\check_live_prereqs.ps1
@@ -119,6 +122,58 @@ try {
                 Add-Result FAIL 'Brief on base ref' "$briefRel is on the current branch but not on $BaseRef; the owner must merge it (not done here)" $true
             } else {
                 Add-Result FAIL 'Brief on base ref' "$briefRel is on neither $BaseRef nor the current branch; the owner must provide and merge it" $true
+            }
+        }
+    }
+
+    # 3b. Generator base branch: mirrors apps/worker/edu_it_worker/ai/cli.py (env var, else
+    # SubprocessGitWorkspace.default_branch(): origin/HEAD, then init.defaultBranch, each only
+    # if refs/heads/<name> exists). The generator reads the brief from the LOCAL ref named
+    # <base> (git rev-parse/ls-tree <base>), not from origin/<base>.
+    $baseEnvName = 'GENERATOR_BASE_BRANCH'
+    $baseItem = 'Generator base branch'
+    $baseName = $null; $baseSource = $null
+    $envBase = [Environment]::GetEnvironmentVariable($baseEnvName)
+    if ($envBase) {
+        $baseName = $envBase; $baseSource = "env $baseEnvName"
+    } else {
+        $oh = & git symbolic-ref --short refs/remotes/origin/HEAD 2>$null
+        if ($LASTEXITCODE -eq 0 -and $oh) {
+            $cand = ("$oh".Trim() -replace '^origin/', '')
+            if ($cand) {
+                $null = & git rev-parse --verify --quiet "refs/heads/$cand^{commit}" 2>&1
+                if ($LASTEXITCODE -eq 0) { $baseName = $cand; $baseSource = 'origin/HEAD' }
+            }
+        }
+        if (-not $baseName) {
+            $cfg = & git config --get init.defaultBranch 2>$null
+            if ($LASTEXITCODE -eq 0 -and $cfg) {
+                $cand = "$cfg".Trim()
+                $null = & git rev-parse --verify --quiet "refs/heads/$cand^{commit}" 2>&1
+                if ($LASTEXITCODE -eq 0) { $baseName = $cand; $baseSource = 'init.defaultBranch' }
+            }
+        }
+    }
+    if (-not $baseName) {
+        Add-Result FAIL $baseItem "no integration branch found; set $baseEnvName (the generator's integration-branch variable)" $true
+    } else {
+        $null = & git rev-parse --verify --quiet "$baseName^{commit}" 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Add-Result FAIL $baseItem "'$baseName' (from $baseSource) does not resolve to a commit in this repo; fix $baseEnvName" $true
+        } else {
+            $onLocal = & git ls-tree --name-only $baseName -- $briefRel 2>$null
+            if ($onLocal) {
+                Add-Result PASS $baseItem "$baseName (source: $baseSource); $briefRel exists on local ref '$baseName', which the generator reads"
+            } else {
+                $remoteRef = "origin/$baseName"
+                $onRemote = $null
+                $null = & git rev-parse --verify --quiet "refs/remotes/$remoteRef^{commit}" 2>&1
+                if ($LASTEXITCODE -eq 0) { $onRemote = & git ls-tree --name-only "refs/remotes/$remoteRef" -- $briefRel 2>$null }
+                if ($onRemote) {
+                    Add-Result FAIL $baseItem "$baseName (source: $baseSource): local '$baseName' lacks $briefRel but $remoteRef has it; the generator reads the local branch, so the owner must fetch and fast-forward local '$baseName' (not done here)" $true
+                } else {
+                    Add-Result FAIL $baseItem "$baseName (source: $baseSource): $briefRel is missing on local '$baseName' and on $remoteRef; the owner must provide and merge it" $true
+                }
             }
         }
     }
