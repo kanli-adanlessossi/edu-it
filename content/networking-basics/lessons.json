@@ -1,0 +1,223 @@
+[
+  {
+    "module_stable_id": "module.addresses-and-networks",
+    "ordinal": 4,
+    "provenance": {
+      "content_version": "sha256:2ea6460a99ed015eff7a19b5c11a3c39633f70e532922bbda06e4fe7f94f2537",
+      "generation_date": "2026-11-03T09:46:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "lesson",
+      "prompt_version": "1",
+      "stable_id": "lesson.automatic-address-assignment-with-dhcp"
+    },
+    "title": {
+      "en": "Automatic address assignment with DHCP",
+      "fr": "Attribution automatique d'adresses avec DHCP"
+    }
+  },
+  {
+    "module_stable_id": "module.inspecting-a-network-from-the-command-line",
+    "ordinal": 1,
+    "provenance": {
+      "content_version": "sha256:de70b82cf730f71728b46b97243974e56d05bb09acfe082d6b442a8430f3ced4",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.checking-connectivity"
+    },
+    "title": {
+      "en": "Checking connectivity",
+      "fr": "Vérifier la connectivité"
+    }
+  },
+  {
+    "module_stable_id": "module.addresses-and-networks",
+    "ordinal": 2,
+    "provenance": {
+      "content_version": "sha256:c787f3ac1baded6fbb1fcce5c33b6efedeccdd3bed0eefa7e65c45afdf48d124",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.gateways-and-routers"
+    },
+    "title": {
+      "en": "Gateways and routers",
+      "fr": "Passerelles et routeurs"
+    }
+  },
+  {
+    "module_stable_id": "module.inspecting-a-network-from-the-command-line",
+    "ordinal": 2,
+    "provenance": {
+      "content_version": "sha256:65b0f06b2d518c8da4394e4966dc76949c30373eea2528997e40639f00a27636",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.inspecting-the-routing-table"
+    },
+    "title": {
+      "en": "Inspecting the routing table",
+      "fr": "Inspecter la table de routage"
+    }
+  },
+  {
+    "module_stable_id": "module.inspecting-a-network-from-the-command-line",
+    "ordinal": 4,
+    "provenance": {
+      "content_version": "sha256:7fa5591f58476e405ad918d4564611e41c7526fcda63758a301c8c9409ffbadd",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.introduction-to-firewalls"
+    },
+    "title": {
+      "en": "Introduction to firewalls",
+      "fr": "Introduction aux pare-feux"
+    }
+  },
+  {
+    "module_stable_id": "module.addresses-and-networks",
+    "ordinal": 3,
+    "provenance": {
+      "content_version": "sha256:56a6fefaa3bdfef8dc92466b8453eef395c2913736d1bdb5eb6b3fdad04a1227",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.mac-addresses-and-switches"
+    },
+    "title": {
+      "en": "MAC addresses and switches",
+      "fr": "Adresses MAC et commutateurs"
+    }
+  },
+  {
+    "module_stable_id": "module.names-and-protocols",
+    "ordinal": 1,
+    "provenance": {
+      "content_version": "sha256:847da4975c4369a44911eb94ed9e30af93c303c7d85e2c7445f161b073b75e50",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.protocols-packets-and-ports"
+    },
+    "title": {
+      "en": "Protocols, packets and ports",
+      "fr": "Protocoles, paquets et ports"
+    }
+  },
+  {
+    "module_stable_id": "module.inspecting-a-network-from-the-command-line",
+    "ordinal": 3,
+    "provenance": {
+      "content_version": "sha256:7a674e50f816896a6fe978c0c358652ebc42e0723dc89c39a1a7ba54f9520397",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.querying-dns-from-the-command-line"
+    },
+    "title": {
+      "en": "Querying DNS from the command line",
+      "fr": "Interroger DNS en ligne de commande"
+    }
+  },
+  {
+    "module_stable_id": "module.inspecting-a-network-from-the-command-line",
+    "ordinal": 0,
+    "provenance": {
+      "content_version": "sha256:d6a6750dbf90616234db20c10679fa45f45aee1e34c34bbc39744775cd37792d",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.reading-network-interface-settings"
+    },
+    "title": {
+      "en": "Reading network interface settings",
+      "fr": "Lire la configuration d'une interface réseau"
+    }
+  },
+  {
+    "module_stable_id": "module.addresses-and-networks",
+    "ordinal": 1,
+    "provenance": {
+      "content_version": "sha256:844d9dc26be6dc0beb23c2a1b8854acecb767e271e1c0a0379168a0c01cb1433",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.subnets-and-subnet-masks"
+    },
+    "title": {
+      "en": "Subnets and subnet masks",
+      "fr": "Sous-réseaux et masques de sous-réseau"
+    }
+  },
+  {
+    "module_stable_id": "module.names-and-protocols",
+    "ordinal": 2,
+    "provenance": {
+      "content_version": "sha256:bdf06e7a954b16e0d51f2bbb506188be6b4d1597cd06d9144c85585434382f29",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.tcp-vs-udp"
+    },
+    "title": {
+      "en": "TCP vs UDP",
+      "fr": "TCP et UDP"
+    }
+  },
+  {
+    "module_stable_id": "module.names-and-protocols",
+    "ordinal": 0,
+    "provenance": {
+      "content_version": "sha256:f2ebba89965ed380023f9a97a4f74354714e70683a0640e98c5e015f68dd1529",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.turning-names-into-addresses-with-dns"
+    },
+    "title": {
+      "en": "Turning names into addresses with DNS",
+      "fr": "Traduire les noms en adresses avec DNS"
+    }
+  },
+  {
+    "module_stable_id": "module.addresses-and-networks",
+    "ordinal": 0,
+    "provenance": {
+      "content_version": "sha256:fbb5e960160086605206cf0618d15f5fac377f4d85e2a386287e6ee3ae7809cc",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "lesson.what-is-an-ip-address"
+    },
+    "title": {
+      "en": "What is an IP address?",
+      "fr": "Qu'est-ce qu'une adresse IP ?"
+    }
+  }
+]
