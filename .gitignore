@@ -19,3 +19,7 @@ htmlcov/
 !.env.example
 
 .e2e/
+
+# Live_Run env (ai-content 28.1): real file ignored, secret-free template committed.
+.env.live
+!.env.live.example
