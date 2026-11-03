@@ -1,4 +1,4 @@
-# Implementation Plan: AI Content Generation
+﻿# Implementation Plan: AI Content Generation
 
 ## Overview
 
@@ -596,31 +596,31 @@ Implementation language is Python (the design uses concrete Python modules, so n
 - [x] 27. Checkpoint - Full suite green before the Live_Run
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 28. Live_Run: generate the Networking track outline and first lesson on an unmerged branch (USD 20 cap)
+- [x] 28. Live_Run: generate the Networking track outline and first lesson on an unmerged branch (USD 20 cap)
   - [x] 28.1 Confirm the Live_Run prerequisites
     - Confirm decision D1: the ADR 0007 addendum exists in `docs/adr` and the vendor adapter of task 4.4 is implemented with its contract tests green. If either is missing, stop and ask the owner. Do not choose a vendor
     - Set `LLM_PROVIDER_ENDPOINT`, `LLM_PROVIDER_ALLOWED_HOSTS`, `LLM_MODEL_GENERATION`, `LLM_MODEL_VERIFIER`, `LLM_PRICES` and the key outside the repository (production reads the secret that task 4.14 refreshes)
     - Confirm `content/networking-basics/brief.json` exists on the base ref (the owner merges it; the Generator never merges) and the Docker daemon is available for sandbox checks
     - _Requirements: 1.10, 1.11, 24.4, 24.13_
 
-  - [~] 28.2 Generate the outline
-    - Run `edu-it-generate --track networking-basics --stage outline --live --record --cost-cap-usd 20` from a clean tree
+  - [x] 28.2 Generate the outline
+    - Run `edu-it-generate --track networking-basics --stage outline --record --cost-cap-usd 20` from a clean tree (`--record` already selects the Live_Provider and writes the Fixtures; it is mutually exclusive with `--live`)
     - The run creates its own Generation_Branch, applies the USD 20 cap with the daily and per-track Budgets, runs all Verification_Checks, and leaves the branch unmerged with no item marked reviewed. Keep the branch name and Generation_Report
     - If the cap is reached, only fully completed units are committed and the discarded unit is listed
     - _Requirements: 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 24.7, 24.8, 24.9, 24.10, 24.11_
 
-  - [~] 28.3 Generate the first lesson
-    - Run `edu-it-generate --track networking-basics --stage lessons --limit-units 1 --live --record --cost-cap-usd 20 --base-ref <outline Generation_Branch>`, FR and EN
+  - [x] 28.3 Generate the first lesson
+    - Run `edu-it-generate --track networking-basics --stage lessons --limit-units 1 --record --cost-cap-usd 20 --base-ref <outline Generation_Branch>`, FR and EN
     - The outline is unmerged, so the Stage_Markers of the preceding Stage are read from the named Base_Ref. That only changes where markers are read. It does not merge or bypass the gate. If the gate still refuses, stop and ask the owner. Do not add a bypass option or merge
     - Keep the second branch name, Generation_Report, total cost, tokens and models
     - _Requirements: 5.3, 5.13, 5.14, 5.15, 5.16, 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 24.8, 24.9, 24.10, 24.11, 24.12_
 
-- [ ] 29. Phase 4 report
-  - [~] 29.1 Run the Eval_Suite for the current Prompt versions
+- [x] 29. Phase 4 report
+  - [x] 29.1 Run the Eval_Suite for the current Prompt versions
     - Run `edu-it-eval` on the Replay_Provider and keep the Eval_Report
     - _Requirements: 11.1, 11.2, 25.3_
 
-  - [~] 29.2 Write `docs/reports/phase-4.md`
+  - [x] 29.2 Write `docs/reports/phase-4.md`
     - Run the `ai-content` verification suite and `tools/phase_report.py` with the Live_Run cost in USD, the Cost_Cap, the models, the Generation_Branch names, the Eval_Report results, the command and outcome of each acceptance check, and what was not verified
     - If any check did not run or pass, the tool must not write a passing report and the missing check is named in the report
     - _Requirements: 23.2, 25.1, 25.2, 25.3, 25.4, 25.5, 25.6_
