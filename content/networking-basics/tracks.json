@@ -1,0 +1,18 @@
+[
+  {
+    "provenance": {
+      "content_version": "sha256:ac9ab29ca1010ecf7f6520b71ab6adc3b5c92050967b7e96dc7ad3597002be74",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "track.networking-basics"
+    },
+    "status": "draft",
+    "title": {
+      "en": "Networking basics",
+      "fr": "Bases du réseau"
+    }
+  }
+]

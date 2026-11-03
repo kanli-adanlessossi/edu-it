@@ -1,0 +1,197 @@
+[
+  {
+    "provenance": {
+      "content_version": "sha256:e5c2ff2149ec47ecd861058c61cf44247cc6093ac1fa08dc5fd25057447f3d6a",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.automatic-address-assignment-with-dhcp"
+    },
+    "title": {
+      "en": "Automatic address assignment with DHCP",
+      "fr": "Attribution automatique d'adresses avec DHCP"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:618de2c95922e31574d5f8794c1d0213a5321f58f7704b3e8ae44694dfb7f4e6",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.checking-connectivity"
+    },
+    "title": {
+      "en": "Checking connectivity",
+      "fr": "Vérifier la connectivité"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:4eb85c301c982bb3fb96ef12ce9a898c832e66aebeade0ba2659d5d9e481c61e",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.gateways-and-routers"
+    },
+    "title": {
+      "en": "Gateways and routers",
+      "fr": "Passerelles et routeurs"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:e120d8d96eb8a50e2aed985ae8c0e7cbacfd494bf750730a3059a8d2f7023aa8",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.inspecting-the-routing-table"
+    },
+    "title": {
+      "en": "Inspecting the routing table",
+      "fr": "Inspecter la table de routage"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:f7a9d8c601b5ec56908d11a5c24943daa9dc7c24f246b5e11e6518d78b8332bf",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.introduction-to-firewalls"
+    },
+    "title": {
+      "en": "Introduction to firewalls",
+      "fr": "Introduction aux pare-feux"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:5d81fefff0d301d13a2320727154998d129105487691fc5fd4d5d6552d5bab4a",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.mac-addresses-and-switches"
+    },
+    "title": {
+      "en": "MAC addresses and switches",
+      "fr": "Adresses MAC et commutateurs"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:f344453f9cc666ecb653270718da1133d8191c7863f4fee199bfcf1841269739",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.protocols-packets-and-ports"
+    },
+    "title": {
+      "en": "Protocols, packets and ports",
+      "fr": "Protocoles, paquets et ports"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:f23bd3364979d18b44c5bf1d5b69c7b706bc18ba70b6dae706e3ee2140c2ffed",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.querying-dns-from-the-command-line"
+    },
+    "title": {
+      "en": "Querying DNS from the command line",
+      "fr": "Interroger DNS en ligne de commande"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:4c9c758012aadf75784442e50318a646dfcf466c6e572d419acfc692ca9bb1be",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.reading-network-interface-settings"
+    },
+    "title": {
+      "en": "Reading network interface settings",
+      "fr": "Lire la configuration d'une interface réseau"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:032df02207e9acbba94d4a67743681d01c876d506ddf9dde839fc1528d974d8c",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.tcp-vs-udp"
+    },
+    "title": {
+      "en": "TCP vs UDP",
+      "fr": "TCP et UDP"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:5bec3b4ae30d1333c8e049aa59bb74aa38cff9ada8ac76b251ebd9e37a71caf6",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.turning-names-into-addresses-with-dns"
+    },
+    "title": {
+      "en": "Turning names into addresses with DNS",
+      "fr": "Traduire les noms en adresses avec DNS"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:a408d03a72fcb52f25ddad878af98be5d5c94fce1f2184d4c391acd90342a348",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.understanding-ip-addresses"
+    },
+    "title": {
+      "en": "Understanding IP addresses",
+      "fr": "Comprendre les adresses IP"
+    }
+  },
+  {
+    "provenance": {
+      "content_version": "sha256:1c33a2ab1f0337627b3749b64769cd4738f2c006272fd91ac1de6ebcba21491d",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "concept.understanding-subnets-and-subnet-masks"
+    },
+    "title": {
+      "en": "Understanding subnets and subnet masks",
+      "fr": "Comprendre les sous-réseaux et les masques de sous-réseau"
+    }
+  }
+]

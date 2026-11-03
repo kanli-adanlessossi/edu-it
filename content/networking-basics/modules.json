@@ -1,0 +1,53 @@
+[
+  {
+    "ordinal": 0,
+    "provenance": {
+      "content_version": "sha256:f82fdc28f22055a700a358c8792803a559f8bfd8b330836f80b1b75fff54f25d",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "module.addresses-and-networks"
+    },
+    "title": {
+      "en": "Addresses and networks",
+      "fr": "Adresses et réseaux"
+    },
+    "track_stable_id": "track.networking-basics"
+  },
+  {
+    "ordinal": 2,
+    "provenance": {
+      "content_version": "sha256:b533b1ab1aeb784cab70b850e74b1582e924c07348fd9a0dfb59b4fd72b03e7c",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "module.inspecting-a-network-from-the-command-line"
+    },
+    "title": {
+      "en": "Inspecting a network from the command line",
+      "fr": "Inspecter un réseau en ligne de commande"
+    },
+    "track_stable_id": "track.networking-basics"
+  },
+  {
+    "ordinal": 1,
+    "provenance": {
+      "content_version": "sha256:d0dbc54468111a9ad042282698f1d0516dd1ef533e3b4f29b026202789df10c6",
+      "generation_date": "2026-11-03T09:38:28Z",
+      "model": "eu.anthropic.claude-sonnet-4-6",
+      "origin": "ai",
+      "prompt_id": "outline",
+      "prompt_version": "1",
+      "stable_id": "module.names-and-protocols"
+    },
+    "title": {
+      "en": "Names and protocols",
+      "fr": "Noms et protocoles"
+    },
+    "track_stable_id": "track.networking-basics"
+  }
+]
