@@ -1839,16 +1839,6 @@
     ],
     "28.1 Confirm the Live_Run prerequisites": [
       {
-        "executionId": "177fa733-cd86-455d-a092-2ec0d1d041ee",
-        "chatSessionId": "sess_fab0ac86-8ed7-4d9f-a7eb-7603567eeeb4",
-        "timestamp": 1793620522102
-      },
-      {
-        "executionId": "66478c54-7eaf-4a74-a82f-ac0101965699",
-        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
-        "timestamp": 1793691774866
-      },
-      {
         "executionId": "b8f8a1ce-8640-4fcb-a9d6-8f15ce58242d",
         "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
         "timestamp": 1793692532226
@@ -1867,6 +1857,36 @@
         "executionId": "0955fd10-b69d-4c67-9058-7bc860b17627",
         "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
         "timestamp": 1793696511475
+      },
+      {
+        "executionId": "ce1dfa4c-7d64-44a9-b64c-e6d800ec3ee7",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793696742274
+      },
+      {
+        "executionId": "ce1dfa4c-7d64-44a9-b64c-e6d800ec3ee7",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793696777489
+      },
+      {
+        "executionId": "4aa4007d-8342-4c22-9630-2fd26500a1da",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793696946536
+      },
+      {
+        "executionId": "4aa4007d-8342-4c22-9630-2fd26500a1da",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793697003360
+      },
+      {
+        "executionId": "dd5a6366-88db-42a4-ba3c-624fac4f5496",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793697171438
+      },
+      {
+        "executionId": "dd5a6366-88db-42a4-ba3c-624fac4f5496",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793697270333
       }
     ],
     "28.2 Generate the outline": [
@@ -1874,6 +1894,26 @@
         "executionId": "177fa733-cd86-455d-a092-2ec0d1d041ee",
         "chatSessionId": "sess_fab0ac86-8ed7-4d9f-a7eb-7603567eeeb4",
         "timestamp": 1793620522158
+      },
+      {
+        "executionId": "4ccd0a12-5e5e-43a3-84be-4a549ceab573",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793697455050
+      },
+      {
+        "executionId": "bf7c95b8-b6de-4878-a717-80721b577970",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793697840290
+      },
+      {
+        "executionId": "bedd9920-97de-49e3-acea-eb18728c71b8",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793698233941
+      },
+      {
+        "executionId": "bedd9920-97de-49e3-acea-eb18728c71b8",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793698845503
       }
     ],
     "28.3 Generate the first lesson": [
@@ -1881,6 +1921,16 @@
         "executionId": "177fa733-cd86-455d-a092-2ec0d1d041ee",
         "chatSessionId": "sess_fab0ac86-8ed7-4d9f-a7eb-7603567eeeb4",
         "timestamp": 1793620522211
+      },
+      {
+        "executionId": "8f7106e4-4e4d-4ffd-803d-5e3f49bcc521",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793699132266
+      },
+      {
+        "executionId": "8f7106e4-4e4d-4ffd-803d-5e3f49bcc521",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793699248774
       }
     ],
     "29.1 Run the Eval_Suite for the current Prompt versions": [
@@ -1989,6 +2039,13 @@
         "executionId": "3284efca-6c89-4c45-b91d-8fa5062eee8f",
         "chatSessionId": "sess_8980f4d2-ac6b-4ce3-a6da-cc0b13a8e33c",
         "timestamp": 1793688312422
+      }
+    ],
+    "28. Live_Run: generate the Networking track outline and first lesson on an unmerged branch (USD 20 cap)": [
+      {
+        "executionId": "8f7106e4-4e4d-4ffd-803d-5e3f49bcc521",
+        "chatSessionId": "sess_ae1e7a56-0a96-42f4-80ff-235a3af3c967",
+        "timestamp": 1793699248829
       }
     ]
   }
