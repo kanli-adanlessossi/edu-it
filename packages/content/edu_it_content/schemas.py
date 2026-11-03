@@ -37,24 +37,39 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 __all__ = [
+    "BriefDraft",
     "Concept",
     "Lab",
     "LabCheck",
+    "LabCheckDraft",
     "LabCheckOutcome",
+    "LabDraft",
     "LabKind",
     "LabTask",
+    "LabTaskDraft",
     "Lesson",
+    "LessonDraft",
+    "LessonOutlineDraft",
+    "LessonSectionDraft",
     "Localized",
     "Module",
+    "ModuleOutlineDraft",
     "Origin",
+    "OutlineDraft",
     "Prerequisite",
     "Project",
+    "ProjectDraft",
     "Provenance",
     "Question",
+    "QuestionDraft",
     "QuestionOption",
+    "QuestionOptionDraft",
+    "QuestionVariant",
     "Quiz",
+    "QuizDraft",
     "Rubric",
     "RubricCriterion",
+    "RubricCriterionDraft",
     "Track",
 ]
 
@@ -459,3 +474,213 @@ class Prerequisite(_ContentModel):
         min_length=1,
         description="Stable id of the concept that must be mastered first.",
     )
+
+
+# ---------------------------------------------------------------------------
+# AI generation: Question_Variant and the per-Stage draft schemas
+# (ai-content Req 5.8, 5.10, 7.5)
+# ---------------------------------------------------------------------------
+#
+# The ``*Draft`` models are the *output schemas* the LLM is asked to fill, one
+# per Stage (brief, outline, lessons, quizzes, labs, project). They hold
+# learner-facing text as :class:`Localized` (both FR and EN required) and
+# nothing else the model could invent about identity or trust: ``stable_id``,
+# ``content_version`` and every :class:`Provenance` field are attached by the
+# Generator after validation (Req 5.10), never produced by the model, and a
+# draft carries no reviewer. Drafts are consumed by the Generator, which
+# assembles the final content items from them; they are not synced content.
+
+
+class BriefDraft(_ContentModel):
+    """The brief Stage output: what a track is about (ai-content Req 5.8)."""
+
+    title: Localized = Field(description="The track's bilingual title.")
+    description: Localized = Field(description="Bilingual summary of the track.")
+    learning_outcomes: tuple[Localized, ...] = Field(
+        min_length=1,
+        description="Bilingual learning outcomes of the track.",
+    )
+
+
+class LessonOutlineDraft(_ContentModel):
+    """One lesson entry of an outline (ai-content Req 5.8)."""
+
+    title: Localized = Field(description="The lesson's bilingual title.")
+    summary: Localized = Field(description="Bilingual summary of what the lesson teaches.")
+    concept_titles: tuple[Localized, ...] = Field(
+        default=(),
+        description="Bilingual titles of the concepts the lesson covers.",
+    )
+
+
+class ModuleOutlineDraft(_ContentModel):
+    """One module entry of an outline, with its ordered lessons."""
+
+    title: Localized = Field(description="The module's bilingual title.")
+    lessons: tuple[LessonOutlineDraft, ...] = Field(
+        min_length=1,
+        description="The module's lessons, in order.",
+    )
+
+
+class OutlineDraft(_ContentModel):
+    """The outline Stage output: ordered modules and their lessons."""
+
+    modules: tuple[ModuleOutlineDraft, ...] = Field(
+        min_length=1,
+        description="The track's modules, in order.",
+    )
+
+
+class LessonSectionDraft(_ContentModel):
+    """A section of a drafted lesson: bilingual prose plus shell commands.
+
+    :attr:`commands` holds the commands only. There is deliberately **no output
+    field**: command output is never produced by the model. The Verifier runs
+    the commands in a Verification_Sandbox and the Generator assembles the MDX
+    from the draft plus those real outputs (ai-content Req 7.5).
+    """
+
+    heading: Localized = Field(description="The section's bilingual heading.")
+    body: Localized = Field(description="The section's bilingual prose.")
+    commands: tuple[str, ...] = Field(
+        default=(),
+        description="Shell commands shown in the section; their outputs are not drafted.",
+    )
+
+
+class LessonDraft(_ContentModel):
+    """The lessons Stage output for one lesson (commands only, no output field)."""
+
+    title: Localized = Field(description="The lesson's bilingual title.")
+    sections: tuple[LessonSectionDraft, ...] = Field(
+        min_length=1,
+        description="The lesson's sections, in order.",
+    )
+
+
+class QuestionOptionDraft(_ContentModel):
+    """An answer option of a drafted question or variant."""
+
+    text: Localized = Field(description="The option's bilingual text.")
+    is_correct: bool = Field(description="Whether selecting this option is correct.")
+
+
+def _check_options(options: tuple[QuestionOptionDraft, ...]) -> None:
+    """Require at least two options of which at least one is correct."""
+    if len(options) < 2:
+        msg = "a question needs at least two options"
+        raise ValueError(msg)
+    if not any(option.is_correct for option in options):
+        msg = "a question needs at least one correct option"
+        raise ValueError(msg)
+
+
+class QuestionDraft(_ContentModel):
+    """A drafted quiz question with its answer key."""
+
+    prompt_text: Localized = Field(description="The question's bilingual prompt text.")
+    options: tuple[QuestionOptionDraft, ...] = Field(description="The answer options.")
+    explanation: Localized = Field(description="Bilingual explanation of the correct answer.")
+    concept_title: Localized = Field(description="Bilingual title of the concept it checks.")
+
+    @model_validator(mode="after")
+    def _options_are_answerable(self) -> QuestionDraft:
+        _check_options(self.options)
+        return self
+
+
+class QuizDraft(_ContentModel):
+    """The quizzes Stage output for one lesson."""
+
+    title: Localized = Field(description="The quiz's bilingual title.")
+    questions: tuple[QuestionDraft, ...] = Field(
+        min_length=1,
+        description="The quiz's questions.",
+    )
+
+
+class LabCheckDraft(_ContentModel):
+    """A drafted lab check: a script that must fail at the start and pass on the solution."""
+
+    script: str = Field(min_length=1, description="Source of the check script.")
+    timeout_seconds: int = Field(gt=0, description="Per-check timeout in seconds.")
+    pass_message: Localized = Field(description="Bilingual message shown when the check passes.")
+    fail_message: Localized = Field(description="Bilingual message shown when the check fails.")
+
+
+class LabTaskDraft(_ContentModel):
+    """A drafted lab task with its checks and progressive hints."""
+
+    title: Localized = Field(description="The task's bilingual title.")
+    description: Localized = Field(description="The task's bilingual description.")
+    hints: tuple[Localized, ...] = Field(default=(), description="Progressive bilingual hints.")
+    checks: tuple[LabCheckDraft, ...] = Field(
+        min_length=1,
+        description="The checks grading this task.",
+    )
+
+
+class LabDraft(_ContentModel):
+    """The labs Stage output for one lab.
+
+    :attr:`reference_solution` is the script that solves the lab; the Verifier
+    applies it in a Verification_Sandbox and every check must pass there while
+    failing on the Starting_State (ai-content Req 8.1 to 8.4).
+    """
+
+    title: Localized = Field(description="The lab's bilingual title.")
+    kind: LabKind = Field(description="Whether the lab is a terminal lab or a code exercise.")
+    instructions: Localized = Field(description="The lab's bilingual instructions.")
+    setup_script: str | None = Field(
+        default=None,
+        description="Script that builds the Starting_State, if any.",
+    )
+    tasks: tuple[LabTaskDraft, ...] = Field(min_length=1, description="The lab's tasks.")
+    reference_solution: str = Field(
+        min_length=1,
+        description="Script that solves the lab from the Starting_State.",
+    )
+
+
+class RubricCriterionDraft(_ContentModel):
+    """A drafted weighted rubric criterion."""
+
+    title: Localized = Field(description="The criterion's bilingual title.")
+    max_points: int = Field(gt=0, description="The criterion's weight in rubric points.")
+
+
+class ProjectDraft(_ContentModel):
+    """The project Stage output: the project brief and its rubric criteria."""
+
+    title: Localized = Field(description="The project's bilingual title.")
+    description: Localized = Field(description="The project's bilingual description/brief.")
+    criteria: tuple[RubricCriterionDraft, ...] = Field(
+        min_length=1,
+        description="The rubric criteria scoring the project.",
+    )
+
+
+class QuestionVariant(_ProvenancedContent):
+    """A generated alternative of an approved Parent_Question (ai-content Req 13, D6).
+
+    Unlike a draft, a variant is a stored item and carries the shared
+    :class:`Provenance` (``origin``, ``model``, ``prompt_id``,
+    ``prompt_version``, ``generation_date``, and the reviewer once approved).
+    :attr:`parent_question_stable_id` references the :class:`Question` it
+    varies; a served variant is presented under that parent's ``stable_id``.
+    Its lifecycle state lives in the ``variant`` table, not in this schema.
+    """
+
+    parent_question_stable_id: str = Field(
+        min_length=1,
+        description="Stable id of the approved Parent_Question this variant derives from.",
+    )
+    prompt_text: Localized = Field(description="The variant's bilingual prompt text.")
+    options: tuple[QuestionOptionDraft, ...] = Field(description="The answer options.")
+    explanation: Localized = Field(description="Bilingual explanation of the correct answer.")
+
+    @model_validator(mode="after")
+    def _options_are_answerable(self) -> QuestionVariant:
+        _check_options(self.options)
+        return self

@@ -224,15 +224,18 @@ def build_learning_router(services: LearningServices) -> APIRouter:
         concept_id: Annotated[str, Query(min_length=1, max_length=128)],
     ) -> ReviewSessionResponse:
         """The questions of the concept's due review (Req 18.4)."""
-        questions = services.start_review.execute(user_of(request), concept_id)
+        resolved = services.start_review.execute_resolved(user_of(request), concept_id)
         return ReviewSessionResponse(
             concept_id=concept_id,
             questions=[
                 ReviewQuestionResponse(
-                    stable_id=q.stable_id,
-                    options=[ReviewOptionResponse(option_id=o.option_id) for o in q.options],
+                    stable_id=r.question.stable_id,
+                    options=[
+                        ReviewOptionResponse(option_id=o.option_id) for o in r.question.options
+                    ],
+                    variant_ref=r.variant_ref,
                 )
-                for q in questions
+                for r in resolved
             ],
         )
 
@@ -244,6 +247,7 @@ def build_learning_router(services: LearningServices) -> APIRouter:
                 user_id=user_of(request),
                 concept_id=body.concept_id,
                 selections=body.selections,
+                variant_refs=body.variant_refs,
             )
         )
         return ReviewResultResponse(

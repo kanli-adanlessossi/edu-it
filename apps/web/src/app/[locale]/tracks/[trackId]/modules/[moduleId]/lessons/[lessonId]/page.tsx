@@ -9,6 +9,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { ReportProblem } from '../../../../../../../../components/report-problem.js';
 import { renderLessonMdx } from '../../../../../../../../components/lesson-mdx.js';
 import { fetchLesson } from '../../../../../../../../lesson-api.js';
 import { isLocale } from '../../../../../../../../locale.js';
@@ -63,6 +64,12 @@ export default async function LessonPage({ params }: LessonPageProps) {
       <h1>{lesson.title}</h1>
       {lesson.locale !== locale ? <p>{t('fallbackNotice')}</p> : null}
       {content}
+      <ReportProblem
+        locale={locale}
+        itemKind="lesson"
+        itemId={lesson.stable_id}
+        contentVersion={lesson.content_version}
+      />
       {labIds.length > 0 ? (
         <section aria-labelledby="lesson-labs-heading">
           <h2 id="lesson-labs-heading">{t('labsHeading')}</h2>

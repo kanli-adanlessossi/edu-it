@@ -227,6 +227,8 @@ export interface LabDetailView {
   readonly locale: string;
   readonly tasks: readonly LabTaskView[];
   readonly learnerFiles: readonly string[];
+  /** The version the learner is looking at; absent when the API sent none. */
+  readonly contentVersion?: string;
 }
 
 export interface HintView {
@@ -251,6 +253,9 @@ export function toLabDetail(body: Json): LabDetailView {
       hintCount: typeof t.hint_count === 'number' ? t.hint_count : 0,
     })),
     learnerFiles: files.filter((f): f is string => typeof f === 'string'),
+    ...(typeof body.content_version === 'string' && body.content_version !== ''
+      ? { contentVersion: body.content_version }
+      : {}),
   };
 }
 

@@ -53,6 +53,7 @@ import {
 } from '../lab-state.js';
 import { terminalUrl } from '../terminal-logic.js';
 import { CodeEditor } from './code-editor.js';
+import { ReportProblem } from './report-problem.js';
 import { TerminalPane } from './terminal-pane.js';
 
 /** How often the session is re-read (status, deadlines, activity); a UI cadence, not a business rule. */
@@ -165,6 +166,12 @@ export function LabView({ locale, lab }: LabViewProps) {
   return (
     <div className="lab-view" lang={locale}>
       <h1>{lab.title}</h1>
+      <ReportProblem
+        locale={locale}
+        itemKind="lab"
+        itemId={lab.labId}
+        contentVersion={lab.contentVersion}
+      />
       {error !== null ? <p role="alert">{error}</p> : null}
       {conflict ? (
         <p>

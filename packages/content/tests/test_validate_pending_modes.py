@@ -33,6 +33,8 @@ def _prov(stable_id: str, origin: str = "human", reviewer: str | None = "usr_r")
     prov: dict[str, Any] = {"stable_id": stable_id, "content_version": "cv_1", "origin": origin}
     if reviewer is not None:
         prov["reviewed_by"] = reviewer
+        prov["reviewed_at"] = "2026-01-01T00:00:00+00:00"
+        prov["reviewed_at"] = "2026-01-01T00:00:00+00:00"
     return prov
 
 

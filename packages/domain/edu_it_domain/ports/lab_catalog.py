@@ -72,6 +72,12 @@ class LabDefinition:
     learner_files: tuple[str, ...] = ()
     """Flat file names a learner may save into the workspace (Code_Exercise)."""
 
+    content_version: str = ""
+    """The content hash of this lab revision; empty when the source has none."""
+
+    lesson_id: StableId = ""
+    """The ``stable_id`` of the owning lesson; empty when the source has none."""
+
 
 @runtime_checkable
 class LabCatalog(Protocol):

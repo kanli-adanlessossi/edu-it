@@ -20,8 +20,15 @@ on the decayed value (Req 8.1, 8.4).
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Protocol
 
+from edu_it_domain.ai.serving import (
+    NoServableQuestionError,
+    ResolvedQuestion,
+    split_variant_ref,
+)
 from edu_it_domain.config import (
     MASTERY_MAX,
     MASTERY_MIN,
@@ -42,10 +49,13 @@ from edu_it_domain.learning.review import (
 from edu_it_domain.learning.scoring import ForeignOptionError, is_selection_correct
 from edu_it_domain.ports.catalog import CatalogRepository, QuestionRecord
 from edu_it_domain.ports.clock import Clock
+from edu_it_domain.ports.item_flags import ItemKind
+from edu_it_domain.ports.item_quality import ObservationRecorder
 from edu_it_domain.ports.lab_check import LabCheck
 from edu_it_domain.ports.mastery import MasteryRepository
 from edu_it_domain.ports.review import ReviewRepository
 
+from edu_it_application.learning._support import record_observation
 from edu_it_application.learning.errors import (
     InsufficientReviewPoolError,
     NotFoundError,
@@ -54,11 +64,32 @@ from edu_it_application.learning.errors import (
 )
 
 __all__ = [
+    "ReviewQuestionResolver",
     "StartReviewUseCase",
     "SubmitReviewRequest",
     "SubmitReviewResult",
     "SubmitReviewUseCase",
 ]
+
+
+class ReviewQuestionResolver(Protocol):
+    """Resolves the question a spaced review shows for a parent question.
+
+    Implemented by ``ServableCatalog`` (ai-content Requirements 14.1, 20.4). Without a
+    resolver a review serves the authored questions of the pool unchanged.
+    """
+
+    def resolve_review_question(
+        self,
+        *,
+        concept_id: StableId,
+        parent_question_id: StableId,
+        user_ref: str,
+        due_at: datetime,
+        variant_ref: str | None = None,
+    ) -> ResolvedQuestion:
+        """Return the servable question, or raise ``NoServableQuestionError``."""
+        ...
 
 
 def _review_session(
@@ -67,20 +98,38 @@ def _review_session(
     clock: Clock,
     user_id: StableId,
     concept_id: StableId,
-) -> tuple[ReviewSchedule, tuple[QuestionRecord, ...]]:
+    resolver: ReviewQuestionResolver | None = None,
+    variant_refs: Mapping[StableId, str] | None = None,
+) -> tuple[ReviewSchedule, tuple[ResolvedQuestion, ...]]:
     """Return the due schedule and its session questions, or raise (Req 9.3, 28)."""
     schedule = reviews.get(user_id, concept_id)
     if schedule is None:
         raise ReviewNotAvailableError(concept_id)
 
     pool = catalog.list_questions_for_concept(concept_id)
+    if resolver is not None and not pool:
+        # Nothing servable at all (every question flagged or none authored): Req 20.4.
+        raise NoServableQuestionError(concept_id)
     # Decline below the minimum pool; nothing is created or advanced (Req 28.1, 28.2).
     if start_review(schedule, pool, user_id=user_id, concept_id=concept_id, clock=clock) is None:
         raise InsufficientReviewPoolError(concept_id, len(pool), MIN_ELIGIBLE_QUESTION_COUNT)
 
     if not is_due(schedule, clock=clock):
         raise ReviewNotDueError(concept_id, schedule.due_at)
-    return schedule, select_review_questions(pool, count=REVIEW_QUESTION_COUNT)
+    selected = select_review_questions(pool, count=REVIEW_QUESTION_COUNT)
+    if resolver is None:
+        return schedule, tuple(ResolvedQuestion(q) for q in selected)
+    refs = variant_refs or {}
+    return schedule, tuple(
+        resolver.resolve_review_question(
+            concept_id=concept_id,
+            parent_question_id=q.stable_id,
+            user_ref=user_id,
+            due_at=schedule.due_at,
+            variant_ref=refs.get(q.stable_id),
+        )
+        for q in selected
+    )
 
 
 class StartReviewUseCase:
@@ -92,11 +141,13 @@ class StartReviewUseCase:
         catalog: CatalogRepository,
         reviews: ReviewRepository,
         clock: Clock,
+        resolver: ReviewQuestionResolver | None = None,
     ) -> None:
         """Wire the ports the use case reads."""
         self._catalog = catalog
         self._reviews = reviews
         self._clock = clock
+        self._resolver = resolver
 
     def execute(self, user_id: StableId, concept_id: StableId) -> tuple[QuestionRecord, ...]:
         """Return the questions of the concept's due review.
@@ -106,10 +157,20 @@ class StartReviewUseCase:
             InsufficientReviewPoolError: the pool is below the minimum.
             ReviewNotDueError: the review is not due yet.
         """
-        _, questions = _review_session(
-            self._catalog, self._reviews, self._clock, user_id, concept_id
+        return tuple(r.question for r in self.execute_resolved(user_id, concept_id))
+
+    def execute_resolved(
+        self, user_id: StableId, concept_id: StableId
+    ) -> tuple[ResolvedQuestion, ...]:
+        """Like :meth:`execute`, keeping the `variant_ref` of each served variant.
+
+        Raises:
+            NoServableQuestionError: nothing servable remains for the concept.
+        """
+        _, resolved = _review_session(
+            self._catalog, self._reviews, self._clock, user_id, concept_id, self._resolver
         )
-        return questions
+        return resolved
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +181,10 @@ class SubmitReviewRequest:
     concept_id: StableId
     selections: Mapping[StableId, int | None]
     """Question ``stable_id`` -> selected ``option_id`` (``None`` = unanswered)."""
+    variant_refs: Mapping[StableId, str] = field(default_factory=dict)
+    """Parent ``stable_id`` -> ``variant_ref`` echoed from the start of the review."""
+    elapsed_ms: Mapping[StableId, int] = field(default_factory=dict)
+    """Parent ``stable_id`` -> client-reported answer time, optional (decision D7)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,8 +208,12 @@ class SubmitReviewUseCase:
         mastery: MasteryRepository,
         clock: Clock,
         lab_check: LabCheck | None = None,
+        resolver: ReviewQuestionResolver | None = None,
+        observations: ObservationRecorder | None = None,
     ) -> None:
         """Wire the ports the use case orchestrates."""
+        self._observations = observations
+        self._resolver = resolver
         self._catalog = catalog
         self._reviews = reviews
         self._mastery = mastery
@@ -163,9 +232,16 @@ class SubmitReviewUseCase:
                 an option foreign to its question; nothing was recorded.
         """
         user_id, concept_id = request.user_id, request.concept_id
-        schedule, questions = _review_session(
-            self._catalog, self._reviews, self._clock, user_id, concept_id
+        schedule, resolved = _review_session(
+            self._catalog,
+            self._reviews,
+            self._clock,
+            user_id,
+            concept_id,
+            self._resolver,
+            request.variant_refs,
         )
+        questions = tuple(r.question for r in resolved)
         mastery = self._mastery.get(user_id, concept_id)
         if mastery is None:
             raise NotFoundError("mastery", concept_id)
@@ -188,12 +264,39 @@ class SubmitReviewUseCase:
 
         self._mastery.save(mastery)
         self._reviews.save(updated_schedule)
+        self._observe(request, resolved)
         return SubmitReviewResult(
             passed=passed,
             score=score,
             schedule=updated_schedule,
             mastery=mastery,
         )
+
+    def _observe(
+        self, request: SubmitReviewRequest, resolved: tuple[ResolvedQuestion, ...]
+    ) -> None:
+        """Append one item observation per answered question (Req 19.1).
+
+        A served variant is observed as the variant, so its statistics can flag
+        or withdraw the variant and not its parent question (Req 19.3).
+        """
+        now = self._clock.now()
+        for item in resolved:
+            parent_id = item.question.stable_id
+            option_id = request.selections.get(parent_id)
+            if option_id is None:
+                continue
+            parts = split_variant_ref(item.variant_ref) if item.variant_ref else None
+            record_observation(
+                self._observations,
+                user_id=request.user_id,
+                kind=ItemKind.VARIANT if parts else ItemKind.QUESTION,
+                item_stable_id=parts[0] if parts else parent_id,
+                correct=is_selection_correct(item.question, option_id),
+                observed_at=now,
+                elapsed_ms=request.elapsed_ms.get(parent_id),
+                variant_ref=item.variant_ref if parts else None,
+            )
 
     @staticmethod
     def _score(

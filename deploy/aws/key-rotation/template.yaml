@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  EDU-IT key rotation for the production Bedrock credential (ai-content task 4.14, ADR 0007
+  addendum 1). An EventBridge rule runs the Lambda every 6 hours. The Lambda generates a
+  short-term Bedrock API key and writes it as a new version of one Secrets Manager secret.
+  Deploying this template is an owner action; it is not part of the test suite or CI.
+
+Parameters:
+  SecretArn:
+    Type: String
+    Description: ARN of the existing secret named by LLM_PROVIDER_API_KEY_SECRET_ID.
+    AllowedPattern: "arn:aws[a-z-]*:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:.+"
+  ModelResourceArns:
+    Type: CommaDelimitedList
+    Description: >
+      ARNs the generated key may invoke (the eu. inference profile and the foundation models it
+      routes to). The key inherits the permissions of this role.
+  CodeBucket:
+    Type: String
+    Description: S3 bucket holding the packaged function (handler.py plus requirements.txt).
+  CodeKey:
+    Type: String
+    Description: S3 key of the packaged function zip.
+  AlarmTopicArn:
+    Type: String
+    Default: ""
+    Description: Optional SNS topic notified when the alarm fires.
+
+Conditions:
+  HasAlarmTopic: !Not [!Equals [!Ref AlarmTopicArn, ""]]
+
+Resources:
+  RotationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: rotate-bedrock-key
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Generate the key: the token is signed with this role and may be used for Bedrock.
+              - Sid: GenerateKey
+                Effect: Allow
+                Action: bedrock:CallWithBearerToken
+                Resource: "*"
+              - Sid: KeyPermissions
+                Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource: !Ref ModelResourceArns
+              # Write that one secret. No read, no delete, no other secret.
+              - Sid: WriteOneSecret
+                Effect: Allow
+                Action: secretsmanager:PutSecretValue
+                Resource: !Ref SecretArn
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt RotationLogGroup.Arn
+
+  RotationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/edu-it-key-rotation
+      RetentionInDays: 30
+
+  RotationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: edu-it-key-rotation
+      Runtime: python3.12
+      Handler: handler.handler
+      Role: !GetAtt RotationRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Code:
+        S3Bucket: !Ref CodeBucket
+        S3Key: !Ref CodeKey
+      Environment:
+        Variables:
+          LLM_PROVIDER_API_KEY_SECRET_ID: !Ref SecretArn
+      LoggingConfig:
+        LogGroup: !Ref RotationLogGroup
+
+  # Every 6 hours, inside the 12-hour key lifetime.
+  RotationSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Rotate the Bedrock short-term key every 6 hours.
+      ScheduleExpression: rate(6 hours)
+      State: ENABLED
+      Targets:
+        - Id: rotate
+          Arn: !GetAtt RotationFunction.Arn
+
+  RotationSchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RotationFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt RotationSchedule.Arn
+
+  # A failed rotation surfaces to the worker as 401/403 once the key expires; alarm before that.
+  RotationErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: edu-it-key-rotation-errors
+      AlarmDescription: The Bedrock key rotation Lambda failed. The stored key expires within 12 hours.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref RotationFunction
+      Statistic: Sum
+      Period: 21600
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmTopic, [!Ref AlarmTopicArn], !Ref "AWS::NoValue"]
+
+Outputs:
+  FunctionName:
+    Value: !Ref RotationFunction

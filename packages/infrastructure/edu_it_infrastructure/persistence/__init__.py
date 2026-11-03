@@ -18,6 +18,9 @@ behavior (Req 20.1-20.3); only the schema is created.
 
 from __future__ import annotations
 
+from edu_it_infrastructure.persistence.generation_ledger import Postgres_GenerationLedger
+from edu_it_infrastructure.persistence.item_flags import Postgres_ItemFlagRepository
+from edu_it_infrastructure.persistence.item_quality import Postgres_ItemQualityRepository
 from edu_it_infrastructure.persistence.lab_repositories import (
     Postgres_GradingRunRepository,
     Postgres_LabSessionRepository,
@@ -39,11 +42,19 @@ from edu_it_infrastructure.persistence.metadata import (
     STABLE_ID_TABLE_NAMES,
     metadata,
 )
+from edu_it_infrastructure.persistence.path_recommendations import (
+    Postgres_PathRecommendationRepository,
+)
 from edu_it_infrastructure.persistence.personal_data import Postgres_PersonalDataGateway
+from edu_it_infrastructure.persistence.problem_reports import Postgres_ProblemReportRepository
 from edu_it_infrastructure.persistence.repositories import (
     Postgres_RoleAssignmentRepository,
     Postgres_SessionRepository,
     Postgres_UserRepository,
+)
+from edu_it_infrastructure.persistence.variants import (
+    Postgres_ReviewTaskRepository,
+    Postgres_VariantRepository,
 )
 
 __all__ = [
@@ -55,15 +66,22 @@ __all__ = [
     "Postgres_AttemptRepository",
     "Postgres_CatalogRepository",
     "Postgres_EnrollmentRepository",
+    "Postgres_GenerationLedger",
     "Postgres_GradingRunRepository",
+    "Postgres_ItemFlagRepository",
+    "Postgres_ItemQualityRepository",
     "Postgres_LabSessionRepository",
     "Postgres_LessonRepository",
     "Postgres_MasteryRepository",
+    "Postgres_PathRecommendationRepository",
     "Postgres_PersonalDataGateway",
+    "Postgres_ProblemReportRepository",
     "Postgres_ProgressRepository",
     "Postgres_ReviewRepository",
+    "Postgres_ReviewTaskRepository",
     "Postgres_RoleAssignmentRepository",
     "Postgres_SessionRepository",
     "Postgres_UserRepository",
+    "Postgres_VariantRepository",
     "metadata",
 ]

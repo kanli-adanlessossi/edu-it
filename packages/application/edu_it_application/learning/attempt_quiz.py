@@ -31,8 +31,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field, replace
+from datetime import datetime
 
 from edu_it_domain.config import MASTERY_GAIN_PER_CORRECT_ANSWER
 from edu_it_domain.learning.antifarming import evaluate_reanswer
@@ -42,10 +43,12 @@ from edu_it_domain.learning.mastery import apply_delta
 from edu_it_domain.learning.models import Answer, Mastery, QuizAttempt, StableId
 from edu_it_domain.learning.scoring import is_selection_correct, mark_best, score_attempt
 from edu_it_domain.ports.attempts import AttemptRepository
-from edu_it_domain.ports.catalog import CatalogRepository
+from edu_it_domain.ports.catalog import CatalogRepository, QuestionRecord
 from edu_it_domain.ports.clock import Clock
 from edu_it_domain.ports.id_generator import IdGenerator
 from edu_it_domain.ports.idempotency import IdempotencyStore, ReservationStatus
+from edu_it_domain.ports.item_flags import ItemKind
+from edu_it_domain.ports.item_quality import ObservationRecorder
 from edu_it_domain.ports.lab_check import LabCheck
 from edu_it_domain.ports.mastery import MasteryRepository
 from edu_it_domain.ports.review import ReviewRepository
@@ -54,6 +57,7 @@ from edu_it_application.learning._support import (
     ensure_review_scheduled,
     has_passed_review,
     load_or_start_mastery,
+    record_observation,
 )
 from edu_it_application.learning.errors import (
     IdempotencyConflictError,
@@ -88,6 +92,13 @@ class AttemptQuizRequest:
 
     ``None`` starts a fresh attempt against the current version (Req 25.2). A
     value naming an older version keeps the in-flight attempt pinned to it.
+    """
+
+    elapsed_ms: Mapping[StableId, int] = field(default_factory=dict)
+    """Question ``stable_id`` -> client-reported answer time, optional (decision D7).
+
+    Clamped to ``ITEM_ELAPSED_MS_MAX`` when stored as an item observation. It is
+    not part of the idempotency fingerprint.
     """
 
 
@@ -140,8 +151,10 @@ class AttemptQuizUseCase:
         clock: Clock,
         ids: IdGenerator,
         lab_check: LabCheck | None = None,
+        observations: ObservationRecorder | None = None,
     ) -> None:
         """Wire the ports the use case orchestrates."""
+        self._observations = observations
         self._catalog = catalog
         self._attempts = attempts
         self._mastery = mastery
@@ -256,6 +269,7 @@ class AttemptQuizUseCase:
         attempt, best = marked[-1], next(a for a in marked if a.is_best)
 
         self._attempts.add_quiz_attempt(user_id, attempt, tuple(answers))
+        self._observe(request, quiz.questions, now)
 
         changed: list[Mastery] = []
         for concept_id, delta in gains.items():
@@ -280,3 +294,24 @@ class AttemptQuizUseCase:
             answers=tuple(answers),
             mastery=tuple(changed),
         )
+
+    def _observe(
+        self,
+        request: AttemptQuizRequest,
+        questions: Sequence[QuestionRecord],
+        observed_at: datetime,
+    ) -> None:
+        """Append one item observation per answered question (Req 19.1)."""
+        for question in questions:
+            option_id = request.selections.get(question.stable_id)
+            if option_id is None:
+                continue
+            record_observation(
+                self._observations,
+                user_id=request.user_id,
+                kind=ItemKind.QUESTION,
+                item_stable_id=question.stable_id,
+                correct=is_selection_correct(question, option_id),
+                observed_at=observed_at,
+                elapsed_ms=request.elapsed_ms.get(question.stable_id),
+            )

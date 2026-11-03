@@ -14,6 +14,21 @@ const options = (base) => [
   { option_id: base + 3, text: 'Option C' },
 ];
 
+const reviewTask = (id, target) => ({
+  stable_id: id,
+  kind: 'new_variant',
+  target_kind: 'variant',
+  target_stable_id: target,
+  track_id: 'track-1',
+  state: 'open',
+  created_at: '2030-01-01T10:00:00Z',
+  revision_content_version: 'v1',
+  reason: null,
+  comment: null,
+  reviewer_id: null,
+  decided_at: null,
+});
+
 const fixtures = {
   enrollments: {
     items: [{ stable_id: 'enr-1', track_id: 'track-1', enrolled_at: '2025-01-01T00:00:00Z' }],
@@ -65,6 +80,44 @@ const fixtures = {
   },
   review: {
     questions: [{ stable_id: 'rq-1', prompt: 'Review question?', options: options(30) }],
+  },
+  reviewTasks: {
+    items: [reviewTask('rt-1', 'var-1'), reviewTask('rt-2', 'var-2')],
+    next_cursor: 'cursor-2',
+  },
+  reviewTaskDetail: {
+    task: reviewTask('rt-1', 'var-1'),
+    variant: {
+      stable_id: 'var-1',
+      parent_question_id: 'q-9',
+      track_id: 'track-1',
+      state: 'pending_review',
+      approved_content_version: null,
+    },
+    revision: {
+      content_version: 'v1',
+      state: 'pending_review',
+      body: {
+        prompt_text: {
+          fr: 'Quelle commande liste les fichiers ?',
+          en: 'Which command lists files?',
+        },
+        explanation: { fr: 'Parce que.', en: 'Because.' },
+        options: [
+          { text: { fr: 'ls', en: 'ls' }, is_correct: true },
+          { text: { fr: 'cd', en: 'cd' }, is_correct: false },
+        ],
+      },
+      origin: 'ai_generated',
+      model: 'model-x',
+      prompt_id: 'variant-gen',
+      prompt_version: '3',
+      generation_date: '2030-01-01T09:00:00Z',
+      reviewed_by: null,
+      reviewed_at: null,
+      findings: [{ kind: 'duplicate', target: 'prompt', detail: 'Matches q-2' }],
+      created_at: '2030-01-01T09:00:00Z',
+    },
   },
   project: {
     stable_id: 'project-1',
@@ -317,6 +370,9 @@ function route(method, url) {
   if (path.startsWith('/quizzes/')) return fixtures.quiz;
   if (path === '/reviews') return fixtures.review;
   if (path.startsWith('/projects/')) return fixtures.project;
+  // Reviewer queue (ai-content task 16.2, Req 15.9).
+  if (path === '/review-tasks') return fixtures.reviewTasks;
+  if (path.startsWith('/review-tasks/')) return fixtures.reviewTaskDetail;
   return undefined;
 }
 

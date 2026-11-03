@@ -27,6 +27,12 @@ dependencies = [
 # privileged reviewer/author/admin role. The only path that provisions
 # privileged roles; self-service never does (Req 13.3).
 edu-it-grant-role = "edu_it_worker.privileged_user_cli:main"
+# Staged AI content generation (ai-content Req 5, 10, 12): one Stage per run, on a new
+# Generation_Branch that is left for review. Honors the stage gate and the budget gate.
+edu-it-generate = "edu_it_worker.ai.cli:entry"
+# Eval_Suite runner (ai-content Req 11): runs the Golden_Set cases against the current Prompt
+# versions and writes the Eval_Report. Replay only under EDU_IT_ENV=test; --live is budgeted.
+edu-it-eval = "edu_it_worker.ai.cli:eval_entry"
 
 [build-system]
 requires = ["hatchling==1.27.0"]

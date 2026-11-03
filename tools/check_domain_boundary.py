@@ -64,8 +64,38 @@ BANNED_MODULES: frozenset[str] = frozenset(
         "asyncpg",
         "redis",
         "aioredis",
+        # LLM provider SDKs (ai-content Req 1.6): the domain depends on the
+        # LLMProvider port only and never on a vendor SDK.
+        "openai",
+        "anthropic",
+        "cohere",
+        "mistralai",
+        "litellm",
+        "langchain",
+        "langchain_core",
+        "vertexai",
+        "ollama",
+        "groq",
+        "boto3",
+        "botocore",
+        "huggingface_hub",
     }
 )
+
+# Banned dotted prefixes whose top-level package is too broad to ban outright.
+BANNED_PREFIXES: tuple[str, ...] = (
+    "google.generativeai",
+    "google.genai",
+    "google.cloud.aiplatform",
+    "azure.ai",
+)
+
+
+def _is_banned(module: str) -> bool:
+    """True when ``module`` is a banned framework / provider SDK import."""
+    if _top_level(module) in BANNED_MODULES:
+        return True
+    return any(module == p or module.startswith(p + ".") for p in BANNED_PREFIXES)
 
 
 class Violation:
@@ -116,9 +146,10 @@ def _scan_file(path: Path) -> list[Violation]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                top = _top_level(alias.name)
-                if top in BANNED_MODULES:
-                    violations.append(Violation(path, node.lineno, top, f"import {alias.name}"))
+                if _is_banned(alias.name):
+                    violations.append(
+                        Violation(path, node.lineno, _top_level(alias.name), f"import {alias.name}")
+                    )
         elif isinstance(node, ast.ImportFrom):
             # Ignore relative imports (node.level > 0): they stay within the
             # domain package and can never reach an external framework.
@@ -126,14 +157,13 @@ def _scan_file(path: Path) -> list[Violation]:
                 continue
             if node.module is None:
                 continue
-            top = _top_level(node.module)
-            if node.level == 0 and top in BANNED_MODULES:
+            if node.level == 0 and _is_banned(node.module):
                 names = ", ".join(a.name for a in node.names)
                 violations.append(
                     Violation(
                         path,
                         node.lineno,
-                        top,
+                        _top_level(node.module),
                         f"from {node.module} import {names}",
                     )
                 )

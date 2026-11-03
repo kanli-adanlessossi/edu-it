@@ -196,6 +196,16 @@ def _keys(node: Any) -> set[str]:
     return set()
 
 
+def _bools(node: Any) -> list[bool]:
+    if isinstance(node, bool):
+        return [node]
+    if isinstance(node, dict):
+        return [b for v in node.values() for b in _bools(v)]
+    if isinstance(node, list):
+        return [b for v in node for b in _bools(v)]
+    return []
+
+
 # Feature: api-route-wiring, Property 14: Content reads are complete, safe, and localized
 @settings(max_examples=100, deadline=None)
 @given(quiz=_quizzes(), project=_projects(), locale=st.sampled_from(["fr", "en"]))
@@ -222,7 +232,9 @@ def test_content_reads_are_complete_safe_and_localized(
             for i, t in enumerate(expected["options"])
         ]
     assert not {k for k in _keys(body) if "correct" in k.lower()}
-    assert "correct" not in json.dumps(body).lower()
+    # Structural check (not a substring scan: generated titles may be "correct"):
+    # the key is never exposed as a field, and no boolean flag appears anywhere.
+    assert not _bools(body)
 
     # Project: complete rubric, localized per field with English fallback.
     status, body = _get(app, "/projects/pj_1", f"locale={locale}")

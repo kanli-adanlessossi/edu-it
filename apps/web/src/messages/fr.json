@@ -9,6 +9,7 @@
       "questionLabel": "Question {number} : {prompt}",
       "showHint": "Afficher l'indice {level}",
       "hintsLabel": "Indices",
+      "reportsLabel": "Signaler un problème sur une question",
       "submit": "Envoyer les réponses",
       "resultTitle": "Votre résultat",
       "score": "Score : {score}",
@@ -44,6 +45,106 @@
       "reviewed": "Votre projet a été évalué.",
       "unavailable": "Ce projet n'est pas disponible.",
       "genericError": "Une erreur est survenue. Veuillez réessayer."
+    }
+  },
+  "Reviewer": {
+    "queue": {
+      "title": "File de relecture",
+      "listLabel": "Tâches de relecture ouvertes",
+      "empty": "Aucune tâche de relecture ne vous attend.",
+      "open": "Relire {id}",
+      "track": "Parcours : {track}",
+      "loadMore": "Afficher plus"
+    },
+    "kind": {
+      "new_variant": "Nouvelle variante",
+      "edited_revision": "Révision modifiée",
+      "flagged_item": "Élément signalé"
+    },
+    "state": {
+      "open": "Ouverte",
+      "approved": "Approuvée",
+      "rejected": "Rejetée",
+      "changes_requested": "Modifications demandées"
+    },
+    "locale": {
+      "fr": "Français",
+      "en": "English"
+    },
+    "detail": {
+      "title": "Tâche de relecture",
+      "back": "Retour à la file de relecture",
+      "taskState": "Statut : {state}",
+      "reason": "Motif : {reason}",
+      "variant": "Variante",
+      "parent": "Question parente : {id}",
+      "prompt": "Question",
+      "options": "Options de réponse",
+      "optionLabel": "Option {number}",
+      "correct": "bonne réponse",
+      "explanation": "Explication",
+      "explanationLine": "Explication : {text}",
+      "noRevision": "Cette tâche n'a aucune révision à relire.",
+      "none": "Non renseigné"
+    },
+    "provenance": {
+      "title": "Provenance",
+      "origin": "Origine",
+      "model": "Modèle",
+      "prompt": "Prompt",
+      "generatedAt": "Générée le",
+      "reviewedBy": "Relue par",
+      "reviewedAt": "Relue le",
+      "contentVersion": "Version du contenu"
+    },
+    "findings": {
+      "title": "Constats de vérification",
+      "none": "Aucun constat.",
+      "kind": {
+        "check_passes_on_starting_state": "La vérification réussit sur l'état initial",
+        "check_fails_on_reference_solution": "La vérification échoue sur la solution de référence",
+        "check_inconclusive": "Vérification non concluante",
+        "setup_failed": "Échec de la préparation",
+        "reference_solution_failed": "Échec de la solution de référence",
+        "sandbox_unavailable": "Bac à sable indisponible",
+        "phase_deadline_exceeded": "Délai de phase dépassé",
+        "disagreement": "La réponse indépendante diverge",
+        "answer_unavailable": "Réponse indépendante indisponible",
+        "command_failed": "Commande en échec",
+        "duplicate": "Doublon d'un texte existant",
+        "uncovered_concept": "Concept non couvert",
+        "readability_out_of_bounds": "Lisibilité hors limites",
+        "similarity_exceeded": "Trop proche des sources"
+      }
+    },
+    "actions": {
+      "title": "Décision",
+      "commentLabel": "Commentaire (obligatoire pour demander des modifications)",
+      "approve": "Approuver",
+      "edit": "Modifier",
+      "requestChanges": "Demander des modifications",
+      "reject": "Rejeter",
+      "saveEdit": "Enregistrer la version modifiée",
+      "cancelEdit": "Annuler"
+    },
+    "outcome": {
+      "approve": "La variante a été approuvée.",
+      "reject": "La variante a été rejetée.",
+      "requestChanges": "Des modifications ont été demandées.",
+      "edit": "Votre modification est enregistrée. Elle doit être approuvée avant d'être servie.",
+      "openNewTask": "Ouvrir la nouvelle tâche de relecture"
+    },
+    "errors": {
+      "expertise": "Vous n'avez pas l'expertise de relecture pour ce parcours.",
+      "alreadyDecided": "Cette tâche a déjà été traitée.",
+      "notFound": "Cette tâche de relecture n'existe pas.",
+      "invalid": "La requête n'est pas valide. Vérifiez votre saisie puis réessayez.",
+      "unauthenticated": "Votre session a expiré. Connectez-vous à nouveau.",
+      "commentRequired": "Saisissez un commentaire pour demander des modifications.",
+      "commentTooLong": "Le commentaire ne doit pas dépasser {max} caractères.",
+      "editIncomplete": "Renseignez chaque texte en français et en anglais.",
+      "editUnchanged": "Modifiez au moins un texte avant d'enregistrer.",
+      "generic": "Une erreur est survenue. Veuillez réessayer."
     }
   },
   "LanguageSwitcher": {
@@ -123,6 +224,40 @@
   "Dashboard": {
     "title": "Tableau de bord",
     "empty": "Votre tableau de bord est vide pour le moment. Les fonctionnalités d'apprentissage arrivent bientôt."
+  },
+  "PathRecommendation": {
+    "heading": "Prochaines étapes suggérées",
+    "intro": "Ces concepts vous sont suggérés, dans cet ordre.",
+    "sourceLlm": "Suggestion établie avec l'aide d'un assistant IA.",
+    "sourceRuleBased": "Suggestion établie à partir de votre progression et de l'ordre du cours.",
+    "dismiss": "Ignorer cette suggestion",
+    "dismissed": "Suggestion ignorée.",
+    "dismissError": "Nous n'avons pas pu ignorer cette suggestion. Veuillez réessayer."
+  },
+  "ProblemReport": {
+    "open": "Signaler un problème",
+    "formLabel": "Signaler un problème concernant {item}",
+    "itemQuestion": "la question {number}",
+    "itemLesson": "cette leçon",
+    "itemLab": "ce lab",
+    "categoryLabel": "Quel est le problème ?",
+    "categoryPlaceholder": "Choisissez une catégorie",
+    "category": {
+      "incorrect": "Contenu incorrect",
+      "unclear": "Peu clair ou confus",
+      "translation": "Problème de traduction",
+      "outdated": "Obsolète",
+      "technical": "Problème technique",
+      "other": "Autre"
+    },
+    "commentLabel": "Détails (facultatif)",
+    "commentHint": "Jusqu'à {max} caractères. N'indiquez pas d'informations personnelles.",
+    "submit": "Envoyer le signalement",
+    "cancel": "Annuler",
+    "categoryRequired": "Choisissez une catégorie.",
+    "sent": "Merci. Votre signalement a été envoyé.",
+    "alreadySent": "Votre signalement est déjà enregistré.",
+    "genericError": "Nous n'avons pas pu envoyer votre signalement. Veuillez réessayer."
   },
   "Lesson": {
     "unsupportedContent": "Cette leçon contient un contenu qui ne peut pas être affiché.",
@@ -274,6 +409,8 @@
     "verifyEmail": "Vérifiez votre e-mail — EDU-IT",
     "resetPassword": "Réinitialisez votre mot de passe — EDU-IT",
     "githubConfirm": "Associez votre compte GitHub — EDU-IT",
-    "dashboard": "Tableau de bord — EDU-IT"
+    "dashboard": "Tableau de bord — EDU-IT",
+    "reviewer": "File de relecture — EDU-IT",
+    "reviewerTask": "Tâche de relecture — EDU-IT"
   }
 }

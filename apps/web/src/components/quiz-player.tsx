@@ -18,6 +18,7 @@ import {
   type QuizView,
 } from '../practice.js';
 import { createQuizApi } from '../practice-api.js';
+import { ReportProblem } from './report-problem.js';
 
 interface QuizPlayerProps {
   readonly quiz: QuizView;
@@ -129,6 +130,20 @@ export function QuizPlayer({ locale, quiz, api: apiOverride }: QuizPlayerProps) 
           </button>
         ) : null}
       </form>
+      {/* Outside the answer form: forms must not nest. */}
+      <ol aria-label={t('reportsLabel')}>
+        {quiz.questions.map((question, index) => (
+          <li key={question.stableId}>
+            <ReportProblem
+              locale={locale}
+              itemKind="question"
+              itemId={question.stableId}
+              contentVersion={quiz.contentVersion}
+              number={index + 1}
+            />
+          </li>
+        ))}
+      </ol>
       {result !== null ? (
         <div role="status" aria-live="polite">
           <h2>{t('resultTitle')}</h2>

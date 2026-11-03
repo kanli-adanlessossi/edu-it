@@ -1,0 +1,25 @@
+{
+  "track": "networking-basics",
+  "terms": [
+    { "term_en": "IP address", "term_fr": "adresse IP" },
+    { "term_en": "subnet", "term_fr": "sous-réseau" },
+    { "term_en": "subnet mask", "term_fr": "masque de sous-réseau" },
+    { "term_en": "gateway", "term_fr": "passerelle" },
+    { "term_en": "router", "term_fr": "routeur" },
+    { "term_en": "switch", "term_fr": "commutateur" },
+    { "term_en": "packet", "term_fr": "paquet" },
+    { "term_en": "port", "term_fr": "port" },
+    { "term_en": "protocol", "term_fr": "protocole" },
+    { "term_en": "DNS", "term_fr": "DNS" },
+    { "term_en": "hostname", "term_fr": "nom d'hôte" },
+    { "term_en": "DHCP", "term_fr": "DHCP" },
+    { "term_en": "MAC address", "term_fr": "adresse MAC" },
+    { "term_en": "TCP", "term_fr": "TCP" },
+    { "term_en": "UDP", "term_fr": "UDP" },
+    { "term_en": "latency", "term_fr": "latence" },
+    { "term_en": "bandwidth", "term_fr": "bande passante" },
+    { "term_en": "firewall", "term_fr": "pare-feu" },
+    { "term_en": "routing table", "term_fr": "table de routage" },
+    { "term_en": "network interface", "term_fr": "interface réseau" }
+  ]
+}

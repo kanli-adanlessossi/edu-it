@@ -105,9 +105,20 @@ import { SignInForm } from './app/[locale]/sign-in/sign-in-form.js';
 import { VerifyEmailResend } from './app/[locale]/verify-email/verify-email-resend.js';
 import { ResetPasswordForm } from './app/[locale]/reset-password/reset-password-form.js';
 import { LandingBody, DashboardBody } from './accessibility-page-bodies.js';
+import { ReviewQueue } from './components/review-queue.js';
+import { ReviewTaskDetailView } from './components/review-task-detail.js';
+import { REVIEWER_DETAIL_FIXTURE, REVIEWER_QUEUE_FIXTURE } from './reviewer-fixtures.js';
 
 /** A `Meta` catalog key naming a page's localized document title. */
-type MetaTitleKey = 'landing' | 'signUp' | 'signIn' | 'verifyEmail' | 'resetPassword' | 'dashboard';
+type MetaTitleKey =
+  | 'landing'
+  | 'signUp'
+  | 'signIn'
+  | 'verifyEmail'
+  | 'resetPassword'
+  | 'dashboard'
+  | 'reviewer'
+  | 'reviewerTask';
 
 /** A page built this phase, named for the scan report. */
 interface PageUnderTest {
@@ -134,6 +145,17 @@ const PAGES: readonly PageUnderTest[] = [
     body: (locale) => <ResetPasswordForm locale={locale} />,
   },
   { name: 'dashboard', titleKey: 'dashboard', body: () => <DashboardBody /> },
+  // ai-content task 16.2 (Req 15.9): the reviewer queue and task detail.
+  {
+    name: 'reviewer queue',
+    titleKey: 'reviewer',
+    body: (locale) => <ReviewQueue locale={locale} initial={REVIEWER_QUEUE_FIXTURE} />,
+  },
+  {
+    name: 'reviewer task',
+    titleKey: 'reviewerTask',
+    body: (locale) => <ReviewTaskDetailView locale={locale} detail={REVIEWER_DETAIL_FIXTURE} />,
+  },
 ];
 
 /** The localized document title for a page, read from the shipped `Meta` catalog. */

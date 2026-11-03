@@ -32,6 +32,7 @@ order on upgrade and drops them in the exact reverse order on downgrade
 from __future__ import annotations
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     Column,
@@ -53,6 +54,7 @@ from sqlalchemy import (
 __all__ = [
     "ACCOUNTS_OAUTH_RESET_TABLE_NAMES",
     "ACCOUNTS_RUNTIME_TABLE_NAMES",
+    "AI_CONTENT_TABLE_NAMES",
     "DATA_MODEL_TABLE_NAMES",
     "STABLE_ID_TABLE_NAMES",
     "metadata",
@@ -64,6 +66,20 @@ ACCOUNTS_RUNTIME_TABLE_NAMES: frozenset[str] = frozenset({"credential", "verific
 
 # Tables created by revision 0004_accounts_oauth_reset. Revision 0001 skips them too.
 ACCOUNTS_OAUTH_RESET_TABLE_NAMES: frozenset[str] = frozenset({"reset_link", "pending_oauth_link"})
+
+# Tables created by revision 0005_ai_content rather than 0001. Revision 0001 skips
+# them so each revision owns exactly what it created. The revision starts as
+# column additions only; the tasks that introduce each table add its name here.
+AI_CONTENT_TABLE_NAMES: frozenset[str] = frozenset(
+    {
+        "variant_revision",
+        "item_flag",
+        "item_observation",
+        "ai_cursor",
+        "problem_report",
+        "advisor_audit_log",
+    }
+)
 
 # A single MetaData collecting every Data_Model table. A stable naming
 # convention keeps constraint/index names deterministic across apply and
@@ -592,6 +608,20 @@ generation_job = Table(
     Column("model", String(128)),
     Column("tokens", Integer),
     Column("cost_cents", Integer),
+    # Revision 0005_ai_content (ai-content design "Data Models"). ``status``,
+    # ``model``, ``tokens`` and ``cost_cents`` stay as the job totals.
+    _stable_id(),
+    Column("kind", String(16)),  # stage, refill, advisor, eval
+    Column("track_stable_id", String(64)),
+    Column("stage", String(32)),
+    Column("unit_key", String(255)),
+    Column("prompt_id", String(128)),
+    Column("prompt_version", String(32)),
+    Column("cost_cap_cents", Integer),
+    Column("branch", String(255)),
+    Column("started_at", DateTime(timezone=True)),
+    Column("finished_at", DateTime(timezone=True)),
+    Column("findings_json", Text),
 )
 
 variant = Table(
@@ -602,15 +632,88 @@ variant = Table(
     Column("question_id", Integer, ForeignKey("question.id"), nullable=False),
     Column("generation_job_id", Integer, ForeignKey("generation_job.id")),
     Column("lifecycle_state", String(32), nullable=False),
+    # Revision 0005_ai_content (ai-content design "Data Models"). Nullable so rows
+    # that predate the revision survive. ``approved_content_version`` names the
+    # ``variant_revision`` the serving code uses.
+    Column("parent_question_stable_id", String(64)),
+    Column("track_stable_id", String(64)),
+    Column("approved_content_version", String(128)),
+    Column("withdrawn_reason", Text),
+    Column("created_at", DateTime(timezone=True)),
+    Index("ix_variant_parent_state", "parent_question_stable_id", "lifecycle_state"),
 )
 
 review_queue_item = Table(
     "review_queue_item",
     metadata,
     _internal_pk(),
-    Column("variant_id", Integer, ForeignKey("variant.id"), nullable=False),
+    # Revision 0005_ai_content: nullable, because a flagged_item task can target
+    # a question, lesson or lab instead of a variant.
+    Column("variant_id", Integer, ForeignKey("variant.id")),
     Column("state", String(32), nullable=False),
     Column("reviewer_id", Integer, ForeignKey("user.id")),
+    _stable_id(),
+    Column("kind", String(16)),  # new_variant, edited_revision, flagged_item
+    Column("target_kind", String(16)),  # variant, question, lesson, lab
+    Column("target_stable_id", String(64)),
+    Column("revision_content_version", String(128)),
+    Column("track_stable_id", String(64)),
+    Column("reason", Text),
+    Column("comment", Text),
+    Column("decided_at", DateTime(timezone=True)),
+    Column("created_at", DateTime(timezone=True)),
+    # Keyset page of the open tasks of a track, oldest first.
+    Index("ix_review_queue_item_page", "state", "track_stable_id", "created_at", "stable_id"),
+    Index("ix_review_queue_item_target", "target_kind", "target_stable_id"),
+)
+
+variant_revision = Table(
+    # One reviewable text of a variant, keyed by (variant, content_version). Created
+    # by revision 0005_ai_content. ``reviewed_by`` references a reviewer account like
+    # content_provenance.reviewed_by; the table holds no other personal data.
+    "variant_revision",
+    metadata,
+    _internal_pk(),
+    Column("variant_id", Integer, ForeignKey("variant.id"), nullable=False),
+    Column("content_version", String(128), nullable=False),
+    Column("body_json", Text, nullable=False),  # FR and EN prompt, options, key
+    Column("state", String(32), nullable=False),  # PendingReview, Approved, Rejected
+    Column("origin", String(32)),
+    Column("model", String(128)),
+    Column("prompt_id", String(128)),
+    Column("prompt_version", String(128)),
+    Column("generation_date", DateTime(timezone=True)),
+    Column("reviewed_by", Integer, ForeignKey("user.id")),
+    Column("reviewed_at", DateTime(timezone=True)),
+    Column("findings_json", Text),
+    Column("created_at", DateTime(timezone=True)),
+    UniqueConstraint("variant_id", "content_version", name="uq_variant_revision_version"),
+)
+
+item_flag = Table(
+    # Marks an item as possibly wrong so serving skips it until a reviewer clears
+    # it. Created by revision 0005_ai_content. The item is addressed by
+    # (item_kind, item_stable_id) with no foreign key, because it can be a
+    # question, variant, lesson or lab. At most one flag per item is active
+    # (cleared_at is null). No personal data.
+    "item_flag",
+    metadata,
+    _internal_pk(),
+    Column("item_kind", String(16), nullable=False),
+    Column("item_stable_id", String(64), nullable=False),
+    Column("reason_kind", String(16), nullable=False),  # reports, statistics
+    Column("detail", Text),
+    Column("flagged_at", DateTime(timezone=True), nullable=False),
+    Column("cleared_at", DateTime(timezone=True)),
+    Column("cleared_by_task", Integer, ForeignKey("review_queue_item.id")),
+    Index(
+        "uq_item_flag_active",
+        "item_kind",
+        "item_stable_id",
+        unique=True,
+        postgresql_where=text("cleared_at is null"),
+        sqlite_where=text("cleared_at is null"),
+    ),
 )
 
 item_statistic = Table(
@@ -621,6 +724,68 @@ item_statistic = Table(
     Column("variant_id", Integer, ForeignKey("variant.id")),
     Column("correct_rate", Float),
     Column("avg_time_ms", Float),
+    # Revision 0005_ai_content: the integer sums the quality fold keeps, so the
+    # averages are exact. `correct_rate` and `avg_time_ms` are derived from them
+    # on each write. An item is addressed by (item_kind, item_stable_id). The row is an
+    # aggregate with no learner link and survives a learner's deletion.
+    Column("item_kind", String(16)),
+    Column("item_stable_id", String(64)),
+    Column("sample_count", Integer, nullable=False, server_default="0"),
+    Column("correct_count", Integer, nullable=False, server_default="0"),
+    Column("timed_count", Integer, nullable=False, server_default="0"),
+    Column("total_time_ms", BigInteger, nullable=False, server_default="0"),
+    Column("updated_at", DateTime(timezone=True)),
+    Index("uq_item_statistic_item", "item_kind", "item_stable_id", unique=True),
+)
+
+item_observation = Table(
+    # One answer to an item, appended by the quiz and review use cases and folded
+    # into item_statistic by the worker. Created by revision 0005_ai_content. The
+    # item is addressed by (item_kind, item_stable_id) with no foreign key, like
+    # item_flag; `variant_ref` is set when the item was a served variant.
+    # Personal data: `user_id` links it to the learner (export, deletion, retention).
+    "item_observation",
+    metadata,
+    _internal_pk(),
+    Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
+    Column("item_kind", String(16), nullable=False),
+    Column("item_stable_id", String(64), nullable=False),
+    Column("variant_ref", String(255)),
+    Column("correct", Boolean, nullable=False),
+    Column("elapsed_ms", Integer),
+    Column("observed_at", DateTime(timezone=True), nullable=False),
+    Index("ix_item_observation_user", "user_id"),
+    Index("ix_item_observation_observed_at", "observed_at"),
+)
+
+problem_report = Table(
+    # A learner's report on a question, lesson or lab. Created by revision
+    # 0005_ai_content. The item is addressed by (item_kind, item_stable_id) with no
+    # foreign key, like item_flag; `content_version` is the version the learner saw.
+    # Personal data: `user_id` and the free-text `comment` (export, deletion, retention).
+    "problem_report",
+    metadata,
+    _internal_pk(),
+    _stable_id(),
+    Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
+    Column("item_kind", String(16), nullable=False),
+    Column("item_stable_id", String(64), nullable=False),
+    Column("content_version", String(128), nullable=False),
+    Column("category", String(32), nullable=False),
+    Column("comment", Text),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Index("ix_problem_report_user", "user_id"),
+    Index("ix_problem_report_item", "item_kind", "item_stable_id", "content_version"),
+    Index("ix_problem_report_created_at", "created_at"),
+)
+
+ai_cursor = Table(
+    # A named position of an AI worker job, for example the last item_observation id
+    # folded into item_statistic. Created by revision 0005_ai_content. No personal data.
+    "ai_cursor",
+    metadata,
+    Column("name", String(64), primary_key=True),
+    Column("value", BigInteger, nullable=False, server_default="0"),
 )
 
 path_recommendation = Table(
@@ -629,7 +794,38 @@ path_recommendation = Table(
     _internal_pk(),
     Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
     Column("source", String(32), nullable=False),
-    Column("ordering", String, nullable=False),
+    Column("ordering", String, nullable=False),  # JSON list of concept ids
+    # Revision 0005_ai_content (ai-content design "Data Models"). `source` is `llm` or
+    # `rule-based`; `run_id` names the advisor run; `dismissed_at` is set by the
+    # learner's dismissal. Nullable (except `stable_id`, backfilled) so rows that predate
+    # the revision survive. Personal data: `user_id` (export, deletion, retention).
+    _stable_id(),
+    Column("created_at", DateTime(timezone=True)),
+    Column("dismissed_at", DateTime(timezone=True)),
+    Column("run_id", String(64)),
+    Index("ix_path_recommendation_user_created", "user_id", "created_at"),
+    Index("ix_path_recommendation_created_at", "created_at"),
+)
+
+advisor_audit_log = Table(
+    # One row per advisor run: the per-run Pseudonymous_Handle, the source, the outcome, the
+    # reason a model order was discarded and the identifiers the model returned. Created by
+    # revision 0005_ai_content. Personal data: `user_id` links it to the learner so it is
+    # deleted with them (export, deletion, retention).
+    "advisor_audit_log",
+    metadata,
+    _internal_pk(),
+    _stable_id(),
+    Column("user_id", Integer, ForeignKey("user.id"), nullable=False),
+    Column("run_id", String(64), nullable=False),
+    Column("handle", String(128), nullable=False),
+    Column("source", String(32), nullable=False),
+    Column("outcome", String(32), nullable=False),
+    Column("reason", Text),
+    Column("returned_ids_json", Text, nullable=False),
+    Column("recorded_at", DateTime(timezone=True), nullable=False),
+    Index("ix_advisor_audit_log_user", "user_id"),
+    Index("ix_advisor_audit_log_recorded_at", "recorded_at"),
 )
 
 budget_ledger = Table(
@@ -639,6 +835,16 @@ budget_ledger = Table(
     Column("generation_job_id", Integer, ForeignKey("generation_job.id"), nullable=False),
     Column("tokens", Integer),
     Column("cost_cents", Integer),
+    # Revision 0005_ai_content: one row per attempt. ``tokens`` and
+    # ``cost_cents`` hold the attempt's totals.
+    Column("attempt_no", Integer, nullable=False, server_default="1"),
+    Column("model", String(128)),
+    Column("input_tokens", Integer),
+    Column("output_tokens", Integer),
+    # ok, invalid, timeout, unavailable, binding
+    Column("outcome", String(16), nullable=False, server_default="ok"),
+    Column("track_stable_id", String(64)),
+    Column("recorded_at", DateTime(timezone=True)),
 )
 
 # ---------------------------------------------------------------------------

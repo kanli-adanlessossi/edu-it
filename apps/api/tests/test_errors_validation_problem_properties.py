@@ -118,5 +118,6 @@ def test_property_29_one_problem_entry_per_rejected_field(
     # value (12345) must never appear in the serialized body (Req 19.5 "no
     # internal representation").
     serialized = json.dumps(problem.to_response_body())
-    assert '"input"' not in serialized
+    # Match the JSON key, not a value: a modeled field may legitimately be named "input".
+    assert '"input":' not in serialized
     assert "12345" not in serialized

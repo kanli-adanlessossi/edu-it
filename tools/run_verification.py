@@ -27,6 +27,17 @@ Requirement 33 test group. ``--phase-report`` then asks ``tools/phase_report.py`
 failed or could not be run, or when the final performance attempt missed a target.
 A tool that is not installed makes its check ``not-run``, never ``passed``.
 
+AI content-generation suite (task 26.1; Requirements 23.1, 23.2, 23.5)::
+
+    python tools/run_verification.py --suite ai-content [--only ai-eval] [--json PATH]
+        [--prompt-base REF]
+
+``--suite ai-content`` runs lint, type checks, unit and property tests, ``content validate``,
+``edu-it-eval`` (replay, ``EDU_IT_ENV=test``), the prompt immutability check against
+``--prompt-base`` (default ``origin/main``) and ``tools/check_traceability.py --milestone all``.
+A missing tool or an unreachable base ref makes its check ``not-run``/``failed``, never
+``passed``; the exit status is non-zero unless every executed check passed.
+
 Two-phase gate procedure (api-route-wiring 14.2, 14.5). ``labs-docker`` (and any Requirement 33
 group file marked ``docker``) reports ``blocked`` without running while a Worker_Service listens
 on port 8001, because the Real_Stack worker's ``ReapSessions`` orphan sweep destroys the
@@ -59,7 +70,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -88,6 +99,8 @@ class Check:
     # True: the check must not run while a Worker_Service is listening (its ReapSessions orphan
     # sweep destroys the check's own ``edu-it.managed`` containers). It reports "blocked" then.
     exclusive_of_worker: bool = False
+    # Extra environment variables for the child process (for example EDU_IT_ENV=test).
+    env: dict[str, str] = field(default_factory=dict)
 
     def command_text(self) -> str:
         if not self.command:
@@ -401,6 +414,110 @@ def build_labs_checks(*, skip_perf: bool = False) -> list[Check]:
     ]
 
 
+# --- ai-content suite (task 26.1) ---------------------------------------------------------
+
+AI_PROMPT_BASE = "origin/main"
+
+
+def build_ai_content_checks(*, prompt_base: str = AI_PROMPT_BASE) -> list[Check]:
+    """The ai-content acceptance checks, in report order (Requirements 23.1, 23.2, 23.5)."""
+    no_docker = ("-m", "not docker")
+    web = "apps/web"
+    return [
+        Check("ai-lint", "23.1", "Ruff lint over the Python components", _ruff("check", ".")),
+        Check(
+            "ai-format",
+            "23.1",
+            "Ruff format check over the Python components",
+            _ruff("format", "--check", "."),
+        ),
+        Check(
+            "ai-domain-boundary",
+            "23.3",
+            "packages/domain imports no web or API framework",
+            ["python", "tools/check_domain_boundary.py"],
+        ),
+        Check("ai-typecheck", "23.1", "mypy over the Python components", ["python", "-m", "mypy"]),
+        Check("ai-web-lint", "23.1", "Web lint", ["npm", "run", "lint"], cwd=web),
+        Check("ai-web-typecheck", "23.1", "Web type check", ["npm", "run", "typecheck"], cwd=web),
+        Check(
+            "ai-unit",
+            "23.1",
+            "Unit tests (Docker-marked tests excluded; no model network access)",
+            _pytest(*no_docker, "-k", "not propert"),
+        ),
+        Check(
+            "ai-property",
+            "23.1",
+            "Property-based tests (Docker-marked tests excluded)",
+            _pytest(*no_docker, "-k", "propert"),
+        ),
+        Check("ai-web-test", "23.1", "Web unit tests (vitest)", ["npm", "test"], cwd=web),
+        Check(
+            "ai-content-validate",
+            "6, 23.1",
+            "content validate, --allow-pending (the CI mode)",
+            [
+                "python",
+                "-m",
+                "edu_it_content.cli",
+                "validate",
+                "--allow-pending",
+                "--content-root",
+                "content",
+            ],
+        ),
+        Check(
+            "ai-eval-replay",
+            "11",
+            "edu-it-eval on the golden suite with the Replay_Provider (EDU_IT_ENV=test)",
+            [
+                "python",
+                "-c",
+                "import sys; from edu_it_worker.ai.cli import eval_entry; "
+                "sys.exit(eval_entry(['--suite', 'golden']))",
+            ],
+            env={"EDU_IT_ENV": "test"},
+        ),
+        Check(
+            "ai-prompt-immutability",
+            "4.2, 4.3",
+            f"No committed Prompt changed since {prompt_base}",
+            ["python", "tools/check_prompt_immutability.py", "--base", prompt_base],
+        ),
+        Check(
+            "ai-traceability",
+            "23.2, 23.5",
+            "Every requirement of milestones A, B, C and 23 to 25 is claimed by a test",
+            ["python", "tools/check_traceability.py", "--milestone", "all"],
+        ),
+        Check(
+            "ai-traceability-suite",
+            "23.2",
+            "Every requirement maps to an existing ai-content test",
+            _pytest("tools/tests/test_ai_content_verification_suite.py"),
+        ),
+    ]
+
+
+def _ruff(*args: str) -> list[str]:
+    return ["python", "-m", "ruff", *args]
+
+
+def _main_ai_content(args: argparse.Namespace) -> int:
+    checks = build_ai_content_checks(prompt_base=args.prompt_base)
+    if args.only:
+        checks = [c for c in checks if any(c.check_id.startswith(p) for p in args.only)]
+    for check in checks:
+        run_check(check)
+        print(_label(check))
+        print(f"          command: {check.command_text()}")
+        print(f"          result : {check.detail}")
+    if args.json:
+        args.json.write_text(json.dumps([asdict(c) for c in checks], indent=2), encoding="utf-8")
+    return 1 if any(c.status != "passed" for c in checks) else 0
+
+
 def _inspect_seed_approval(seed_dir: Path) -> tuple[bool, str]:
     """Pass only when every provenanced seed item records ``reviewed_by``."""
     missing = 0
@@ -484,6 +601,7 @@ def run_check(check: Check, worker_probe: Callable[[int], bool] | None = None) -
         child_env = dict(os.environ)
         if not child_env.get("ALPINE_MIRROR"):
             child_env.pop("ALPINE_MIRROR", None)
+        child_env.update(check.env)
         try:
             result = subprocess.run(
                 command,
@@ -695,7 +813,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", type=Path, help="write the results to this JSON file")
     parser.add_argument(
         "--suite",
-        choices=("learning", "labs"),
+        choices=("learning", "labs", "ai-content"),
         default="learning",
         help="which acceptance suite to run (default: learning)",
     )
@@ -716,9 +834,16 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="labs: write docs/reports/phase-3.md (or PATH) only if every check passed",
     )
+    parser.add_argument(
+        "--prompt-base",
+        default=AI_PROMPT_BASE,
+        help="ai-content: git ref the prompt immutability check diffs against",
+    )
     args = parser.parse_args(argv)
     if args.phase_report is not None and args.suite != "labs":
         parser.error("--phase-report requires --suite labs")
+    if args.suite == "ai-content":
+        return _main_ai_content(args)
     if args.suite == "labs":
         return _main_labs(args)
 

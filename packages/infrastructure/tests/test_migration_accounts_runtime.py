@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from edu_it_infrastructure.persistence import DATA_MODEL_TABLE_NAMES
+from edu_it_infrastructure.persistence.metadata import AI_CONTENT_TABLE_NAMES
 from edu_it_infrastructure.persistence.runner import Migration_Runner
 from sqlalchemy import create_engine, inspect
 
@@ -37,7 +38,10 @@ def test_upgrade_creates_only_the_two_tables_and_downgrade_drops_only_them(tmp_p
     assert runner.current() == _REVISION
     after = _tables(url)
     assert after - before == _NEW_TABLES
-    assert after == DATA_MODEL_TABLE_NAMES - {"reset_link", "pending_oauth_link"}
+    assert after == DATA_MODEL_TABLE_NAMES - AI_CONTENT_TABLE_NAMES - {
+        "reset_link",
+        "pending_oauth_link",
+    }
 
     insp_engine = create_engine(url)
     try:

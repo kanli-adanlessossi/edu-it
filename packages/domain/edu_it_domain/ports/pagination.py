@@ -8,6 +8,7 @@ of the last item of the previous page, and the results are strictly after it.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
@@ -20,10 +21,20 @@ __all__ = [
     "AttemptPageReader",
     "EnrollmentPageReader",
     "Keyset",
+    "Page",
 ]
 
 Keyset = tuple["datetime", "StableId"]
 """A keyset position: ``(sort-key instant, stable_id)``."""
+
+
+@dataclass(frozen=True, slots=True)
+class Page[T]:
+    """One keyset page: ``items`` plus the position to pass as ``after`` for the
+    next page, or ``None`` when this is the last page."""
+
+    items: tuple[T, ...]
+    next_after: Keyset | None = None
 
 
 @runtime_checkable

@@ -14,21 +14,33 @@ production fakes; they exist only to prove each Protocol is satisfiable.
 from __future__ import annotations
 
 import ast
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 
 import edu_it_domain
+import pytest
 from edu_it_domain.ports import (
+    AttemptUsage,
+    BudgetReachedError,
     Clock,
     JobHandler,
-    LLMCompletion,
+    LLMInput,
     LLMProvider,
     Mailer,
+    MalformedOutputError,
+    MissingFixtureError,
     ObjectStorage,
     OutboundMail,
+    OutputSchema,
+    PersonalDataInRequestError,
+    PromptRef,
+    ProviderBindingError,
+    ProviderUnavailableError,
     StoredObject,
+    StructuredOutput,
     TaskQueue,
+    validate_max_retries,
 )
 
 EXPECTED_PORTS = ("Clock", "Mailer", "ObjectStorage", "TaskQueue", "LLMProvider")
@@ -105,15 +117,27 @@ class _MemoryTaskQueue:
         self.handlers[job_name] = handler
 
 
+class _EchoSchema:
+    def validate(self, text: str) -> Mapping[str, object]:
+        return {"text": text}
+
+
 class _StubLLMProvider:
     def complete(
         self,
-        prompt: str,
-        *,
-        model: str,
-        stop: Sequence[str] | None = None,
-    ) -> LLMCompletion:
-        return LLMCompletion(text=prompt, model=model)
+        prompt_version: PromptRef,
+        input: LLMInput,
+        schema: OutputSchema,
+        max_retries: int,
+    ) -> StructuredOutput:
+        validate_max_retries(max_retries)
+        usage = AttemptUsage("fake-1", 1, 1, 0, "ok")
+        return StructuredOutput(
+            output=schema.validate(input.fields["q"]),
+            prompt=prompt_version,
+            model="fake-1",
+            attempts=(usage,),
+        )
 
 
 def test_minimal_double_satisfies_each_port_structurally() -> None:
@@ -156,11 +180,34 @@ def test_task_queue_records_enqueue_and_registers_handler() -> None:
     assert "verify_email" in queue.handlers
 
 
-def test_llm_provider_returns_completion_with_provenance() -> None:
+def test_llm_provider_returns_structured_output_with_provenance() -> None:
     provider: LLMProvider = _StubLLMProvider()
-    result = provider.complete("hello", model="fake-1")
-    assert result.text == "hello"
+    ref = PromptRef("p", "1")
+    result = provider.complete(ref, LLMInput("k", {"q": "hello"}), _EchoSchema(), 0)
+    assert result.output == {"text": "hello"}
+    assert result.prompt == ref
     assert result.model == "fake-1"
+    assert result.attempts[0].outcome == "ok"
+
+
+@pytest.mark.parametrize("bad", [-1, 3])
+def test_max_retries_outside_zero_to_two_is_rejected(bad: int) -> None:
+    for ok in (0, 1, 2):
+        assert validate_max_retries(ok) == ok
+    with pytest.raises(ValueError):
+        validate_max_retries(bad)
+
+
+def test_budget_and_fixture_errors_carry_their_detail() -> None:
+    assert BudgetReachedError("daily").kind == "daily"
+    assert MissingFixtureError("abc").key == "abc"
+    for exc in (
+        MalformedOutputError,
+        ProviderUnavailableError,
+        ProviderBindingError,
+        PersonalDataInRequestError,
+    ):
+        assert issubclass(exc, Exception)
 
 
 def test_ports_package_imports_no_banned_framework() -> None:

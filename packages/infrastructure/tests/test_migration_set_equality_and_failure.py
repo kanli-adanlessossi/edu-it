@@ -113,11 +113,18 @@ _EXPECTED_ENTITIES_BY_GROUP: dict[str, frozenset[str]] = {
             "hint_reveal",
         }
     ),
-    # AI / review ops (D3 Section 2, 6 entities)
+    # AI / review ops (D3 Section 2, 6 entities, plus variant_revision, item_flag,
+    # item_observation and ai_cursor, all from 0005_ai_content)
     "ai_review_ops": frozenset(
         {
             "review_queue_item",
             "variant",
+            "variant_revision",
+            "item_flag",
+            "item_observation",
+            "ai_cursor",
+            "problem_report",
+            "advisor_audit_log",
             "generation_job",
             "item_statistic",
             "path_recommendation",
@@ -133,7 +140,7 @@ _EXPECTED_ENTITIES_BY_GROUP: dict[str, frozenset[str]] = {
     ),
 }
 
-# The flattened expected set: the union of every group above (45 entities).
+# The flattened expected set: the union of every group above (50 entities).
 EXPECTED_DATA_MODEL_ENTITIES: frozenset[str] = frozenset().union(
     *_EXPECTED_ENTITIES_BY_GROUP.values()
 )
@@ -141,7 +148,7 @@ EXPECTED_DATA_MODEL_ENTITIES: frozenset[str] = frozenset().union(
 # D3 states the model has 45 entities with no join tables beyond those listed; a
 # guard so the hand-written set below cannot silently gain or lose a name (e.g.
 # via a copy/paste duplicate across groups) without this count check catching it.
-_EXPECTED_ENTITY_COUNT = 45
+_EXPECTED_ENTITY_COUNT = 51
 
 
 def _test_database_url(tmp_path: Path) -> str:
@@ -312,12 +319,19 @@ def test_mid_migration_failure_leaves_db_at_last_committed_version(
     assert runner.current() == "0001_create_data_model"
     # The committed 0001 schema is intact: the Data_Model tables exist.
     created = _created_table_names(database_url)
-    # (0001 predates the two account runtime tables added by revision 0003.)
+    # (0001 predates the account tables of revisions 0003 and 0004 and the ai-content
+    # table of revision 0005.)
     assert created == EXPECTED_DATA_MODEL_ENTITIES - {
         "credential",
         "verification_link",
         "reset_link",
         "pending_oauth_link",
+        "variant_revision",
+        "item_flag",
+        "item_observation",
+        "ai_cursor",
+        "problem_report",
+        "advisor_audit_log",
     }
 
 

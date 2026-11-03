@@ -26,17 +26,21 @@ from __future__ import annotations
 import ast
 import inspect
 import io
+import json
 import socket
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Protocol, get_type_hints
 
 import pytest
 from edu_it_domain.ports import (
     Clock,
+    LLMInput,
     LLMProvider,
     Mailer,
     ObjectStorage,
     OutboundMail,
+    PromptRef,
     TaskQueue,
 )
 from edu_it_domain.ports.attempts import AttemptRepository
@@ -62,6 +66,14 @@ from edu_it_infrastructure.fakes import (
     In_Memory_TaskQueue,
     Test_Clock,
 )
+
+
+class _AnyJsonSchema:
+    def validate(self, text: str) -> Mapping[str, object]:
+        value = json.loads(text)
+        assert isinstance(value, dict)
+        return value
+
 
 # Each domain port paired with the fake that must be substitutable for it (Req 5.2).
 PORT_FAKE_PAIRS: tuple[tuple[type, object], ...] = (
@@ -182,12 +194,14 @@ def test_llm_provider_fake_makes_no_network_call(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(socket, "create_connection", _forbid_connect)
 
     provider = Fake_LLMProvider()
-    result = provider.complete("generate a lesson", model="fake-model")
+    prompt = PromptRef(prompt_id="lesson", prompt_version="1")
+    llm_input = LLMInput(kind="k", fields={"topic": "dns"})
+    result = provider.complete(prompt, llm_input, _AnyJsonSchema(), 0)
 
-    # The call completed locally and produced usable text with provenance.
-    assert result.text
-    assert result.model == "fake-model"
-    assert provider.calls == (("generate a lesson", "fake-model"),)
+    # The call completed locally and produced validated output with provenance.
+    assert result.output
+    assert result.prompt == prompt
+    assert provider.calls == ((prompt, llm_input),)
 
 
 # --- Req 6.3: no production composition root sets/advances the clock ----------

@@ -45,6 +45,9 @@ def test_startup_logs_dev_only_runc_warning(caplog: pytest.LogCaptureFixture) ->
     assert any(RUNC_WARNING in r.getMessage() and "runc" in r.getMessage() for r in caplog.records)
 
 
+# The 10.255.255.1 case deliberately targets an unroutable address (an unreachable daemon);
+# the no-model-network guard blocks the connect, which the provider maps to "unavailable".
+@pytest.mark.network_guard_expected
 @pytest.mark.parametrize("base_url", ["tcp://127.0.0.1:1", "tcp://10.255.255.1:2375"])
 def test_unreachable_daemon_is_provider_unavailable_within_bound(base_url: str) -> None:
     bound = 1.0

@@ -38,6 +38,8 @@ def _prov(stable_id: str, *, ai_unreviewed: bool = False) -> dict[str, Any]:
     }
     if not ai_unreviewed:
         prov["reviewed_by"] = "usr_r"
+        prov["reviewed_at"] = "2026-01-01T00:00:00+00:00"
+        prov["reviewed_at"] = "2026-01-01T00:00:00+00:00"
     return prov
 
 
@@ -279,6 +281,7 @@ def test_post_review_state_validates_strictly_with_empty_list() -> None:
         "content_version": "cv_1",
         "origin": "ai",
         "reviewed_by": "usr_expert",
+        "reviewed_at": "2026-01-01T00:00:00+00:00",
     }
     code, err = _run_cli_capture(items, pending=[])
     assert code == 0, err

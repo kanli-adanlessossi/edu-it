@@ -1,0 +1,28 @@
+{
+  "title": {
+    "en": "Networking basics",
+    "fr": "Bases du réseau"
+  },
+  "description": {
+    "en": "An introduction to how computers talk to each other: addresses, names, routes and the everyday tools used to inspect a network from the command line.",
+    "fr": "Une introduction à la façon dont les ordinateurs communiquent entre eux : adresses, noms, routes et outils courants pour inspecter un réseau en ligne de commande."
+  },
+  "learning_outcomes": [
+    {
+      "en": "Explain what an IP address, a subnet and a gateway are, and how they work together.",
+      "fr": "Expliquer ce que sont une adresse IP, un sous-réseau et une passerelle, et comment ils fonctionnent ensemble."
+    },
+    {
+      "en": "Describe how DNS turns a name into an address.",
+      "fr": "Décrire comment le DNS traduit un nom en adresse."
+    },
+    {
+      "en": "Tell TCP from UDP and name a common use of each.",
+      "fr": "Distinguer TCP et UDP et citer un usage courant de chacun."
+    },
+    {
+      "en": "Use basic command-line tools to check connectivity and read network settings.",
+      "fr": "Utiliser des outils de base en ligne de commande pour vérifier la connectivité et lire la configuration réseau."
+    }
+  ]
+}

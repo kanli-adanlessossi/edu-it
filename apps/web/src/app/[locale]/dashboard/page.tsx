@@ -7,8 +7,10 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
+import { PathRecommendationCard } from '../../../components/path-recommendation-card.js';
 import { requireLearningApi } from '../../../learning-server.js';
 import {
   completedLessonCount,
@@ -17,6 +19,9 @@ import {
   type Progress,
 } from '../../../learning.js';
 import { isLocale } from '../../../locale.js';
+import { createPathRecommendationApi } from '../../../path-recommendation-api.js';
+import type { PathRecommendation } from '../../../path-recommendation.js';
+import { SESSION_COOKIE } from '../../../session.js';
 import { pageMetadata } from '../page-metadata.js';
 import { enrollAction } from './enroll-action.js';
 
@@ -53,12 +58,27 @@ export default async function DashboardPage({ params, searchParams }: DashboardP
   }
   const { due, overdue } = splitDueOverdue(schedule, new Date());
 
+  // The suggestion is optional: any failure just leaves the card out (Req 17.7).
+  let recommendation: PathRecommendation | null;
+  try {
+    const reference = (await cookies()).get(SESSION_COOKIE)?.value ?? '';
+    recommendation = await createPathRecommendationApi(locale, {
+      sessionReference: reference,
+    }).get();
+  } catch {
+    recommendation = null;
+  }
+
   return (
     <section>
       <h1>{title}</h1>
       {loadFailed ? <p role="alert">{t('loadError')}</p> : null}
       {error === 'invalid' || error === 'enroll' ? (
         <p role="alert">{t(error === 'invalid' ? 'enroll.invalid' : 'enroll.failed')}</p>
+      ) : null}
+
+      {recommendation !== null ? (
+        <PathRecommendationCard locale={locale} recommendation={recommendation} />
       ) : null}
 
       <h2>{t('dashboard.progress')}</h2>

@@ -9,6 +9,7 @@
       "questionLabel": "Question {number}: {prompt}",
       "showHint": "Show hint {level}",
       "hintsLabel": "Hints",
+      "reportsLabel": "Report a problem with a question",
       "submit": "Submit answers",
       "resultTitle": "Your result",
       "score": "Score: {score}",
@@ -44,6 +45,106 @@
       "reviewed": "Your project has been reviewed.",
       "unavailable": "This project is not available.",
       "genericError": "Something went wrong. Please try again."
+    }
+  },
+  "Reviewer": {
+    "queue": {
+      "title": "Review queue",
+      "listLabel": "Open review tasks",
+      "empty": "No review tasks are waiting for you.",
+      "open": "Review {id}",
+      "track": "Track: {track}",
+      "loadMore": "Load more"
+    },
+    "kind": {
+      "new_variant": "New variant",
+      "edited_revision": "Edited revision",
+      "flagged_item": "Flagged item"
+    },
+    "state": {
+      "open": "Open",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "changes_requested": "Changes requested"
+    },
+    "locale": {
+      "fr": "Français",
+      "en": "English"
+    },
+    "detail": {
+      "title": "Review task",
+      "back": "Back to the review queue",
+      "taskState": "Status: {state}",
+      "reason": "Reason: {reason}",
+      "variant": "Variant",
+      "parent": "Parent question: {id}",
+      "prompt": "Question",
+      "options": "Answer options",
+      "optionLabel": "Option {number}",
+      "correct": "correct answer",
+      "explanation": "Explanation",
+      "explanationLine": "Explanation: {text}",
+      "noRevision": "This task has no revision to review.",
+      "none": "Not recorded"
+    },
+    "provenance": {
+      "title": "Provenance",
+      "origin": "Origin",
+      "model": "Model",
+      "prompt": "Prompt",
+      "generatedAt": "Generated",
+      "reviewedBy": "Reviewed by",
+      "reviewedAt": "Reviewed at",
+      "contentVersion": "Content version"
+    },
+    "findings": {
+      "title": "Verification findings",
+      "none": "No findings.",
+      "kind": {
+        "check_passes_on_starting_state": "Check passes on the starting state",
+        "check_fails_on_reference_solution": "Check fails on the reference solution",
+        "check_inconclusive": "Check inconclusive",
+        "setup_failed": "Setup failed",
+        "reference_solution_failed": "Reference solution failed",
+        "sandbox_unavailable": "Sandbox unavailable",
+        "phase_deadline_exceeded": "Phase deadline exceeded",
+        "disagreement": "Independent answer disagrees",
+        "answer_unavailable": "Independent answer unavailable",
+        "command_failed": "Command failed",
+        "duplicate": "Duplicate of existing text",
+        "uncovered_concept": "Concept not covered",
+        "readability_out_of_bounds": "Readability out of bounds",
+        "similarity_exceeded": "Too similar to the sources"
+      }
+    },
+    "actions": {
+      "title": "Decision",
+      "commentLabel": "Comment (required to request changes)",
+      "approve": "Approve",
+      "edit": "Edit",
+      "requestChanges": "Request changes",
+      "reject": "Reject",
+      "saveEdit": "Save edited version",
+      "cancelEdit": "Cancel"
+    },
+    "outcome": {
+      "approve": "The variant was approved.",
+      "reject": "The variant was rejected.",
+      "requestChanges": "Changes were requested.",
+      "edit": "Your edit was saved. It needs its own approval before it is served.",
+      "openNewTask": "Open the new review task"
+    },
+    "errors": {
+      "expertise": "You do not have reviewer expertise in this track.",
+      "alreadyDecided": "This task has already been decided.",
+      "notFound": "This review task does not exist.",
+      "invalid": "The request was not valid. Check your input and try again.",
+      "unauthenticated": "Your session has expired. Sign in again.",
+      "commentRequired": "Enter a comment to request changes.",
+      "commentTooLong": "The comment must be at most {max} characters.",
+      "editIncomplete": "Fill in every French and English text.",
+      "editUnchanged": "Change at least one text before saving.",
+      "generic": "Something went wrong. Please try again."
     }
   },
   "LanguageSwitcher": {
@@ -123,6 +224,40 @@
   "Dashboard": {
     "title": "Dashboard",
     "empty": "Your dashboard is empty for now. Learning features arrive soon."
+  },
+  "PathRecommendation": {
+    "heading": "Suggested next steps",
+    "intro": "These concepts are suggested for you, in this order.",
+    "sourceLlm": "Suggested with the help of an AI assistant.",
+    "sourceRuleBased": "Suggested from your progress and the course order.",
+    "dismiss": "Dismiss this suggestion",
+    "dismissed": "Suggestion dismissed.",
+    "dismissError": "We could not dismiss this suggestion. Please try again."
+  },
+  "ProblemReport": {
+    "open": "Report a problem",
+    "formLabel": "Report a problem with {item}",
+    "itemQuestion": "question {number}",
+    "itemLesson": "this lesson",
+    "itemLab": "this lab",
+    "categoryLabel": "What is the problem?",
+    "categoryPlaceholder": "Choose a category",
+    "category": {
+      "incorrect": "Incorrect content",
+      "unclear": "Unclear or confusing",
+      "translation": "Translation issue",
+      "outdated": "Outdated",
+      "technical": "Technical problem",
+      "other": "Other"
+    },
+    "commentLabel": "Details (optional)",
+    "commentHint": "Up to {max} characters. Do not include personal information.",
+    "submit": "Send report",
+    "cancel": "Cancel",
+    "categoryRequired": "Choose a category.",
+    "sent": "Thank you. Your report was sent.",
+    "alreadySent": "Your report was already recorded.",
+    "genericError": "We could not send your report. Please try again."
   },
   "Lesson": {
     "unsupportedContent": "This lesson contains content that cannot be displayed.",
@@ -274,6 +409,8 @@
     "verifyEmail": "Verify your email — EDU-IT",
     "resetPassword": "Reset your password — EDU-IT",
     "githubConfirm": "Link your GitHub account — EDU-IT",
-    "dashboard": "Dashboard — EDU-IT"
+    "dashboard": "Dashboard — EDU-IT",
+    "reviewer": "Review queue — EDU-IT",
+    "reviewerTask": "Review task — EDU-IT"
   }
 }

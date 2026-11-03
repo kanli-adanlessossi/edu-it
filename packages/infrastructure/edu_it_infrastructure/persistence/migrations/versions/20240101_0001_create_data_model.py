@@ -28,10 +28,13 @@ from alembic import op
 from edu_it_infrastructure.persistence.metadata import (
     ACCOUNTS_OAUTH_RESET_TABLE_NAMES,
     ACCOUNTS_RUNTIME_TABLE_NAMES,
+    AI_CONTENT_TABLE_NAMES,
     metadata,
 )
 
-_LATER_TABLES = ACCOUNTS_RUNTIME_TABLE_NAMES | ACCOUNTS_OAUTH_RESET_TABLE_NAMES
+_LATER_TABLES = (
+    ACCOUNTS_RUNTIME_TABLE_NAMES | ACCOUNTS_OAUTH_RESET_TABLE_NAMES | AI_CONTENT_TABLE_NAMES
+)
 
 # revision identifiers, used by Alembic.
 revision: str = "0001_create_data_model"

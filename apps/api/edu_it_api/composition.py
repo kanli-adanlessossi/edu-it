@@ -27,6 +27,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from edu_it_application.ai import (
+    DismissRecommendation,
+    EligibleItems,
+    GetRecommendation,
+    ListReviewTasks,
+    ReviewTaskActions,
+    ServableCatalog,
+    SubmitProblemReport,
+    decode_problem_report_result,
+    encode_problem_report_result,
+    enqueue_item_evaluation,
+)
 from edu_it_application.authenticate import (
     AuthenticateSessionUseCase,
     AuthenticateUseCase,
@@ -96,6 +108,8 @@ from edu_it_domain.ports.enrollment import EnrollmentRepository
 from edu_it_domain.ports.github_oauth import GitHubOAuthClient
 from edu_it_domain.ports.id_generator import IdGenerator
 from edu_it_domain.ports.idempotency import IdempotencyStore
+from edu_it_domain.ports.item_flags import ItemFlagWriter
+from edu_it_domain.ports.item_quality import ObservationRecorder
 from edu_it_domain.ports.lab_catalog import LabCatalog
 from edu_it_domain.ports.lab_sessions import GradingRunRepository, LabSessionRepository
 from edu_it_domain.ports.lessons import LessonRepository
@@ -104,17 +118,22 @@ from edu_it_domain.ports.mailer import Mailer
 from edu_it_domain.ports.mastery import MasteryRepository
 from edu_it_domain.ports.oauth_link import OAuthLinkRepository
 from edu_it_domain.ports.object_storage import ObjectStorage
+from edu_it_domain.ports.path_recommendations import PathRecommendationRepository
 from edu_it_domain.ports.pending_oauth_link import PendingOAuthLinkRepository
 from edu_it_domain.ports.personal_data import PersonalDataGateway
+from edu_it_domain.ports.problem_reports import ProblemReportRepository
 from edu_it_domain.ports.progress import ProgressRepository
 from edu_it_domain.ports.project_reviewer import ProjectReviewer
 from edu_it_domain.ports.rate_limiter import SignInRateLimiter
 from edu_it_domain.ports.repository import SessionRepository, UserRepository
 from edu_it_domain.ports.reset_link import ResetLinkRepository
 from edu_it_domain.ports.review import ReviewRepository
+from edu_it_domain.ports.review_tasks import ReviewTaskRepository
+from edu_it_domain.ports.role_assignment import RoleAssignmentRepository
 from edu_it_domain.ports.sandbox import SandboxProvider
 from edu_it_domain.ports.session_store import SessionStore
 from edu_it_domain.ports.task_queue import TaskQueue
+from edu_it_domain.ports.variants import VariantRepository
 from edu_it_domain.ports.verification_link import VerificationLinkRepository
 from edu_it_infrastructure.adapters.content_text import Content_StoreTextSource
 from edu_it_infrastructure.adapters.idempotency_store import Redis_IdempotencyStore
@@ -141,21 +160,27 @@ from edu_it_infrastructure.fakes import (
     In_Memory_EnrollmentRepository,
     In_Memory_GradingRunRepository,
     In_Memory_IdempotencyStore,
+    In_Memory_ItemQualityRepository,
     In_Memory_LabSessionRepository,
     In_Memory_LessonRepository,
     In_Memory_MasteryRepository,
     In_Memory_OAuthLinkRepository,
     In_Memory_ObjectStorage,
+    In_Memory_PathRecommendationRepository,
     In_Memory_PendingOAuthLinkRepository,
     In_Memory_PersonalDataGateway,
+    In_Memory_ProblemReportRepository,
     In_Memory_ProgressRepository,
     In_Memory_ResetLinkRepository,
     In_Memory_ReviewRepository,
+    In_Memory_ReviewTaskRepository,
+    In_Memory_RoleAssignmentRepository,
     In_Memory_SessionRepository,
     In_Memory_SessionStore,
     In_Memory_SignInRateLimiter,
     In_Memory_TaskQueue,
     In_Memory_UserRepository,
+    In_Memory_VariantRepository,
     In_Memory_VerificationLinkRepository,
     Sequential_IdGenerator,
 )
@@ -171,6 +196,7 @@ from edu_it_infrastructure.persistence.account_repositories import (
     Postgres_ResetLinkRepository,
     Postgres_VerificationLinkRepository,
 )
+from edu_it_infrastructure.persistence.item_quality import Postgres_ItemQualityRepository
 from edu_it_infrastructure.persistence.lab_repositories import (
     Postgres_GradingRunRepository,
     Postgres_LabSessionRepository,
@@ -185,10 +211,19 @@ from edu_it_infrastructure.persistence.learning_repositories import (
     Postgres_ProgressRepository,
     Postgres_ReviewRepository,
 )
+from edu_it_infrastructure.persistence.path_recommendations import (
+    Postgres_PathRecommendationRepository,
+)
 from edu_it_infrastructure.persistence.personal_data import Postgres_PersonalDataGateway
+from edu_it_infrastructure.persistence.problem_reports import Postgres_ProblemReportRepository
 from edu_it_infrastructure.persistence.repositories import (
+    Postgres_RoleAssignmentRepository,
     Postgres_SessionRepository,
     Postgres_UserRepository,
+)
+from edu_it_infrastructure.persistence.variants import (
+    Postgres_ReviewTaskRepository,
+    Postgres_VariantRepository,
 )
 from edu_it_infrastructure.project_reviewer import Pending_ProjectReviewer
 from fastapi import APIRouter
@@ -200,6 +235,12 @@ from edu_it_api.labs import LabServices, build_labs_router
 from edu_it_api.learning import LearningServices, build_learning_router
 from edu_it_api.learning_lists import ListServices, build_list_router
 from edu_it_api.oauth import OAuthServices, build_oauth_router
+from edu_it_api.path_recommendations import (
+    PathRecommendationServices,
+    build_path_recommendations_router,
+)
+from edu_it_api.problem_reports import ProblemReportServices, build_problem_reports_router
+from edu_it_api.review_tasks import ReviewTaskServices, build_review_tasks_router
 from edu_it_api.session_cookie import CookieSettings
 from edu_it_api.startup import check_github_oauth_settings, refuse_start
 
@@ -349,6 +390,7 @@ class ApiAdapters:
     lessons_factory: Callable[[LessonContentSource], LessonRepository]
     attempt_idempotency: IdempotencyStore
     lab_idempotency: IdempotencyStore
+    report_idempotency: IdempotencyStore
     project_reviewer: ProjectReviewer
     lab_sessions: LabSessionRepository
     grading_runs: GradingRunRepository
@@ -360,6 +402,13 @@ class ApiAdapters:
     pending_oauth_links: PendingOAuthLinkRepository
     object_storage: ObjectStorage
     personal_data: PersonalDataGateway
+    variants: VariantRepository
+    review_tasks: ReviewTaskRepository
+    item_flags: ItemFlagWriter
+    observations: ObservationRecorder
+    problem_reports: ProblemReportRepository
+    path_recommendations: PathRecommendationRepository
+    roles: RoleAssignmentRepository
     oauth_client: GitHubOAuthClient | None = None
     """The GitHub OAuth client; ``None`` when OAuth is not configured (routes not mounted)."""
 
@@ -405,6 +454,8 @@ def _fake_adapters(settings: CompositionSettings) -> ApiAdapters:
     clock = build_fake_clock()
     lessons = In_Memory_LessonRepository()
     runs = In_Memory_GradingRunRepository()
+    variants = In_Memory_VariantRepository(clock)
+    item_quality = In_Memory_ItemQualityRepository()
     return ApiAdapters(
         settings=settings,
         fakes=True,
@@ -432,6 +483,7 @@ def _fake_adapters(settings: CompositionSettings) -> ApiAdapters:
         lessons_factory=lambda _source: lessons,
         attempt_idempotency=In_Memory_IdempotencyStore(),
         lab_idempotency=In_Memory_IdempotencyStore(),
+        report_idempotency=In_Memory_IdempotencyStore(),
         project_reviewer=Fake_ProjectReviewer(pending=True),
         lab_sessions=In_Memory_LabSessionRepository(runs),
         grading_runs=runs,
@@ -444,6 +496,13 @@ def _fake_adapters(settings: CompositionSettings) -> ApiAdapters:
         pending_oauth_links=In_Memory_PendingOAuthLinkRepository(),
         object_storage=In_Memory_ObjectStorage(),
         personal_data=In_Memory_PersonalDataGateway(),
+        variants=variants,
+        review_tasks=In_Memory_ReviewTaskRepository(clock, variants),
+        item_flags=item_quality,
+        observations=item_quality,
+        problem_reports=In_Memory_ProblemReportRepository(),
+        path_recommendations=In_Memory_PathRecommendationRepository(),
+        roles=In_Memory_RoleAssignmentRepository(),
     )
 
 
@@ -452,6 +511,7 @@ def _real_adapters(settings: CompositionSettings) -> ApiAdapters:
     clock = System_Clock()
     redis = _built("redis", lambda: redis_from_url(settings.redis_url))
     hasher = _built("password_hasher", Scrypt_PasswordHasher)
+    item_quality = Postgres_ItemQualityRepository(url, clock)
     return ApiAdapters(
         settings=settings,
         fakes=False,
@@ -482,6 +542,12 @@ def _real_adapters(settings: CompositionSettings) -> ApiAdapters:
             namespace="edu_it:attempt-idempotency",
         ),
         lab_idempotency=Redis_IdempotencyStore(redis, encode=encode_result, decode=decode_result),
+        report_idempotency=Redis_IdempotencyStore(
+            redis,
+            encode=encode_problem_report_result,
+            decode=decode_problem_report_result,
+            namespace="edu_it:problem-report-idempotency",
+        ),
         project_reviewer=Pending_ProjectReviewer(),
         lab_sessions=Postgres_LabSessionRepository(url),
         grading_runs=Postgres_GradingRunRepository(url),
@@ -492,6 +558,13 @@ def _real_adapters(settings: CompositionSettings) -> ApiAdapters:
         pending_oauth_links=Postgres_PendingOAuthLinkRepository(url),
         object_storage=_built("object_storage", lambda: build_object_storage(settings)),
         personal_data=Postgres_PersonalDataGateway(url),
+        variants=Postgres_VariantRepository(url, clock),
+        review_tasks=Postgres_ReviewTaskRepository(url, clock),
+        item_flags=item_quality,
+        observations=item_quality,
+        problem_reports=Postgres_ProblemReportRepository(url),
+        path_recommendations=Postgres_PathRecommendationRepository(url),
+        roles=Postgres_RoleAssignmentRepository(url),
     )
 
 
@@ -627,6 +700,8 @@ def build_api_routers(
     )
 
     lessons = adapters.lessons_factory(_lesson_source(store, root))
+    # Learners only ever see unflagged questions and Approved variants (ai-content 14.1, 20.1).
+    servable = ServableCatalog(adapters.catalog, adapters.item_flags, adapters.variants)
     learning = build_learning_router(
         LearningServices(
             current_user=resolver,
@@ -648,25 +723,26 @@ def build_api_routers(
             ),
             lessons=GetLessonUseCase(lessons=lessons),
             attempt_quiz=AttemptQuizUseCase(
-                catalog=adapters.catalog,
+                catalog=servable,
                 attempts=adapters.attempts,
                 mastery=adapters.mastery,
                 reviews=adapters.reviews,
                 idempotency=adapters.attempt_idempotency,
                 clock=clock,
                 ids=ids,
+                observations=adapters.observations,
             ),
-            reveal_hint=RevealHintUseCase(
-                catalog=adapters.catalog, mastery=adapters.mastery, clock=clock
-            ),
+            reveal_hint=RevealHintUseCase(catalog=servable, mastery=adapters.mastery, clock=clock),
             start_review=StartReviewUseCase(
-                catalog=adapters.catalog, reviews=adapters.reviews, clock=clock
+                catalog=servable, reviews=adapters.reviews, clock=clock, resolver=servable
             ),
             submit_review=SubmitReviewUseCase(
-                catalog=adapters.catalog,
+                catalog=servable,
                 reviews=adapters.reviews,
                 mastery=adapters.mastery,
                 clock=clock,
+                resolver=servable,
+                observations=adapters.observations,
             ),
             submit_project=SubmitProjectUseCase(
                 catalog=adapters.catalog,
@@ -693,7 +769,7 @@ def build_api_routers(
     content = build_content_router(
         ContentServices(
             current_user=resolver,
-            get_quiz=GetQuizUseCase(catalog=adapters.catalog, text=text),
+            get_quiz=GetQuizUseCase(catalog=servable, text=text),
             get_project=GetProjectUseCase(catalog=adapters.catalog, text=text),
         )
     )
@@ -756,6 +832,46 @@ def build_api_routers(
             session_cookie_name=resolver.cookie_name,
         )
     )
+    review_tasks = build_review_tasks_router(
+        ReviewTaskServices(
+            current_user=resolver,
+            list_tasks=ListReviewTasks(
+                tasks=adapters.review_tasks, roles=adapters.roles, codec=codec
+            ),
+            actions=ReviewTaskActions(
+                tasks=adapters.review_tasks,
+                variants=adapters.variants,
+                roles=adapters.roles,
+                clock=clock,
+                ids=ids,
+                flags=adapters.item_flags,
+            ),
+        )
+    )
+    problem_reports = build_problem_reports_router(
+        ProblemReportServices(
+            current_user=resolver,
+            submit=SubmitProblemReport(
+                reports=adapters.problem_reports,
+                idempotency=adapters.report_idempotency,
+                clock=clock,
+                ids=ids,
+                on_stored=lambda item: enqueue_item_evaluation(adapters.task_queue, item),
+            ),
+        )
+    )
+    path_recommendations = build_path_recommendations_router(
+        PathRecommendationServices(
+            current_user=resolver,
+            get=GetRecommendation(
+                recommendations=adapters.path_recommendations,
+                eligible=EligibleItems(servable, adapters.mastery),
+            ),
+            dismiss=DismissRecommendation(
+                recommendations=adapters.path_recommendations, clock=clock
+            ),
+        )
+    )
     oauth_router = _build_oauth_router(adapters, cookies, new_token)
     return ApiRouters(
         v1_routers=(
@@ -764,6 +880,9 @@ def build_api_routers(
             lists,
             content,
             lab_router,
+            review_tasks,
+            problem_reports,
+            path_recommendations,
             *(() if oauth_router is None else (oauth_router,)),
         ),
         resolver=resolver,

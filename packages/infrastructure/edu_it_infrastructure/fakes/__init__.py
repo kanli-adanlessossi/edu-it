@@ -26,10 +26,14 @@ Milestone A domain services and Milestone C use cases without a database
 """
 
 from edu_it_infrastructure.fakes.clock import Test_Clock
+from edu_it_infrastructure.fakes.generation_ledger import In_Memory_GenerationLedger
 from edu_it_infrastructure.fakes.idempotency import (
     In_Memory_IdempotencyStore,
     Sequential_IdGenerator,
 )
+from edu_it_infrastructure.fakes.item_flags import In_Memory_ItemFlagRepository
+from edu_it_infrastructure.fakes.item_info import In_Memory_ItemInfoSource
+from edu_it_infrastructure.fakes.item_quality import In_Memory_ItemQualityRepository
 from edu_it_infrastructure.fakes.lab_catalog import Fake_LabCatalog
 from edu_it_infrastructure.fakes.lab_check import Fake_LabCheck
 from edu_it_infrastructure.fakes.lab_repositories import (
@@ -48,10 +52,12 @@ from edu_it_infrastructure.fakes.learning_repositories import (
 from edu_it_infrastructure.fakes.llm_provider import Fake_LLMProvider
 from edu_it_infrastructure.fakes.mailer import Console_Mailer
 from edu_it_infrastructure.fakes.object_storage import In_Memory_ObjectStorage
+from edu_it_infrastructure.fakes.path_recommendations import In_Memory_PathRecommendationRepository
 from edu_it_infrastructure.fakes.personal_data import (
     In_Memory_PersonalDataGateway,
     PersonalDataDeletionFailure,
 )
+from edu_it_infrastructure.fakes.problem_reports import In_Memory_ProblemReportRepository
 from edu_it_infrastructure.fakes.project_reviewer import Fake_ProjectReviewer
 from edu_it_infrastructure.fakes.rate_limiter import In_Memory_SignInRateLimiter
 from edu_it_infrastructure.fakes.repositories import (
@@ -67,6 +73,10 @@ from edu_it_infrastructure.fakes.repositories import (
 from edu_it_infrastructure.fakes.sandbox_provider import Fake_SandboxProvider, ProvisionMode
 from edu_it_infrastructure.fakes.session_store import In_Memory_SessionStore
 from edu_it_infrastructure.fakes.task_queue import In_Memory_TaskQueue, QueuedJob
+from edu_it_infrastructure.fakes.variants import (
+    In_Memory_ReviewTaskRepository,
+    In_Memory_VariantRepository,
+)
 
 __all__ = [
     "Console_Mailer",
@@ -79,24 +89,32 @@ __all__ = [
     "In_Memory_CatalogRepository",
     "In_Memory_CredentialStore",
     "In_Memory_EnrollmentRepository",
+    "In_Memory_GenerationLedger",
     "In_Memory_GradingRunRepository",
     "In_Memory_IdempotencyStore",
+    "In_Memory_ItemFlagRepository",
+    "In_Memory_ItemInfoSource",
+    "In_Memory_ItemQualityRepository",
     "In_Memory_LabSessionRepository",
     "In_Memory_LessonRepository",
     "In_Memory_MasteryRepository",
     "In_Memory_OAuthLinkRepository",
     "In_Memory_ObjectStorage",
+    "In_Memory_PathRecommendationRepository",
     "In_Memory_PendingOAuthLinkRepository",
     "In_Memory_PersonalDataGateway",
+    "In_Memory_ProblemReportRepository",
     "In_Memory_ProgressRepository",
     "In_Memory_ResetLinkRepository",
     "In_Memory_ReviewRepository",
+    "In_Memory_ReviewTaskRepository",
     "In_Memory_RoleAssignmentRepository",
     "In_Memory_SessionRepository",
     "In_Memory_SessionStore",
     "In_Memory_SignInRateLimiter",
     "In_Memory_TaskQueue",
     "In_Memory_UserRepository",
+    "In_Memory_VariantRepository",
     "In_Memory_VerificationLinkRepository",
     "PersonalDataDeletionFailure",
     "ProvisionMode",

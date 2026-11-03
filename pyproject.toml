@@ -87,6 +87,7 @@ include = [
     "packages/infrastructure/**/*.py",
     "packages/content/**/*.py",
     "tools/**/*.py",
+    "deploy/**/*.py",
 ]
 extend-exclude = [
     "apps/web",
@@ -233,7 +234,9 @@ ignore_missing_imports = true
 # exits zero when every collected test passes. `--import-mode=importlib` keeps
 # same-named test modules across components from colliding.
 [tool.pytest.ini_options]
-addopts = "-ra --import-mode=importlib"
+addopts = "-ra --import-mode=importlib -p pytest_no_model_network"
+# `tools/` holds the no-model-network plugin (ai-content Req 1.6, 2.5, 22.4).
+pythonpath = ["tools"]
 markers = [
     "docker: needs a reachable Docker daemon and the locally built lab images (skipped otherwise)",
 ]
@@ -247,6 +250,8 @@ testpaths = [
     "apps/worker",
     # Repo-level tooling tests (import-boundary check + exit-status behavior).
     "tools/tests",
+    # Key rotation Lambda (ai-content task 4.14); fake clients only.
+    "deploy/aws/key-rotation/tests",
 ]
 python_files = ["test_*.py", "*_test.py"]
 

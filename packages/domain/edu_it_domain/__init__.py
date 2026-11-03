@@ -12,7 +12,6 @@ convenience: ``Clock``, ``Mailer``, ``ObjectStorage``, ``TaskQueue``, and
 from edu_it_domain.ports import (
     Clock,
     JobHandler,
-    LLMCompletion,
     LLMProvider,
     Mailer,
     ObjectStorage,
@@ -24,7 +23,6 @@ from edu_it_domain.ports import (
 __all__ = [
     "Clock",
     "JobHandler",
-    "LLMCompletion",
     "LLMProvider",
     "Mailer",
     "ObjectStorage",

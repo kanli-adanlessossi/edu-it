@@ -678,7 +678,43 @@ def _seed_remaining_personal_data(w: _World, user: str) -> None:
         )
         c.execute(
             insert(_T["path_recommendation"]).values(
-                user_id=uid, source="placement", ordering=json.dumps([_TRACK])
+                stable_id=f"rec-{uid}",
+                user_id=uid,
+                source="placement",
+                ordering=json.dumps([_TRACK]),
+            )
+        )
+        c.execute(
+            insert(_T["item_observation"]).values(
+                user_id=uid,
+                item_kind="question",
+                item_stable_id="q-1",
+                correct=True,
+                observed_at=_T0,
+            )
+        )
+        c.execute(
+            insert(_T["problem_report"]).values(
+                stable_id=f"pr-{user}",
+                user_id=uid,
+                item_kind="question",
+                item_stable_id="q-1",
+                content_version="v1",
+                category="unclear",
+                comment="note",
+                created_at=_T0,
+            )
+        )
+        c.execute(
+            insert(_T["advisor_audit_log"]).values(
+                stable_id=f"aud-{user}",
+                user_id=uid,
+                run_id="run-1",
+                handle="h_0123",
+                source="rule-based",
+                outcome="failed",
+                returned_ids_json="[]",
+                recorded_at=_T0,
             )
         )
         c.execute(insert(_T["oauth_link"]).values(user_id=uid, provider="github", subject=user))

@@ -1,0 +1,5 @@
+{
+  "metrics": {"latencyMs": 900},
+  "output": {"message": {"role": "assistant", "content": [{"text": "{}"}]}},
+  "stopReason": "end_turn"
+}

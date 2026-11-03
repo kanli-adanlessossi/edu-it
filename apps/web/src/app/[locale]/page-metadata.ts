@@ -13,7 +13,15 @@ import { isLocale } from '../../locale.js';
 
 /** A `Meta` catalog key naming a page's localized document title. */
 type MetaTitleKey =
-  'landing' | 'signUp' | 'signIn' | 'verifyEmail' | 'resetPassword' | 'githubConfirm' | 'dashboard';
+  | 'landing'
+  | 'signUp'
+  | 'signIn'
+  | 'verifyEmail'
+  | 'resetPassword'
+  | 'githubConfirm'
+  | 'dashboard'
+  | 'reviewer'
+  | 'reviewerTask';
 
 /**
  * Build a page's localized metadata (its document `<title>`) from the `Meta`

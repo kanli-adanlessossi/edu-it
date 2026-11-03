@@ -87,6 +87,7 @@ from sqlalchemy import and_, func, insert, or_, select, update
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
+from edu_it_infrastructure.persistence._ordering import code_point_order
 from edu_it_infrastructure.persistence.repositories import _as_aware, _EngineHandle
 
 # The ``persistence`` package re-exports the ``MetaData`` object under the name
@@ -288,7 +289,7 @@ class Postgres_CatalogRepository(_Base, CatalogRepository):
         statement = (
             select(m.question.c.id, m.question.c.stable_id, m.question.c.concept_stable_ids)
             .where(m.question.c.concept_stable_ids.like(pattern, escape="\\"))
-            .order_by(m.question.c.stable_id)
+            .order_by(code_point_order(m.question.c.stable_id, self._engine))
         )
         with self._engine.connect() as connection:
             rows = connection.execute(statement).mappings().all()
@@ -493,19 +494,18 @@ class Postgres_EnrollmentRepository(_Base, EnrollmentRepository):
 
         The sort key is ``(enrolled_at, stable_id)`` (Req 17.5).
         """
+        # Ties on the instant break by stable_id in code-point order, as the fake does.
+        tie_break = code_point_order(m.enrollment.c.stable_id, self._engine)
         statement = self._select().where(m.user.c.stable_id == user_id)
         if after is not None:
-            enrolled_at, stable_id = after
+            enrolled_at, after_id = after
             statement = statement.where(
                 or_(
                     m.enrollment.c.enrolled_at > enrolled_at,
-                    and_(
-                        m.enrollment.c.enrolled_at == enrolled_at,
-                        m.enrollment.c.stable_id > stable_id,
-                    ),
+                    and_(m.enrollment.c.enrolled_at == enrolled_at, tie_break > after_id),
                 )
             )
-        statement = statement.order_by(m.enrollment.c.enrolled_at, m.enrollment.c.stable_id).limit(
+        statement = statement.order_by(m.enrollment.c.enrolled_at, tie_break).limit(
             _page_size(limit)
         )
         with self._engine.connect() as connection:
@@ -1201,20 +1201,19 @@ class Postgres_AttemptRepository(_Base, AttemptRepository):
         statement = self._attempt_select().where(
             and_(m.user.c.stable_id == user_id, m.quiz.c.stable_id == quiz_id)
         )
+        # Ties on the instant break by stable_id in code-point order, as the fake does.
+        tie_break = code_point_order(m.quiz_attempt.c.stable_id, self._engine)
         if after is not None:
-            attempted_at, stable_id = after
+            attempted_at, after_id = after
             statement = statement.where(
                 or_(
                     m.quiz_attempt.c.attempted_at > attempted_at,
-                    and_(
-                        m.quiz_attempt.c.attempted_at == attempted_at,
-                        m.quiz_attempt.c.stable_id > stable_id,
-                    ),
+                    and_(m.quiz_attempt.c.attempted_at == attempted_at, tie_break > after_id),
                 )
             )
-        statement = statement.order_by(
-            m.quiz_attempt.c.attempted_at, m.quiz_attempt.c.stable_id
-        ).limit(_page_size(limit))
+        statement = statement.order_by(m.quiz_attempt.c.attempted_at, tie_break).limit(
+            _page_size(limit)
+        )
         with self._engine.connect() as connection:
             rows = connection.execute(statement).mappings().all()
         return tuple(_attempt(row) for row in rows)
