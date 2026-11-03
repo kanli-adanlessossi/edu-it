@@ -9,6 +9,8 @@
       "origin": "ai",
       "prompt_id": "lesson",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.automatic-address-assignment-with-dhcp"
     },
     "title": {
@@ -26,6 +28,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.checking-connectivity"
     },
     "title": {
@@ -43,6 +47,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.gateways-and-routers"
     },
     "title": {
@@ -60,6 +66,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.inspecting-the-routing-table"
     },
     "title": {
@@ -77,6 +85,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.introduction-to-firewalls"
     },
     "title": {
@@ -94,6 +104,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.mac-addresses-and-switches"
     },
     "title": {
@@ -111,6 +123,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.protocols-packets-and-ports"
     },
     "title": {
@@ -128,6 +142,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.querying-dns-from-the-command-line"
     },
     "title": {
@@ -145,6 +161,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.reading-network-interface-settings"
     },
     "title": {
@@ -162,6 +180,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.subnets-and-subnet-masks"
     },
     "title": {
@@ -179,6 +199,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.tcp-vs-udp"
     },
     "title": {
@@ -196,6 +218,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.turning-names-into-addresses-with-dns"
     },
     "title": {
@@ -213,6 +237,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "lesson.what-is-an-ip-address"
     },
     "title": {

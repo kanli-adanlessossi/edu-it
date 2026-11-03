@@ -7,6 +7,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.automatic-address-assignment-with-dhcp"
     },
     "title": {
@@ -22,6 +24,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.checking-connectivity"
     },
     "title": {
@@ -37,6 +41,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.gateways-and-routers"
     },
     "title": {
@@ -52,6 +58,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.inspecting-the-routing-table"
     },
     "title": {
@@ -67,6 +75,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.introduction-to-firewalls"
     },
     "title": {
@@ -82,6 +92,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.mac-addresses-and-switches"
     },
     "title": {
@@ -97,6 +109,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.protocols-packets-and-ports"
     },
     "title": {
@@ -112,6 +126,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.querying-dns-from-the-command-line"
     },
     "title": {
@@ -127,6 +143,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.reading-network-interface-settings"
     },
     "title": {
@@ -142,6 +160,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.tcp-vs-udp"
     },
     "title": {
@@ -157,6 +177,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.turning-names-into-addresses-with-dns"
     },
     "title": {
@@ -172,6 +194,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.understanding-ip-addresses"
     },
     "title": {
@@ -187,6 +211,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "concept.understanding-subnets-and-subnet-masks"
     },
     "title": {

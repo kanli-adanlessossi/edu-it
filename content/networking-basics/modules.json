@@ -8,6 +8,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "module.addresses-and-networks"
     },
     "title": {
@@ -25,6 +27,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "module.inspecting-a-network-from-the-command-line"
     },
     "title": {
@@ -42,6 +46,8 @@
       "origin": "ai",
       "prompt_id": "outline",
       "prompt_version": "1",
+      "reviewed_at": "2026-11-03T11:16:17Z",
+      "reviewed_by": "kanli-adanlessossi",
       "stable_id": "module.names-and-protocols"
     },
     "title": {
