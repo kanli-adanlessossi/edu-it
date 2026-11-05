@@ -1067,6 +1067,15 @@ jobs:
               echo "::notice title=Signature verification skipped::$msg"
               echo "$msg" >> "$GITHUB_STEP_SUMMARY"
               exit 0 ;;
+            cancelled)
+              # The run was cancelled before sign could finish (most often concurrency's
+              # cancel-in-progress superseding this run when a newer commit was pushed to the
+              # same ref). Nothing was signed and nothing was released, but a cancelled run is
+              # not a release failure, so do not escalate it to a hard error.
+              msg="Signature verification SKIPPED: the sign job was cancelled (ref ${GITHUB_REF}), typically because a newer push superseded this run. Nothing was signed and nothing was pushed to a real registry."
+              echo "::notice title=Signature verification skipped::$msg"
+              echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+              exit 0 ;;
             *)
               msg="Images NOT released: the sign job finished with '$SIGN_RESULT'." ;;
           esac
