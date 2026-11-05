@@ -125,7 +125,19 @@ def installed_chart(kind_context: str) -> Iterator[str]:
                 "-n", PLATFORM_NAMESPACE, "--timeout=300s",
             )
         # Phase 2: the pre-upgrade migration hook runs, then Api and Worker must become ready.
-        _run(["helm", "upgrade", RELEASE, *args, "--wait", "--timeout", WAIT_TIMEOUT], timeout=700)
+        # This test's scope is the Api, the Worker and a lab-pod round trip (Req 1.4, 1.5, 6.3,
+        # 15.4); web readiness is the E2E test's job (tests/k8s/test_e2e_kind.py, which pins a web
+        # digest). values-dev.yaml leaves images.web.digest at the all-zeros placeholder and this
+        # test does not override it, so a blanket `helm upgrade --wait` would wait on an
+        # unpullable web image and time out. Run the upgrade without --wait (the pre-upgrade
+        # migration hook still runs), then wait on only the Api and Worker Deployments, mirroring
+        # the Phase 1 rollout-status wait on the datastores above.
+        _run(["helm", "upgrade", RELEASE, *args, "--timeout", WAIT_TIMEOUT], timeout=700)
+        for deployment in ("api", "worker"):
+            _kubectl(
+                kind_context, "rollout", "status", f"deployment/{RELEASE}-{deployment}",
+                "-n", PLATFORM_NAMESPACE, "--timeout=300s",
+            )
         yield kind_context
     finally:
         subprocess.run(  # noqa: S603 - cleanup, failures must not mask the test result
