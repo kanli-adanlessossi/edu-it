@@ -23,7 +23,8 @@
     "workloadIdentity",
     "observability",
     "imagePolicy",
-    "prometheusRules"
+    "prometheusRules",
+    "smokeTest"
   ],
   "properties": {
     "environment": {
@@ -1476,6 +1477,18 @@
         "externalSecret"
       ],
       "additionalProperties": true
+    },
+    "smokeTest": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false
     },
     "kindTest": {
       "type": "object",

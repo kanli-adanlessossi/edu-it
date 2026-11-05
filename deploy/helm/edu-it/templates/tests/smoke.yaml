@@ -3,8 +3,11 @@ Helm test hook (task 6.14, Req 15.4, 16.1): `helm test <release>` runs this pod 
 api image with a Python entrypoint and no shell (the distroless image has none; Req 12.3) and
 checks the Api and Worker readiness endpoints through their ClusterIP Services. The pod exits
 non-zero when either endpoint is not ready within the deadline, which fails `helm test`.
-The pod runs under the restricted Pod Security profile of the platform namespace.
+The pod runs under the restricted Pod Security profile of the platform namespace. Rendered only when
+smokeTest.enabled is true: it needs the smoke-test NetworkPolicies (networkpolicy-smoke-test.yaml) to
+reach the Api and Worker under default-deny, so without them it could only fail.
 */ -}}
+{{- if .Values.smokeTest.enabled }}
 {{- $ctx := dict "root" . "component" "smoke-test" }}
 {{- $ns := include "edu-it.platformNamespace" . }}
 {{- $apiHost := printf "%s.%s.svc" (include "edu-it.componentName" (dict "root" . "component" "api")) $ns }}
@@ -70,3 +73,4 @@ spec:
         limits:
           cpu: 200m
           memory: 128Mi
+{{- end }}

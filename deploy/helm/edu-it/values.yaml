@@ -251,3 +251,5 @@ prometheusRules:
     windowMinutes: 10
   externalSecret:
     staleMinutes: 30
+smokeTest:
+  enabled: false

@@ -100,6 +100,8 @@ def _helm_args(context: str, digests: dict[str, str], cidr: str) -> list[str]:
         "--namespace", PLATFORM_NAMESPACE,
         "-f", str(CHART / "values-dev.yaml"),
         "--set", "namespaces.manage=operator-managed",
+        # Opt in to the smoke-test NetworkPolicies and hook pod (default off; never in production).
+        "--set", "smokeTest.enabled=true",
         "--set", f"networkPolicy.kubernetesApi.cidrs={{{cidr}}}",
     ]
     for name, digest in digests.items():
@@ -166,11 +168,29 @@ def test_chart_installs_helm_test_passes_and_a_lab_pod_round_trips(
     context = installed_chart
 
     # Api and Worker readiness endpoints, checked by the Helm test hook pod.
-    _run(
+    helm_test = subprocess.run(  # noqa: S603 - fixed argv, no shell
         ["helm", "test", RELEASE, "--kube-context", context, "-n", PLATFORM_NAMESPACE,
          "--timeout", HELM_TEST_TIMEOUT],
-        timeout=400,
+        capture_output=True, text=True, timeout=400, check=False,
     )
+    if helm_test.returncode != 0:
+        # helm test keeps the hook pod on failure: surface its `NOT READY: ...` lines, its events
+        # and the NetworkPolicies so a failure is not blind.
+        diagnostics = []
+        for argv in (
+            ["logs", "-n", PLATFORM_NAMESPACE, f"{RELEASE}-smoke-test"],
+            ["describe", "pod", "-n", PLATFORM_NAMESPACE, f"{RELEASE}-smoke-test"],
+            ["get", "networkpolicy", "-n", PLATFORM_NAMESPACE],
+        ):
+            got = subprocess.run(  # noqa: S603
+                ["kubectl", "--context", context, *argv],
+                capture_output=True, text=True, timeout=60, check=False,
+            )
+            diagnostics.append(f"$ kubectl {' '.join(argv)}\n{got.stdout[-3000:]}{got.stderr[-1000:]}")
+        pytest.fail(
+            f"helm test failed ({helm_test.returncode}):\n{helm_test.stdout[-2000:]}\n"
+            f"{helm_test.stderr[-1000:]}\n" + "\n".join(diagnostics)
+        )
 
     # One Lab_Pod through the real composition root, then none left.
     from edu_it_domain.labs.sandbox_spec import build_sandbox_spec

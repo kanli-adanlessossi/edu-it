@@ -1,19 +1,20 @@
 {{- /*
-Test-hook-gated NetworkPolicies for the Helm test smoke pod (tests/smoke.yaml).
+Values-gated NetworkPolicies for the Helm test smoke pod (tests/smoke.yaml), rendered ONLY when
+smokeTest.enabled is true (default false; the production Values_Files never enable it).
 The platform-default-deny policy (networkpolicy-platform.yaml, podSelector {}, Ingress+Egress)
 denies all traffic in both directions, and ingress/egress are evaluated independently, so the
 smoke-test pod needs: egress to the Api (api.port), the Worker health surface (worker.adminPort)
 and cluster DNS; plus ingress admitting the smoke-test pod on the Api and Worker health ports.
-
-These policies carry the same `helm.sh/hook: test` /
-`helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded` annotations as the smoke pod, so
-they are created and torn down WITH `helm test` and never ship to a normal install/upgrade. The
-production platform NetworkPolicy surface (networkpolicy-platform.yaml) is unchanged.
-
+These are ordinary (non-hook) resources on purpose: `helm install/upgrade` applies them before
+`helm test` starts the pod, so the CNI has them programmed before the pod's first connection.
+(The earlier `helm.sh/hook: test` version was not enforced in time and failed at runtime.)
+The production platform NetworkPolicy surface (networkpolicy-platform.yaml) is unchanged; these
+policies are purely additive.
 A NetworkPolicy's spec.podSelector selects a single pod set, so this is three policies: one egress
 policy selecting the smoke-test pod, one ingress policy selecting the Api, one ingress policy
 selecting the Worker.
 */ -}}
+{{- if .Values.smokeTest.enabled }}
 {{- $ns := include "edu-it.platformNamespace" . }}
 {{- $apiPort := int .Values.api.port }}
 {{- $workerHealthPort := int .Values.worker.adminPort }}
@@ -27,9 +28,6 @@ metadata:
   namespace: {{ $ns }}
   labels:
     {{- include "edu-it.labels" (dict "root" . "component" "smoke-test-egress") | nindent 4 }}
-  annotations:
-    "helm.sh/hook": test
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   podSelector:
     matchLabels:
@@ -60,9 +58,6 @@ metadata:
   namespace: {{ $ns }}
   labels:
     {{- include "edu-it.labels" (dict "root" . "component" "smoke-test-api-ingress") | nindent 4 }}
-  annotations:
-    "helm.sh/hook": test
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   podSelector:
     matchLabels:
@@ -85,9 +80,6 @@ metadata:
   namespace: {{ $ns }}
   labels:
     {{- include "edu-it.labels" (dict "root" . "component" "smoke-test-worker-ingress") | nindent 4 }}
-  annotations:
-    "helm.sh/hook": test
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   podSelector:
     matchLabels:
@@ -102,3 +94,4 @@ spec:
       ports:
         - protocol: TCP
           port: {{ $workerHealthPort }}
+{{- end }}
