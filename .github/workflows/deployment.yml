@@ -565,9 +565,13 @@ jobs:
           set -euo pipefail
           build_push() {  # <dockerfile-dir> <target> <repository>
             local ref="$LOCAL_REGISTRY/$3"
+            # Build and push progress go to stderr so the only thing on this function's
+            # stdout is the digest below. The caller captures stdout with $(...) into
+            # $GITHUB_OUTPUT, and docker push writes progress lines (e.g. "<layer>: Waiting")
+            # to stdout, which would otherwise corrupt the KEY=VALUE output and fail the step.
             docker build --platform linux/amd64 \
-              --file "deploy/images/$1/Dockerfile" --target "$2" --tag "$ref:ci" .
-            docker push "$ref:ci"
+              --file "deploy/images/$1/Dockerfile" --target "$2" --tag "$ref:ci" . >&2
+            docker push "$ref:ci" >&2
             docker inspect --format '{{index .RepoDigests 0}}' "$ref:ci" | cut -d@ -f2
           }
           {
