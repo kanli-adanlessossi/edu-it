@@ -382,7 +382,10 @@ jobs:
         with:
           image: registry:${{ env.LOCAL_REGISTRY }}/edu-it/${{ matrix.image.name }}@${{ steps.manifest.outputs.linux_amd64_digest }}
           format: spdx-json
-          output-file: ${{ runner.temp }}/sbom-${{ matrix.image.name }}-linux-amd64.spdx.json
+          # Workspace-relative output path: sbom-action (Syft) rejects an absolute
+          # output-file ("absolute file path detected"). The file lands in the workspace
+          # root, where the bash steps below read it.
+          output-file: sbom-${{ matrix.image.name }}-linux-amd64.spdx.json
           upload-artifact: false
           upload-release-assets: false
 
@@ -393,7 +396,8 @@ jobs:
         with:
           image: registry:${{ env.LOCAL_REGISTRY }}/edu-it/${{ matrix.image.name }}@${{ steps.manifest.outputs.linux_arm64_digest }}
           format: spdx-json
-          output-file: ${{ runner.temp }}/sbom-${{ matrix.image.name }}-linux-arm64.spdx.json
+          # Workspace-relative output path (see the amd64 step).
+          output-file: sbom-${{ matrix.image.name }}-linux-arm64.spdx.json
           upload-artifact: false
           upload-release-assets: false
 
@@ -407,11 +411,12 @@ jobs:
           set -euo pipefail
           ref="$LOCAL_REGISTRY/edu-it/$IMAGE_NAME@$DIGEST"
           for slug in linux-amd64 linux-arm64; do
+            # The SBOM steps write to the workspace root (relative output-file).
             oras attach --plain-http \
               --artifact-type application/spdx+json \
               --annotation "edu-it.io/sbom-platform=${slug/-//}" \
               "$ref" \
-              "$RUNNER_TEMP/sbom-$IMAGE_NAME-$slug.spdx.json:application/spdx+json"
+              "sbom-$IMAGE_NAME-$slug.spdx.json:application/spdx+json"
           done
           oras discover --plain-http --format json "$ref" > "$RUNNER_TEMP/referrers.json"
           python3 - "$RUNNER_TEMP/referrers.json" <<'PY'
@@ -432,7 +437,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/out"
-          cp "$RUNNER_TEMP"/sbom-"$IMAGE_NAME"-*.spdx.json "$RUNNER_TEMP/out/"
+          # The SBOM steps write to the workspace root (relative output-file).
+          cp sbom-"$IMAGE_NAME"-*.spdx.json "$RUNNER_TEMP/out/"
           printf '%s' "$DIGEST" > "$RUNNER_TEMP/out/digest-$IMAGE_NAME.txt"
 
       - name: Upload the SBOMs and the digest
