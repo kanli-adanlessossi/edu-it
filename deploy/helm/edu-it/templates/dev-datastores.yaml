@@ -1,0 +1,191 @@
+{{- /*
+Dev-only bundled PostgreSQL and Redis (Req 16.9). Rendered only when devDatastores.enabled.
+Small StatefulSets with emptyDir storage: data is lost on pod restart, never use outside dev/kind.
+The production guard is written inline on purpose (not in _helpers.tpl) so it cannot be skipped
+by a helper change.
+*/ -}}
+{{- if .Values.devDatastores.enabled }}
+{{- if eq (toString .Values.environment) "production" }}
+{{- fail "devDatastores.enabled is true while environment is \"production\": the bundled dev PostgreSQL and Redis must never render in production. Set devDatastores.enabled=false and use the managed datastores." }}
+{{- end }}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- $pgName := include "edu-it.componentName" (dict "root" . "component" "dev-postgres") }}
+{{- $redisName := include "edu-it.componentName" (dict "root" . "component" "dev-redis") }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $pgName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "dev-postgres") | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "edu-it.selectorLabels" (dict "root" . "component" "dev-postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $pgName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "dev-postgres") | nindent 4 }}
+spec:
+  serviceName: {{ $pgName }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" (dict "root" . "component" "dev-postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "edu-it.labels" (dict "root" . "component" "dev-postgres") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: edu_it
+            - name: POSTGRES_DB
+              value: edu_it
+            - name: POSTGRES_PASSWORD_FILE
+              value: /var/run/secrets/edu-it/dev-postgres/password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "edu_it", "-d", "edu_it"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: password
+              mountPath: /var/run/secrets/edu-it/dev-postgres
+              readOnly: true
+            - name: run
+              mountPath: /var/run/postgresql
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+        - name: password
+          secret:
+            secretName: {{ include "edu-it.componentName" (dict "root" . "component" "dev-postgres") }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $pgName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "dev-postgres") | nindent 4 }}
+type: Opaque
+stringData:
+  # Dev-only placeholder, identical to the database placeholder in secrets-dev.yaml.
+  password: edu-it-dev-placeholder
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $redisName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "dev-redis") | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "edu-it.selectorLabels" (dict "root" . "component" "dev-redis") | nindent 4 }}
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $redisName }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "dev-redis") | nindent 4 }}
+spec:
+  serviceName: {{ $redisName }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" (dict "root" . "component" "dev-redis") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "edu-it.labels" (dict "root" . "component" "dev-redis") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["--save", "", "--appendonly", "no"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+{{- end }}

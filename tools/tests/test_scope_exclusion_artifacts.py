@@ -207,13 +207,28 @@ def test_repository_contains_no_kubernetes_artifact() -> None:
         "networkpolicy.yml",
     }
 
+    # Narrowed by the kubernetes-deployment spec (supersedes the pre-Kubernetes
+    # phase guard): only that spec's own trees are permitted; anything else
+    # Kubernetes-shaped is still rejected.
+    deploy_dir = REPO_ROOT / "deploy"
+    allowed_roots = (
+        deploy_dir / "helm" / "edu-it",
+        deploy_dir / "kind",
+        deploy_dir / "images",
+    )
+
+    def _allowed(path: Path) -> bool:
+        if path == deploy_dir / "helm":  # parent dir of the allowed chart
+            return True
+        return any(path == root or root in path.parents for root in allowed_roots)
+
     offending_dirs: list[Path] = []
     offending_files: list[Path] = []
-    for root in (*SOURCE_ROOTS, REPO_ROOT / "deploy"):
+    for root in (*SOURCE_ROOTS, deploy_dir):
         if not root.exists():
             continue
         for path in root.rglob("*"):
-            if _is_ignored(path):
+            if _is_ignored(path) or _allowed(path):
                 continue
             if path.is_dir() and path.name.lower() in k8s_dir_names:
                 offending_dirs.append(path)

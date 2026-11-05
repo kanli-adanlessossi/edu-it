@@ -66,6 +66,7 @@ _TERMINAL_VALUES = tuple(
         SessionStatus.EXPIRED,
         SessionStatus.IDLE_EXPIRED,
         SessionStatus.FAILED,
+        SessionStatus.ENDED_BY_INFRASTRUCTURE,
     )
 )
 
@@ -80,7 +81,22 @@ _FIELD_COLUMNS: dict[str, str] = {
     "provision_attempts": "provision_attempts",
     "next_provision_at": "next_provision_at",
     "terminal_epoch": "terminal_epoch",
+    "capacity_attempts": "capacity_attempts",
 }
+
+
+def _tolerant_status(value: str) -> SessionStatus:
+    """Read a stored status, tolerating a value this release does not know.
+
+    A rolling upgrade or a rollback can leave rows written by another release (for
+    example ``ended-by-infrastructure`` read by the previous release). An unknown value
+    reads as the terminal ``failed`` status: inactive, so it never holds the learner's
+    active-session slot and never selects a sandbox action (Req 21.6).
+    """
+    try:
+        return SessionStatus(value)
+    except ValueError:
+        return SessionStatus.FAILED
 
 
 def _opt(instant: datetime | None) -> datetime | None:
@@ -107,7 +123,7 @@ class Postgres_LabSessionRepository(_Base):
             stable_id=row.stable_id,
             user_id=row.user_sid,
             lab_id=row.lab_sid,
-            status=SessionStatus(row.status),
+            status=_tolerant_status(row.status),
             created_at=_as_aware(row.started_at),
             ttl_at=_as_aware(row.ttl_at),
             sandbox_ref=row.sandbox_ref,
@@ -117,6 +133,7 @@ class Postgres_LabSessionRepository(_Base):
             provision_attempts=row.provision_attempts,
             next_provision_at=_opt(row.next_provision_at),
             terminal_epoch=row.terminal_epoch,
+            capacity_attempts=row.capacity_attempts,
         )
 
     def _one(self, where: Any) -> LabSession | None:

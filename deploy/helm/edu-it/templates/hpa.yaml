@@ -1,0 +1,75 @@
+{{- /*
+HorizontalPodAutoscalers for the Api and the Worker (task 12.2, Req 8.2, 8.10, 8.11).
+Api: CPU utilization. Worker: queue depth per replica when metricsAdapter.enabled (Req 8.10),
+otherwise CPU utilization (Req 8.11). Each HPA renders only when its own `hpa.enabled` is true.
+The queue depth is read as an External metric published by the operator's metrics adapter.
+*/ -}}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- $queueDepthMetric := .Values.metricsAdapter.enabled }}
+{{- if and (eq (default "cpu" .Values.worker.hpa.metric) "queueDepth") (not .Values.metricsAdapter.enabled) }}
+{{- fail "worker.hpa.metric: 'queueDepth' needs metricsAdapter.enabled=true; set the metric to 'cpu' or enable the metrics adapter" }}
+{{- end }}
+{{- if .Values.api.hpa.enabled }}
+{{- $ctx := dict "root" . "component" "api" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "edu-it.componentName" $ctx }}
+  minReplicas: {{ int .Values.api.hpa.minReplicas }}
+  maxReplicas: {{ int .Values.api.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ int .Values.api.hpa.targetCpuUtilizationPercentage }}
+{{- end }}
+{{- if .Values.worker.hpa.enabled }}
+{{- $ctx := dict "root" . "component" "worker" }}
+{{- if .Values.api.hpa.enabled }}
+---
+{{- end }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "edu-it.componentName" $ctx }}
+  minReplicas: {{ int .Values.worker.hpa.minReplicas }}
+  maxReplicas: {{ int .Values.worker.hpa.maxReplicas }}
+  metrics:
+    {{- if $queueDepthMetric }}
+    - type: External
+      external:
+        metric:
+          name: edu_it_queue_depth
+          selector:
+            matchLabels:
+              queue: worker
+        target:
+          type: AverageValue
+          averageValue: {{ int .Values.worker.hpa.queueDepthTarget | quote }}
+    {{- else }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ int .Values.worker.hpa.targetCpuUtilizationPercentage }}
+    {{- end }}
+{{- end }}

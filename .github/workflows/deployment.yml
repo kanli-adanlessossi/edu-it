@@ -1,0 +1,1046 @@
+# EDU-IT deployment pipeline, early version (kubernetes-deployment task 6.21).
+#
+# Jobs in this version:
+#   tests          unit and property tests, kind-marked tests excluded (Req 15.1)
+#   chart          `helm lint` and `helm template` for each Values_File that exists
+#                  (Req 15.3, 7.5, 7.6)
+#   discover       the Image_Set (web, api, migrations, worker); fails if a Dockerfile under
+#                  deploy/images is not in the set
+#   build          one job per image and platform (linux/amd64, linux/arm64): build to an
+#                  OCI archive, check_image_contents, vulnerability scan, upload. Never
+#                  pushes. A failure names the image and the platform (Req 12.1 to 12.6,
+#                  15.1, 15.2)
+#   publish        needs every build job, so a failed build or scan publishes nothing.
+#                  Joins the platforms into one multi-architecture manifest in the LOCAL
+#                  registry, generates an SBOM per platform and attaches it by digest
+#                  (Req 12.1, 12.7)
+#   image-refs     check_image_refs on the built digests and the four Values_Files
+#                  (Req 12.11)
+#   kind           kind harness, Chart install (wait up to 600 s), helm test, one Lab_Pod
+#                  round trip (task 6.14; Req 15.4, 16.1); then, only when the install is
+#                  ready, the E2E, isolation, upgrade, rollback, failure scenario and load
+#                  tests, plus the real-API contract test, the provider suites and
+#                  check_values_consistency (task 15.1; Req 15.5, 15.6, 25.1)
+#   static-checks  tools/check_ci_pins.py on this file and tools/check_traceability.py
+#                  (Req 15.11)
+#   docs-check     tools/check_docs.py: headings, checklist items, links, French word count
+#                  (task 16.5; Req 18.5)
+#   sign           keyless signing, SBOM attach and provenance by digest, push to the real
+#                  registry. Runs only for a push to the default branch or a release tag,
+#                  after every verification job passed (Req 12.8, 12.9, 12.12, 12.13, 15.9)
+#   release-gate   always runs; records whether the images were released or why not
+#
+# Signing and registry push (Req 15.8, 15.9). Only the `sign` job signs and pushes to a real
+# registry, and only for a push to the default branch or a release tag (`v*`). It is the only
+# job with `id-token: write`. Pull-request runs (forks included) and pushes to other branches
+# use the throw-away registry service container of the job, verify the local-registry digests,
+# record in the run output that signature verification was skipped, and neither sign nor push.
+#
+# Later tasks extend this file: 15.2.
+#
+# Third-party actions are pinned to a full 40-character commit SHA (Req 15.11). The
+# version is kept in a trailing comment. Verify a SHA with
+# `gh api repos/<owner>/<repo>/commits/<sha>` before changing it.
+
+name: Deployment
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'v*'
+  pull_request:
+
+# Least privilege. A job that needs more declares it on the job itself.
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Local registry used by the image build. It is a service container of the job.
+  LOCAL_REGISTRY: localhost:5001
+  # Vulnerability threshold (Req 15.2): CRITICAL or HIGH with a fix available.
+  SCAN_SEVERITY_CUTOFF: high
+  # Pipeline scan timeout in minutes (Req 12.6). A scan that does not finish in time fails
+  # the build and is reported as incomplete.
+  SCAN_TIMEOUT_MINUTES: '15'
+
+jobs:
+  tests:
+    name: unit and property tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv (pinned Python toolchain)
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Install Python workspace (frozen to uv.lock)
+        run: uv sync --frozen --all-packages
+
+      # Kind-marked tests need Docker, kind and helm and run in the kind job (task 6.14).
+      # Docker-marked tests need the lab images and run in ci.yml.
+      - name: Unit and property tests (kind and docker markers excluded)
+        run: uv run --frozen pytest -m "not kind and not docker" --no-cov
+
+  chart:
+    name: helm lint and template
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      # Runs against every Values_File that exists. A Values_File that does not exist yet
+      # is reported and skipped; one that exists must pass. `--strict` makes a warning
+      # fail the lint (Req 7.5: zero errors and zero warnings).
+      - name: helm lint and helm template for each Values_File
+        shell: bash
+        run: |
+          set -euo pipefail
+          chart=deploy/helm/edu-it
+          if [ ! -f "$chart/Chart.yaml" ]; then
+            echo "::notice::No Chart at $chart yet; nothing to lint or template."
+            exit 0
+          fi
+          checked=0
+          for target in dev eks aks onprem; do
+            values="$chart/values-$target.yaml"
+            if [ ! -f "$values" ]; then
+              echo "::notice::$values does not exist yet; skipped."
+              continue
+            fi
+            echo "::group::helm lint ($target)"
+            helm lint "$chart" --strict -f "$values"
+            echo "::endgroup::"
+            echo "::group::helm template ($target)"
+            helm template edu-it "$chart" -f "$values" > /dev/null
+            echo "::endgroup::"
+            checked=$((checked + 1))
+          done
+          echo "helm lint and helm template passed for $checked Values_File(s)."
+
+  # The Image_Set (Req 12.1). `api` and `migrations` are two targets of one Dockerfile. A
+  # Dockerfile under deploy/images that is not listed here fails the run, so a new image
+  # cannot silently skip the build, scan and SBOM steps.
+  discover:
+    name: discover the image set
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.list.outputs.images }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: List images
+        id: list
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib, sys
+
+          IMAGE_SET = [
+              {"name": "web", "dir": "web", "target": "final"},
+              {"name": "api", "dir": "api", "target": "api"},
+              {"name": "migrations", "dir": "api", "target": "migrations"},
+              {"name": "worker", "dir": "worker", "target": "worker"},
+          ]
+          root = pathlib.Path("deploy/images")
+          listed = {image["dir"] for image in IMAGE_SET}
+          present = {p.parent.name for p in root.glob("*/Dockerfile")}
+          for missing in sorted(listed - present):
+              print(f"::error::deploy/images/{missing}/Dockerfile is in the image set but missing", file=sys.stderr)
+          for extra in sorted(present - listed):
+              print(f"::error::deploy/images/{extra}/Dockerfile is not in the image set of discover", file=sys.stderr)
+          if listed != present:
+              sys.exit(1)
+          print("images=" + json.dumps(IMAGE_SET))
+          PY
+
+  # One job per image and platform. Each platform is built on its own, so a failure names
+  # the image and the platform (Req 12.2): the job name carries both and the build step
+  # prints an error annotation with both. The build writes an OCI archive and nothing
+  # else; this job never pushes anywhere (Req 12.2, 12.6). The archive is checked
+  # (Req 12.3, 12.4), scanned (Req 12.5, 12.6, 15.2) and uploaded for the publish job.
+  build:
+    name: build ${{ matrix.image.name }} ${{ matrix.platform }}
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.discover.outputs.images) }}
+        platform:
+          - linux/amd64
+          - linux/arm64
+    env:
+      IMAGE_NAME: ${{ matrix.image.name }}
+      IMAGE_DIR: ${{ matrix.image.dir }}
+      IMAGE_TARGET: ${{ matrix.image.target }}
+      PLATFORM: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up QEMU (cross-platform builds)
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Name the archive
+        id: archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          slug="${PLATFORM//\//-}"
+          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+          echo "path=$RUNNER_TEMP/$IMAGE_NAME-$slug.tar" >> "$GITHUB_OUTPUT"
+
+      # Provenance and Buildx SBOM attestations are off: the pipeline generates and
+      # attaches the SBOM itself (Req 12.7), and provenance belongs to task 13.4.
+      - name: Build ${{ matrix.image.name }} (${{ matrix.platform }})
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! docker buildx build \
+            --platform "$PLATFORM" \
+            --file "deploy/images/$IMAGE_DIR/Dockerfile" \
+            --target "$IMAGE_TARGET" \
+            --provenance=false \
+            --sbom=false \
+            --output "type=oci,dest=${{ steps.archive.outputs.path }}" \
+            .; then
+            echo "::error title=Image build failed::image=$IMAGE_NAME platform=$PLATFORM; nothing is published from this run"
+            exit 1
+          fi
+
+      # No shell, no package manager, numeric non-root user (Req 12.3, 12.4).
+      - name: check_image_contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! python3 tools/check_image_contents.py "${{ steps.archive.outputs.path }}"; then
+            echo "::error title=Image content check failed::image=$IMAGE_NAME platform=$PLATFORM"
+            exit 1
+          fi
+
+      # The threshold comes from SCAN_SEVERITY_CUTOFF in the pipeline configuration (Req 12.5).
+      # `only-fixed` limits findings to those with a fix available (Req 15.2). A scanner
+      # error, an unavailable vulnerability database or a step that exceeds
+      # SCAN_TIMEOUT_MINUTES also fails the step, and the next step reports the scan as
+      # incomplete (Req 12.6).
+      - name: Vulnerability scan ${{ matrix.image.name }} (${{ matrix.platform }})
+        id: scan
+        timeout-minutes: ${{ fromJSON(env.SCAN_TIMEOUT_MINUTES) }}
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: oci-archive:${{ steps.archive.outputs.path }}
+          fail-build: true
+          severity-cutoff: ${{ env.SCAN_SEVERITY_CUTOFF }}
+          only-fixed: true
+          output-format: table
+
+      - name: Report the scan result
+        if: ${{ always() && steps.scan.outcome != 'success' && steps.scan.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          echo "::error title=Vulnerability scan did not pass::image=$IMAGE_NAME platform=$PLATFORM; a finding at or above '$SCAN_SEVERITY_CUTOFF' with a fix, or an incomplete scan (scanner error, database unavailable or timeout). The image is not published."
+          exit 1
+
+      - name: Upload the image archive
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: oci-${{ matrix.image.name }}-${{ steps.archive.outputs.slug }}
+          path: ${{ steps.archive.outputs.path }}
+          retention-days: 1
+          if-no-files-found: error
+
+  # Runs only when every build job of every image and platform succeeded (the default for
+  # `needs`), so a failed build or scan anywhere publishes nothing (Req 12.2, 12.6). It
+  # assembles one multi-architecture manifest per image in the LOCAL registry service
+  # container, generates an SBOM per platform and attaches it to the manifest by digest
+  # (Req 12.1, 12.7). Nothing is signed and nothing reaches a real registry here; signing,
+  # provenance and the release push are task 13.4.
+  publish:
+    name: publish ${{ matrix.image.name }} (local registry)
+    needs: [discover, build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.discover.outputs.images) }}
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5001:5000
+    env:
+      IMAGE_NAME: ${{ matrix.image.name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Set up oras
+        uses: oras-project/setup-oras@5e2f2482b30b0cb3e14e67f89a80c88c659a7c63 # v2.0.3
+        with:
+          version: 1.2.3
+
+      - name: Download the image archives
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: oci-${{ matrix.image.name }}-*
+          path: ${{ runner.temp }}/oci
+
+      # Copy each platform image into the local registry, then join them into one
+      # manifest list. The platforms present in the result are verified, so a manifest
+      # that lacks one platform fails the job.
+      - name: Publish the multi-architecture manifest
+        id: manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$LOCAL_REGISTRY" in
+            localhost:5001) ;;
+            *) echo "::error::Refusing to push to a non-local registry: $LOCAL_REGISTRY"; exit 1 ;;
+          esac
+          repo="$LOCAL_REGISTRY/edu-it/$IMAGE_NAME"
+          parts=()
+          for slug in linux-amd64 linux-arm64; do
+            archive="$RUNNER_TEMP/oci/oci-$IMAGE_NAME-$slug/$IMAGE_NAME-$slug.tar"
+            layout="$RUNNER_TEMP/layout/$slug"
+            mkdir -p "$layout"
+            tar -xf "$archive" -C "$layout"
+            manifest=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["manifests"][0]["digest"])' "$layout/index.json")
+            oras cp --from-oci-layout --to-plain-http "$layout@$manifest" "$repo:ci-$slug"
+            echo "${slug//-/_}_digest=$manifest" >> "$GITHUB_OUTPUT"
+            parts+=("$repo:ci-$slug")
+          done
+          docker buildx imagetools create --tag "$repo:ci" "${parts[@]}"
+          digest=$(oras resolve --plain-http "$repo:ci")
+          docker buildx imagetools inspect "$repo@$digest" --raw > "$RUNNER_TEMP/index.json"
+          python3 - "$RUNNER_TEMP/index.json" <<'PY'
+          import json, sys
+
+          index = json.load(open(sys.argv[1], encoding="utf-8"))
+          found = {f"{m['platform']['os']}/{m['platform']['architecture']}" for m in index["manifests"]}
+          missing = {"linux/amd64", "linux/arm64"} - found
+          if missing:
+              sys.exit("manifest is missing platform(s): " + ", ".join(sorted(missing)))
+          PY
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "- \`$IMAGE_NAME\`: \`$digest\` (linux/amd64, linux/arm64)" >> "$GITHUB_STEP_SUMMARY"
+
+      # One SBOM per platform image (Req 12.7).
+      - name: SBOM ${{ matrix.image.name }} (linux/amd64)
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        env:
+          SYFT_REGISTRY_INSECURE_USE_HTTP: 'true'
+        with:
+          image: registry:${{ env.LOCAL_REGISTRY }}/edu-it/${{ matrix.image.name }}@${{ steps.manifest.outputs.linux_amd64_digest }}
+          format: spdx-json
+          output-file: ${{ runner.temp }}/sbom-${{ matrix.image.name }}-linux-amd64.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: SBOM ${{ matrix.image.name }} (linux/arm64)
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        env:
+          SYFT_REGISTRY_INSECURE_USE_HTTP: 'true'
+        with:
+          image: registry:${{ env.LOCAL_REGISTRY }}/edu-it/${{ matrix.image.name }}@${{ steps.manifest.outputs.linux_arm64_digest }}
+          format: spdx-json
+          output-file: ${{ runner.temp }}/sbom-${{ matrix.image.name }}-linux-arm64.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      # Attach both SBOMs to the multi-architecture manifest, so that they are retrievable
+      # by its digest, then read them back by digest. A missing SBOM fails the job.
+      - name: Attach the SBOMs by digest and verify them
+        shell: bash
+        env:
+          DIGEST: ${{ steps.manifest.outputs.digest }}
+        run: |
+          set -euo pipefail
+          ref="$LOCAL_REGISTRY/edu-it/$IMAGE_NAME@$DIGEST"
+          for slug in linux-amd64 linux-arm64; do
+            oras attach --plain-http \
+              --artifact-type application/spdx+json \
+              --annotation "edu-it.io/sbom-platform=${slug/-//}" \
+              "$ref" \
+              "$RUNNER_TEMP/sbom-$IMAGE_NAME-$slug.spdx.json:application/spdx+json"
+          done
+          oras discover --plain-http --format json "$ref" > "$RUNNER_TEMP/referrers.json"
+          python3 - "$RUNNER_TEMP/referrers.json" <<'PY'
+          import json, sys
+
+          doc = json.load(open(sys.argv[1], encoding="utf-8"))
+          entries = doc.get("referrers") or doc.get("manifests") or []
+          found = [e for e in entries if e.get("artifactType") == "application/spdx+json"]
+          if len(found) < 2:
+              sys.exit(f"expected 2 SBOMs attached to the image digest, found {len(found)}")
+          print(f"{len(found)} SBOMs retrievable by digest")
+          PY
+
+      - name: Keep the SBOMs and the digest
+        shell: bash
+        env:
+          DIGEST: ${{ steps.manifest.outputs.digest }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/out"
+          cp "$RUNNER_TEMP"/sbom-"$IMAGE_NAME"-*.spdx.json "$RUNNER_TEMP/out/"
+          printf '%s' "$DIGEST" > "$RUNNER_TEMP/out/digest-$IMAGE_NAME.txt"
+
+      - name: Upload the SBOMs and the digest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image-${{ matrix.image.name }}
+          path: ${{ runner.temp }}/out
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Record signature verification status
+        shell: bash
+        run: |
+          msg="Signature verification SKIPPED for $IMAGE_NAME: images were verified against local-registry digests only. This job never signs and never pushes to a real registry; the sign job does, on the default branch and release tags only (ref ${GITHUB_REF})."
+          echo "::notice title=Signature verification skipped::$msg"
+          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+
+  # check_image_refs on the digests of every image that was built, and on the four Values_Files
+  # of the Chart (Req 12.11, 7.11). The base values.yaml carries empty digests by design.
+  # The built digests are written to a values file of the same shape as the Chart's
+  # `images` key, so the same tool checks both.
+  image-refs:
+    name: check_image_refs
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv (pinned Python toolchain)
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Download the image digests
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: image-*
+          path: ${{ runner.temp }}/images
+
+      - name: Compose the values of the built images
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, os, pathlib
+
+          lines = ["images:"]
+          for path in sorted(glob.glob(os.environ["RUNNER_TEMP"] + "/images/*/digest-*.txt")):
+              name = pathlib.Path(path).name.removeprefix("digest-").removesuffix(".txt")
+              digest = pathlib.Path(path).read_text(encoding="utf-8").strip()
+              lines += [f"  {name}:", f"    repository: localhost:5001/edu-it/{name}", f"    digest: {digest}"]
+          pathlib.Path(os.environ["RUNNER_TEMP"], "built-images.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+          cat "$RUNNER_TEMP/built-images.yaml"
+
+      - name: check_image_refs (built images and Chart values)
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run --frozen python tools/check_image_refs.py \
+            "$RUNNER_TEMP/built-images.yaml" \
+            deploy/helm/edu-it/values-dev.yaml \
+            deploy/helm/edu-it/values-eks.yaml \
+            deploy/helm/edu-it/values-aks.yaml \
+            deploy/helm/edu-it/values-onprem.yaml
+
+  # Walking-skeleton kind job (task 6.14; Req 15.4, 15.8, 16.1, 11.13). Runs the kind harness,
+  # builds api, worker and migrations into the harness registry (localhost:5001), then runs
+  # tests/k8s/test_smoke_kind.py, which installs the Chart (the first-install bootstrap is
+  # documented in that test and in ADR 0010), waits up to 600 s for readiness, runs `helm test`,
+  # and provisions and destroys one Lab_Pod. Nothing is signed and nothing leaves the runner:
+  # the images are referenced by their local-registry digests (Req 15.8).
+  #
+  # Task 15.1 extends this job. The install step (`install`) waits up to 600 s for every Chart
+  # workload to be ready (Req 15.4). When it fails, every later test step is skipped and a
+  # notice says so (Req 15.5). When it passes, the E2E, isolation, Upgrade, rollback, failure
+  # scenario and Load tests run (Req 15.6, 16.1, 25.1), then the real-API contract test, the
+  # provider suites on kind and check_values_consistency. Each test step runs even if an
+  # earlier test step failed, so one run reports every failure; the job still fails.
+  kind:
+    name: kind install and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      LOAD_TEST_RESULTS: load-test-results/load-test.json
+    steps:
+      # Full history: the Upgrade_Test resolves the previous release from release tags and the
+      # merge base (Req 25.8).
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up uv (pinned Python toolchain)
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Install Python workspace (frozen to uv.lock)
+        run: uv sync --frozen --all-packages
+
+      # The harness preloads these into the node containerd stores (kind and kubectl are
+      # preinstalled on GitHub-hosted runners).
+      - name: Build the lab images
+        run: docker buildx bake -f lab-images/docker-bake.hcl --load
+
+      - name: Run the kind harness
+        run: uv run --frozen python tools/kind_harness.py up
+
+      # Build into the harness registry and record the local-registry digests (Req 15.8).
+      - name: Build and push web, api, worker and migrations to the local registry
+        id: images
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_push() {  # <dockerfile-dir> <target> <repository>
+            local ref="$LOCAL_REGISTRY/$3"
+            docker build --platform linux/amd64 \
+              --file "deploy/images/$1/Dockerfile" --target "$2" --tag "$ref:ci" .
+            docker push "$ref:ci"
+            docker inspect --format '{{index .RepoDigests 0}}' "$ref:ci" | cut -d@ -f2
+          }
+          {
+            echo "web=$(build_push web final edu-it-web)"
+            echo "api=$(build_push api api edu-it-api)"
+            echo "migrations=$(build_push api migrations edu-it-migrations)"
+            echo "worker=$(build_push worker worker edu-it-worker)"
+          } >> "$GITHUB_OUTPUT"
+
+      # Signature verification before every install (Req 12.14, 15.8). The images of this job
+      # live only in the harness registry and are never signed (signing happens in the sign
+      # job, after this job passed), so the tool runs in --pull-request mode: it checks that
+      # every image is a pinned digest in the local registry, runs no cosign command and
+      # prints the note that signature verification was skipped. The signatures of the
+      # released images are verified with the same tool at the end of the sign job. Task 15.1
+      # reuses this step before the Upgrade_Test.
+      - name: Verify image signatures (local-registry digests, signing skipped)
+        shell: bash
+        env:
+          DIGEST_WEB: ${{ steps.images.outputs.web }}
+          DIGEST_API: ${{ steps.images.outputs.api }}
+          DIGEST_WORKER: ${{ steps.images.outputs.worker }}
+          DIGEST_MIGRATIONS: ${{ steps.images.outputs.migrations }}
+        run: |
+          set -euo pipefail
+          values="$RUNNER_TEMP/kind-images.yaml"
+          {
+            echo "images:"
+            echo "  web: {repository: $LOCAL_REGISTRY/edu-it-web, digest: $DIGEST_WEB}"
+            echo "  api: {repository: $LOCAL_REGISTRY/edu-it-api, digest: $DIGEST_API}"
+            echo "  worker: {repository: $LOCAL_REGISTRY/edu-it-worker, digest: $DIGEST_WORKER}"
+            echo "  migrations: {repository: $LOCAL_REGISTRY/edu-it-migrations, digest: $DIGEST_MIGRATIONS}"
+          } > "$values"
+          uv run --frozen python tools/verify_image_signatures.py --pull-request "$values" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The install step: it waits up to 600 s for the Chart workloads (Req 15.4). A failure here
+      # marks the step failed and the test steps below are skipped (Req 15.5).
+      - name: Install the Chart, wait up to 600 s, run helm test and the smoke test
+        id: install
+        env:
+          EDU_IT_KIND_DIGEST_API: ${{ steps.images.outputs.api }}
+          EDU_IT_KIND_DIGEST_WORKER: ${{ steps.images.outputs.worker }}
+          EDU_IT_KIND_DIGEST_MIGRATIONS: ${{ steps.images.outputs.migrations }}
+        run: uv run --frozen pytest tests/k8s/test_smoke_kind.py -m kind --no-cov -v
+
+      - name: Record that the install-dependent tests were skipped
+        if: ${{ !cancelled() && steps.install.outcome != 'success' }}
+        shell: bash
+        run: |
+          msg="Chart workloads were not ready within 600 s of the install (install step outcome: ${{ steps.install.outcome }}). The E2E, isolation, upgrade, rollback, failure scenario and load tests were SKIPPED."
+          echo "::error title=Install not ready::$msg"
+          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+
+      # Test environment shared by the steps below: the candidate digests in the harness
+      # registry (Req 25.8) and the E2E browser (Req 16.1). Node and npm are preinstalled on
+      # GitHub-hosted runners.
+      - name: Install the E2E browser
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        working-directory: apps/web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      # E2E_Test: installs on an empty cluster, waits up to 600 s, runs the real-stack
+      # journeys (Req 16.1, 15.6).
+      - name: E2E_Test
+        id: e2e
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          EDU_IT_KIND_DIGEST_WEB: ${{ steps.images.outputs.web }}
+          EDU_IT_KIND_DIGEST_API: ${{ steps.images.outputs.api }}
+          EDU_IT_KIND_DIGEST_WORKER: ${{ steps.images.outputs.worker }}
+          EDU_IT_KIND_DIGEST_MIGRATIONS: ${{ steps.images.outputs.migrations }}
+        run: uv run --frozen pytest tests/k8s/test_e2e_kind.py -m kind --no-cov -v
+
+      - name: Isolation tests
+        id: isolation
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run --frozen pytest tests/k8s/test_isolation_kind.py -m kind --no-cov -v
+
+      # Signature verification before the Upgrade_Test (Req 12.14). Same tool and mode as the
+      # step of the install above (task 13.4); the Upgrade_Test runs it again before each
+      # install it makes, through tests/k8s/upgrade_fixtures.py.
+      - name: Verify image signatures before the Upgrade_Test (local-registry digests, signing skipped)
+        id: verify-upgrade
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        env:
+          DIGEST_WEB: ${{ steps.images.outputs.web }}
+          DIGEST_API: ${{ steps.images.outputs.api }}
+          DIGEST_WORKER: ${{ steps.images.outputs.worker }}
+          DIGEST_MIGRATIONS: ${{ steps.images.outputs.migrations }}
+        run: |
+          set -euo pipefail
+          values="$RUNNER_TEMP/kind-upgrade-images.yaml"
+          {
+            echo "images:"
+            echo "  web: {repository: $LOCAL_REGISTRY/edu-it-web, digest: $DIGEST_WEB}"
+            echo "  api: {repository: $LOCAL_REGISTRY/edu-it-api, digest: $DIGEST_API}"
+            echo "  worker: {repository: $LOCAL_REGISTRY/edu-it-worker, digest: $DIGEST_WORKER}"
+            echo "  migrations: {repository: $LOCAL_REGISTRY/edu-it-migrations, digest: $DIGEST_MIGRATIONS}"
+          } > "$values"
+          uv run --frozen python tools/verify_image_signatures.py --pull-request "$values" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upgrade_Test
+        id: upgrade
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.verify-upgrade.outcome == 'success' }}
+        env:
+          EDU_IT_KIND_DIGEST_WEB: ${{ steps.images.outputs.web }}
+          EDU_IT_KIND_DIGEST_API: ${{ steps.images.outputs.api }}
+          EDU_IT_KIND_DIGEST_WORKER: ${{ steps.images.outputs.worker }}
+          EDU_IT_KIND_DIGEST_MIGRATIONS: ${{ steps.images.outputs.migrations }}
+        run: uv run --frozen pytest tests/k8s/test_upgrade_kind.py -m kind --no-cov -v
+
+      - name: Rollback test
+        id: rollback
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.verify-upgrade.outcome == 'success' }}
+        env:
+          EDU_IT_KIND_DIGEST_WEB: ${{ steps.images.outputs.web }}
+          EDU_IT_KIND_DIGEST_API: ${{ steps.images.outputs.api }}
+          EDU_IT_KIND_DIGEST_WORKER: ${{ steps.images.outputs.worker }}
+          EDU_IT_KIND_DIGEST_MIGRATIONS: ${{ steps.images.outputs.migrations }}
+        run: uv run --frozen pytest tests/k8s/test_rollback_kind.py -m kind --no-cov -v
+
+      - name: Failure scenario tests
+        id: failure
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          EDU_IT_KIND_DIGEST_API: ${{ steps.images.outputs.api }}
+          EDU_IT_KIND_DIGEST_WORKER: ${{ steps.images.outputs.worker }}
+          EDU_IT_KIND_DIGEST_MIGRATIONS: ${{ steps.images.outputs.migrations }}
+        run: >-
+          uv run --frozen pytest
+          tests/k8s/test_failure_nodes_kind.py
+          tests/k8s/test_failure_restarts_kind.py
+          tests/k8s/test_failure_migration_quota_secrets_kind.py
+          -m kind --no-cov -v
+
+      # Load_Test: 10 concurrent Lab_Sessions on the Kind_Cluster (Req 24). The results file is
+      # uploaded by task 15.2.
+      - name: Load_Test
+        id: load
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          mkdir -p "$(dirname "$LOAD_TEST_RESULTS")"
+          uv run --frozen python tools/perf/lab_load_k8s.py --context kind-edu-it --out "$LOAD_TEST_RESULTS"
+
+      # These do not need the Chart, only the cluster, so they run whether or not it installed.
+      - name: Real-API contract test (kind)
+        id: contract
+        if: ${{ !cancelled() }}
+        run: uv run --frozen pytest tests/k8s/test_provider_contract_kind.py -m kind --no-cov -v
+
+      - name: Provider suites on kind
+        id: providers
+        if: ${{ !cancelled() }}
+        run: uv run --frozen pytest tests/k8s/test_provider_suites_kind.py -m kind --no-cov -v
+
+      # Production Values_Files only (Req 2.5, 9.4, 9.5, 16.11).
+      - name: check_values_consistency
+        id: values-consistency
+        if: ${{ !cancelled() }}
+        run: >-
+          uv run --frozen python tools/check_values_consistency.py
+          deploy/helm/edu-it/values-eks.yaml
+          deploy/helm/edu-it/values-aks.yaml
+          deploy/helm/edu-it/values-onprem.yaml
+
+      - name: Dump cluster state on failure
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          kubectl --context kind-edu-it get pods -A -o wide || true
+          kubectl --context kind-edu-it -n platform get events --sort-by=.lastTimestamp || true
+          kubectl --context kind-edu-it -n platform logs -l app.kubernetes.io/part-of=edu-it --tail=100 --all-containers --prefix || true
+
+      # Step logs and the Kubernetes event dump, kept 14 days, on any failure (Req 15.7).
+      - name: Collect step logs and the event dump
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          mkdir -p failure-artifacts
+          kubectl --context kind-edu-it get events -A --sort-by=.lastTimestamp > failure-artifacts/events.txt 2>&1 || true
+          kubectl --context kind-edu-it get pods -A -o wide > failure-artifacts/pods.txt 2>&1 || true
+          kubectl --context kind-edu-it logs -A -l app.kubernetes.io/part-of=edu-it --tail=500 --all-containers --prefix > failure-artifacts/step-logs.txt 2>&1 || true
+          cp -r .e2e failure-artifacts/e2e 2>/dev/null || true
+
+      - name: Upload step logs and events
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: failure-logs-kind
+          path: failure-artifacts
+          retention-days: 14
+          if-no-files-found: warn
+
+      # Load_Test results on every run, or a record that none were produced (Req 24.6).
+      - name: Record Load_Test results
+        if: ${{ always() }}
+        id: load-results
+        shell: bash
+        run: |
+          if [ -s "$LOAD_TEST_RESULTS" ]; then
+            echo "produced=true" >> "$GITHUB_OUTPUT"
+          else
+            mkdir -p "$(dirname "$LOAD_TEST_RESULTS")"
+            echo '{"produced": false, "reason": "Load_Test did not produce results in this run"}' > "$LOAD_TEST_RESULTS"
+            echo "produced=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=No Load_Test results::The Load_Test produced no results file; a placeholder record was uploaded."
+            echo "Load_Test produced no results in this run." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Load_Test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: load-test-results
+          path: load-test-results/load-test.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Record signature verification status
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          msg="Signature verification SKIPPED for the kind job: images were verified against local-registry digests only (api ${{ steps.images.outputs.api }}). The kind job signs nothing and pushes nothing to a real registry (ref ${GITHUB_REF})."
+          echo "::notice title=Signature verification skipped::$msg"
+          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Delete the kind cluster
+        if: ${{ always() }}
+        run: uv run --frozen python tools/kind_harness.py down
+
+  static-checks:
+    name: ci pins and traceability
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv (pinned Python toolchain)
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      # Fails the run on any third-party action referenced by a tag or branch (Req 15.11).
+      - name: check_ci_pins
+        run: uv run --frozen python tools/check_ci_pins.py .github/workflows/deployment.yml
+
+      - name: check_traceability
+        run: uv run --frozen python tools/check_traceability.py --spec kubernetes-deployment
+
+  # Required headings and checklist items, link resolution and the French word count of the
+  # deployment documentation (task 16.5; Req 18.5). The tool uses the standard library only.
+  docs-check:
+    name: docs check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv (pinned Python toolchain)
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      - name: check_docs
+        run: uv run --frozen python tools/check_docs.py
+
+  # Keyless signing, SBOM attachment and provenance, by digest, in the real registry
+  # (Req 12.8, 12.9, 12.12, 12.13, 15.9). Gate: a push to the default branch or a release tag
+  # (`v*`), after every verification job passed. Pull-request events (fork pull requests
+  # included) and pushes to other branches never reach this job, so they neither sign nor
+  # push (Req 15.8). `id-token: write` is set here and nowhere else (Req 12.12); a job-level
+  # `permissions` block replaces the top-level one, so `contents: read` is repeated.
+  # Any failing step (push, SBOM attach, signing, signature publication, provenance,
+  # verification) fails the job and therefore the run; `release-gate` reports the image as
+  # not released and the `released-*` marker artifact is not uploaded.
+  sign:
+    name: sign ${{ matrix.image.name }} (keyless)
+    needs: [discover, tests, chart, publish, image-refs, kind, static-checks, docs-check]
+    if: ${{ github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.discover.outputs.images) }}
+    env:
+      IMAGE_NAME: ${{ matrix.image.name }}
+      OIDC_ISSUER: https://token.actions.githubusercontent.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv (pinned Python toolchain)
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Set up oras
+        uses: oras-project/setup-oras@5e2f2482b30b0cb3e14e67f89a80c88c659a7c63 # v2.0.3
+        with:
+          version: 1.2.3
+
+      - name: Set up cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Log in to the registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download the image archives
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: oci-${{ matrix.image.name }}-*
+          path: ${{ runner.temp }}/oci
+
+      - name: Download the SBOMs and the tested digest
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image-${{ matrix.image.name }}
+          path: ${{ runner.temp }}/out
+
+      # Push the platform images that were built and scanned, then join them into one
+      # multi-architecture manifest. All later steps address the image by that digest.
+      - name: Push the multi-architecture manifest
+        id: push
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="ghcr.io/${GITHUB_REPOSITORY,,}/$IMAGE_NAME"
+          parts=()
+          for slug in linux-amd64 linux-arm64; do
+            archive="$RUNNER_TEMP/oci/oci-$IMAGE_NAME-$slug/$IMAGE_NAME-$slug.tar"
+            layout="$RUNNER_TEMP/layout/$slug"
+            mkdir -p "$layout"
+            tar -xf "$archive" -C "$layout"
+            manifest=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["manifests"][0]["digest"])' "$layout/index.json")
+            oras cp --from-oci-layout "$layout@$manifest" "$repo:ci-$slug"
+            parts+=("$repo:ci-$slug")
+          done
+          docker buildx imagetools create --tag "$repo:sha-${GITHUB_SHA}" "${parts[@]}"
+          digest=$(oras resolve "$repo:sha-${GITHUB_SHA}")
+          case "$digest" in
+            sha256:????????????????????????????????????????????????????????????????) ;;
+            *) echo "::error title=Image not released::image=$IMAGE_NAME: no digest after push"; exit 1 ;;
+          esac
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Attach the SBOMs by digest
+        shell: bash
+        env:
+          REF: ${{ steps.push.outputs.repo }}@${{ steps.push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          for slug in linux-amd64 linux-arm64; do
+            oras attach \
+              --artifact-type application/spdx+json \
+              --annotation "edu-it.io/sbom-platform=${slug/-//}" \
+              "$REF" \
+              "$RUNNER_TEMP/out/sbom-$IMAGE_NAME-$slug.spdx.json:application/spdx+json"
+          done
+          oras discover --format json "$REF" > "$RUNNER_TEMP/referrers.json"
+          python3 - "$RUNNER_TEMP/referrers.json" <<'PY'
+          import json, sys
+
+          doc = json.load(open(sys.argv[1], encoding="utf-8"))
+          entries = doc.get("referrers") or doc.get("manifests") or []
+          found = [e for e in entries if e.get("artifactType") == "application/spdx+json"]
+          if len(found) < 2:
+              sys.exit(f"expected 2 SBOMs attached to the image digest, found {len(found)}")
+          PY
+
+      # Keyless: the signature uses the OIDC identity of this workflow run (Req 12.8, 12.12).
+      # `cosign sign` publishes the signature to the registry next to the image.
+      - name: Sign by digest (keyless)
+        shell: bash
+        env:
+          REF: ${{ steps.push.outputs.repo }}@${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "$REF"
+
+      # Provenance attestation by digest (Req 12.13).
+      - name: Attach the provenance attestation by digest
+        shell: bash
+        env:
+          REF: ${{ steps.push.outputs.repo }}@${{ steps.push.outputs.digest }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python3 - > "$RUNNER_TEMP/provenance.json" <<'PY'
+          import json, os
+
+          env = os.environ
+          print(json.dumps({
+              "buildDefinition": {
+                  "buildType": "https://actions.github.io/buildtypes/workflow/v1",
+                  "externalParameters": {
+                      "workflow": {
+                          "ref": env["GITHUB_REF"],
+                          "repository": f"{env['GITHUB_SERVER_URL']}/{env['GITHUB_REPOSITORY']}",
+                          "path": ".github/workflows/deployment.yml",
+                      },
+                      "image": env["IMAGE_NAME"],
+                  },
+                  "resolvedDependencies": [
+                      {"uri": f"git+{env['GITHUB_SERVER_URL']}/{env['GITHUB_REPOSITORY']}@{env['GITHUB_REF']}",
+                       "digest": {"gitCommit": env["GITHUB_SHA"]}}
+                  ],
+              },
+              "runDetails": {
+                  "builder": {"id": f"{env['GITHUB_SERVER_URL']}/{env['GITHUB_REPOSITORY']}/.github/workflows/deployment.yml@{env['GITHUB_REF']}"},
+                  "metadata": {"invocationId": env["RUN_URL"]},
+              },
+          }))
+          PY
+          cosign attest --yes --type slsaprovenance1 --predicate "$RUNNER_TEMP/provenance.json" "$REF"
+
+      # Verify what was just published, with the tool the kind job uses: a missing or
+      # invalid signature or attestation fails the job (Req 12.9, 12.14).
+      - name: Verify the signature and the provenance
+        shell: bash
+        env:
+          REPO: ${{ steps.push.outputs.repo }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          identity="^https://github\\.com/${GITHUB_REPOSITORY}/\\.github/workflows/deployment\\.yml@refs/(heads|tags)/.+$"
+          values="$RUNNER_TEMP/released-$IMAGE_NAME.yaml"
+          printf 'images:\n  %s:\n    repository: %s\n    digest: %s\n' "$IMAGE_NAME" "$REPO" "$DIGEST" > "$values"
+          uv run --frozen python tools/verify_image_signatures.py \
+            --certificate-identity-regexp "$identity" \
+            --certificate-oidc-issuer "$OIDC_ISSUER" \
+            "$values"
+          cosign verify-attestation --type slsaprovenance1 \
+            --certificate-identity-regexp "$identity" \
+            --certificate-oidc-issuer "$OIDC_ISSUER" \
+            "$REPO@$DIGEST" > /dev/null
+          mkdir -p "$RUNNER_TEMP/released"
+          printf '%s@%s' "$REPO" "$DIGEST" > "$RUNNER_TEMP/released/$IMAGE_NAME.txt"
+          echo "- \`$IMAGE_NAME\` released: \`$REPO@$DIGEST\` (signed, SBOM and provenance attached)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report the failure
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          echo "::error title=Image not released::image=$IMAGE_NAME; SBOM attachment, signing, signature publication or provenance failed, so the image is not marked as released"
+
+      - name: Mark the image as released
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: released-${{ matrix.image.name }}
+          path: ${{ runner.temp }}/released
+          retention-days: 14
+          if-no-files-found: error
+
+  # Run-level record of the signing decision (Req 15.8, 15.9), whatever the image jobs did.
+  release-gate:
+    name: release status
+    needs: sign
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record the release decision
+        shell: bash
+        env:
+          SIGN_RESULT: ${{ needs.sign.result }}
+          EVENT: ${{ github.event_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          case "$SIGN_RESULT" in
+            success)
+              msg="Images signed and pushed (ref ${GITHUB_REF}): keyless signature, SBOM and provenance attached by digest." ;;
+            skipped)
+              msg="Signature verification SKIPPED: ref ${GITHUB_REF} (event $EVENT) is neither the default branch ($DEFAULT_BRANCH) nor a release tag, or an earlier job did not pass. Nothing was signed and nothing was pushed to a real registry."
+              echo "::notice title=Signature verification skipped::$msg"
+              echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+              exit 0 ;;
+            *)
+              msg="Images NOT released: the sign job finished with '$SIGN_RESULT'." ;;
+          esac
+          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$SIGN_RESULT" != success ]; then
+            echo "::error title=Images not released::$msg"
+            exit 1
+          fi
+          echo "$msg"

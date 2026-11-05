@@ -91,6 +91,11 @@ from edu_it_application.labs.reap_sessions import (
 
 __all__ += ["DestroyOutcome", "DestroySandbox", "ReapReport", "ReapSessions"]
 
+from edu_it_application.labs.end_by_infrastructure import EndByInfrastructure  # noqa: E402
+from edu_it_application.labs.watch_lab_pods import WatchLabPods  # noqa: E402
+
+__all__ += ["EndByInfrastructure", "WatchLabPods"]
+
 from edu_it_application.labs.terminal import (  # noqa: E402
     AuthorizeTerminal,
     Frame,

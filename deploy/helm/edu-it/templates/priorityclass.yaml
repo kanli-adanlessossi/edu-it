@@ -1,0 +1,11 @@
+{{- /* Platform_Priority_Class: assigned to Api, Worker and Web; value is above labs.podPriorityValue (validated in validate-priorityclass.yaml). */ -}}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.priorityClass.name }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "priority") | nindent 4 }}
+value: {{ int64 .Values.priorityClass.value }}
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: "EDU-IT platform workloads (api, worker, web). Higher than lab pods so learner labs never starve the platform."

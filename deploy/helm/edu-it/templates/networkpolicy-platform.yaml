@@ -1,0 +1,298 @@
+{{- /*
+Platform_Namespace network policies (Req 10.10, 11.1 to 11.6, 11.13, 11.14; design "Network policies").
+One default-deny policy selects every pod and denies all ingress and egress. Allow policies add only
+the arrows of the design diagram:
+- Api and Worker (and the Migration_Job for PostgreSQL) reach the PostgreSQL and Redis ports. The
+  managed datastores sit outside the cluster, so those egress rules are port-only; in dev the
+  bundled datastores additionally get an ingress rule admitting exactly those callers.
+- Worker egress: LLM endpoint, Kubernetes API, PostgreSQL, Redis, DNS. LLM egress is rendered for the
+  Worker only (Req 10.10).
+- Api egress: Kubernetes API (terminal attach through pods/exec), PostgreSQL, Redis, object storage, DNS.
+- Migration_Job egress: PostgreSQL and DNS.
+- Web egress: Api port and DNS (design: the web to api arrow extends Req 11).
+- Ingress: the ingress controller reaches the Api and web service ports only; web reaches the Api
+  port; the monitoring namespace reaches the metrics port only, and only when
+  networkPolicy.monitoringIngress.enabled is true (OQ-4, default false).
+- cni-check: the Job pod reaches the Kubernetes API and the probe pods on 8080. The probes' own
+  ingress (deny all, then admit the Job pod to probe-allowed) is created by the check itself, so
+  under this default-deny a probe is reachable only through the check's allow policy.
+The Kubernetes API egress is an ipBlock rule from networkPolicy.kubernetesApi.cidrs; rendering
+fails naming that key when the list is empty (Req 11.13, 11.14).
+*/ -}}
+{{- include "edu-it.validateNetworkPolicy" . }}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- $np := .Values.networkPolicy }}
+{{- $pg := include "edu-it.postgresPort" . | int }}
+{{- $redis := include "edu-it.redisPort" . | int }}
+{{- $apiPort := int .Values.api.port }}
+{{- $webPort := int .Values.web.port }}
+{{- $llmPort := include "edu-it.endpointPort" .Values.llm.endpoint | int }}
+{{- $objPort := include "edu-it.endpointPort" .Values.objectStorage.endpoint | int }}
+{{- $monitoring := and $np.monitoringIngress (default false $np.monitoringIngress.enabled) }}
+{{- $api := dict "root" . "component" "api" }}
+{{- $worker := dict "root" . "component" "worker" }}
+{{- $web := dict "root" . "component" "web" }}
+{{- $migration := dict "root" . "component" "migration" }}
+{{- $cni := dict "root" . "component" "cni-check" }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-default-deny") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-default-deny") | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-api-egress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-api-egress") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $api | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    {{- include "edu-it.kubeApiEgressRule" . | nindent 4 }}
+    - ports:
+        - protocol: TCP
+          port: {{ $pg }}
+    - ports:
+        - protocol: TCP
+          port: {{ $redis }}
+    - ports:
+        - protocol: TCP
+          port: {{ $objPort }}
+    {{- include "edu-it.dnsEgressRule" . | nindent 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-worker-egress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-worker-egress") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $worker | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    {{- include "edu-it.kubeApiEgressRule" . | nindent 4 }}
+    - ports:
+        - protocol: TCP
+          port: {{ $pg }}
+    - ports:
+        - protocol: TCP
+          port: {{ $redis }}
+    # LLM provider endpoint (Worker only, Req 10.10); a hostname cannot be selected, so port only.
+    - ports:
+        - protocol: TCP
+          port: {{ $llmPort }}
+    {{- include "edu-it.dnsEgressRule" . | nindent 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-migration-egress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-migration-egress") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $migration | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: TCP
+          port: {{ $pg }}
+    {{- include "edu-it.dnsEgressRule" . | nindent 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-web-egress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-web-egress") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $web | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" $api | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ $apiPort }}
+    {{- include "edu-it.dnsEgressRule" . | nindent 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-api-ingress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-api-ingress") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $api | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Ingress controller and web pods reach the Api service port only.
+    - from:
+        - namespaceSelector:
+            {{- toYaml $np.ingressControllerNamespaceSelector | nindent 12 }}
+        - podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" $web | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ $apiPort }}
+    {{- if $monitoring }}
+    # Optional (OQ-4): the monitoring namespace reaches the metrics port only.
+    - from:
+        - namespaceSelector:
+            {{- toYaml $np.monitoringNamespaceSelector | nindent 12 }}
+      ports:
+        - protocol: TCP
+          port: {{ include "edu-it.metricsPort" $api }}
+    {{- end }}
+{{- if $monitoring }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-worker-ingress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-worker-ingress") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $worker | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Optional (OQ-4): the monitoring namespace reaches the metrics port only.
+    - from:
+        - namespaceSelector:
+            {{- toYaml $np.monitoringNamespaceSelector | nindent 12 }}
+      ports:
+        - protocol: TCP
+          port: {{ include "edu-it.metricsPort" $worker }}
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-web-ingress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-web-ingress") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $web | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            {{- toYaml $np.ingressControllerNamespaceSelector | nindent 12 }}
+      ports:
+        - protocol: TCP
+          port: {{ $webPort }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-cni-check") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-cni-check") | nindent 4 }}
+spec:
+  # The cni-check Job pod: Kubernetes API (creates and deletes the probes) and the probe pods on 8080.
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $cni | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    {{- include "edu-it.kubeApiEgressRule" . | nindent 4 }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: cni-check-probe
+      ports:
+        - protocol: TCP
+          port: 8080
+{{- if .Values.devDatastores.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-dev-postgres-ingress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-dev-postgres-ingress") | nindent 4 }}
+spec:
+  # Bundled dev PostgreSQL: Api, Worker and Migration_Job only.
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" (dict "root" . "component" "dev-postgres") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        {{- range $c := list $api $worker $migration }}
+        - podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" $c | nindent 14 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ $pg }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "platform-dev-redis-ingress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "platform-dev-redis-ingress") | nindent 4 }}
+spec:
+  # Bundled dev Redis: Api and Worker only.
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" (dict "root" . "component" "dev-redis") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        {{- range $c := list $api $worker }}
+        - podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" $c | nindent 14 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ $redis }}
+{{- end }}

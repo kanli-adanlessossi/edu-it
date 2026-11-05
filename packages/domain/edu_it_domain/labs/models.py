@@ -27,6 +27,8 @@ class SessionStatus(Enum):
     EXPIRED = "expired"
     IDLE_EXPIRED = "idle-expired"
     FAILED = "failed"
+    ENDED_BY_INFRASTRUCTURE = "ended-by-infrastructure"
+    """Terminal: the Lab_Pod was lost to a node drain, failure or eviction."""
 
     @property
     def is_active(self) -> bool:
@@ -74,6 +76,9 @@ class LabSession:
     provision_attempts: int = 0
     next_provision_at: datetime | None = None
     terminal_epoch: int = 0
+    capacity_attempts: int = 0
+    """Attempts rejected for capacity; counted apart from ``provision_attempts``
+    so they never consume the retry allowance (kubernetes-deployment Req 22.4)."""
 
 
 @dataclass(frozen=True, slots=True)

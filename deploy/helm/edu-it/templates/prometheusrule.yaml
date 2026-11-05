@@ -1,0 +1,51 @@
+{{- /*
+Alert rules, rendered only when prometheusRules.enabled (Req 22.9, 23.5). PrometheusRule is a
+Prometheus Operator CRD, an operator-installed optional prerequisite.
+- Quota rejections: fires when the rejection counter increases by more than the threshold in the
+  window and stays so for a full window (sustained). Window and threshold are values.
+- ExternalSecret: fires when the Ready condition stays False for 5 minutes (Req 23.5), and when a
+  sync error is recorded within the configured number of minutes. The metrics come from the
+  External Secrets controller.
+*/ -}}
+{{- if .Values.prometheusRules.enabled }}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- $window := int .Values.prometheusRules.quotaRejection.windowMinutes }}
+{{- $threshold := int .Values.prometheusRules.quotaRejection.threshold }}
+{{- $stale := int .Values.prometheusRules.externalSecret.staleMinutes }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "alerts") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "alerts") | nindent 4 }}
+spec:
+  groups:
+    - name: edu-it.labs
+      rules:
+        - alert: EduItLabQuotaRejections
+          expr: increase(edu_it_lab_quota_rejections_total[{{ $window }}m]) > {{ $threshold }}
+          for: {{ $window }}m
+          labels:
+            severity: warning
+          annotations:
+            summary: Lab pod creation is rejected by the Labs namespace quota
+            description: More than {{ $threshold }} quota rejections in {{ $window }} minutes, sustained for {{ $window }} minutes. Raise labs.quota or add lab capacity.
+    - name: edu-it.external-secrets
+      rules:
+        - alert: EduItExternalSecretNotReady
+          expr: externalsecret_status_condition{type="Ready",status="False",namespace="{{ $ns }}"} == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: An ExternalSecret has not been Ready for 5 minutes
+            description: ExternalSecret {{ "{{ $labels.name }}" }} in namespace {{ "{{ $labels.namespace }}" }} reports Ready=False. Read its condition reason and message with kubectl describe externalsecret.
+        - alert: EduItExternalSecretSyncErrors
+          expr: increase(externalsecret_sync_calls_error{namespace="{{ $ns }}"}[{{ $stale }}m]) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: An ExternalSecret sync failed within the last {{ $stale }} minutes
+            description: ExternalSecret {{ "{{ $labels.name }}" }} in namespace {{ "{{ $labels.namespace }}" }} recorded a sync error. Check the store and the remote key.
+{{- end }}

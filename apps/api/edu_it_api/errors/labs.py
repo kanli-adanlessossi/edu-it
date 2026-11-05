@@ -47,7 +47,9 @@ if TYPE_CHECKING:
     from starlette.responses import Response
 
 __all__ = [
+    "LAB_CAPACITY",
     "LAB_FILES_INVALID",
+    "LAB_MESSAGES",
     "LAB_GRADING_IN_PROGRESS",
     "LAB_GRADING_THROTTLED",
     "LAB_HINT_NOT_AVAILABLE",
@@ -58,6 +60,7 @@ __all__ = [
     "LAB_SANDBOX_UNAVAILABLE",
     "LAB_SESSION_ACTIVE",
     "LAB_SESSION_EXPIRED",
+    "LAB_SESSION_INTERRUPTED",
     "LAB_SESSION_NOT_FOUND",
     "LAB_SESSION_NOT_READY",
     "LAB_TASK_NOT_FOUND",
@@ -233,6 +236,38 @@ LAB_PROVISION_FAILED: Final[ProblemType] = _type(
         "We could not prepare your lab environment. Start a new lab.",
     ),
 )
+
+#: Translated text shown when the labs are at capacity (kubernetes-deployment Req 22.2).
+#: Fixed text: it never carries quota figures or other Kubernetes output.
+LAB_CAPACITY: Final[ProblemType] = _type(
+    HTTPStatus.SERVICE_UNAVAILABLE,
+    "lab-capacity",
+    ("Les labs sont à pleine capacité", "Labs are at capacity"),
+    (
+        "Les labs sont à pleine capacité. Réessayez dans un instant.",
+        "Labs are at capacity. Try again shortly.",
+    ),
+)
+
+#: Translated text shown when a session was lost to an infrastructure event
+#: (kubernetes-deployment Req 19, 20). No infrastructure detail.
+LAB_SESSION_INTERRUPTED: Final[ProblemType] = _type(
+    HTTPStatus.CONFLICT,
+    "lab-session-interrupted",
+    ("Session de lab interrompue", "Lab session interrupted"),
+    (
+        "Votre session de lab a été interrompue. Vos progrès sont conservés. "
+        "Démarrez un nouveau lab pour continuer.",
+        "Your lab session was interrupted. Your progress is kept. Start a new lab to continue.",
+    ),
+)
+
+#: Message key -> FR/EN text for the learner-facing lab messages that are delivered by key.
+LAB_MESSAGES: Final[dict[str, ProblemType]] = {
+    "labs.capacity": LAB_CAPACITY,
+    "labs.session_interrupted": LAB_SESSION_INTERRUPTED,
+    "labs.provision_failed": LAB_PROVISION_FAILED,
+}
 
 _LIMITS: Final[FileLimits] = FileLimits()
 

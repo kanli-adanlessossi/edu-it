@@ -341,7 +341,11 @@
       "restored": "Connexion rétablie.",
       "serverRestart": "Le serveur redémarre. Reconnexion automatique…",
       "failed": "Reconnexion impossible. Rechargez la page pour réessayer.",
-      "reload": "Recharger"
+      "reload": "Recharger",
+      "terminalFailed": "Reconnexion à votre terminal impossible. Votre session de labo est inchangée. Réessayez.",
+      "retry": "Réessayer",
+      "reauthRequired": "Votre connexion n'est plus valide pour ce labo. Reconnectez-vous pour continuer.",
+      "signIn": "Se reconnecter"
     },
     "session": {
       "endedTitle": "Votre session de labo est terminée",
@@ -365,7 +369,10 @@
       "sessionNotFound": "Cette session de labo n'existe plus.",
       "filesInvalid": "Vos fichiers n'ont pas pu être enregistrés. Vérifiez leur taille et leurs noms.",
       "sandboxUnavailable": "Les labos sont temporairement indisponibles. Veuillez réessayer plus tard.",
-      "saveFailed": "Nous n'avons pas pu enregistrer vos fichiers. Veuillez réessayer."
+      "saveFailed": "Nous n'avons pas pu enregistrer vos fichiers. Veuillez réessayer.",
+      "capacity": "Les labs sont à pleine capacité. Réessayez dans un instant.",
+      "sessionInterrupted": "Votre session de lab a été interrompue. Vos progrès sont conservés. Démarrez un nouveau lab pour continuer.",
+      "provisionFailed": "Nous n'avons pas pu préparer votre environnement de lab. Démarrez un nouveau lab."
     }
   },
   "Learning": {

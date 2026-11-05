@@ -86,7 +86,14 @@ class LabSessionResponse(_Response):
     stable_id: str
     lab_id: str
     status: Literal[
-        "provisioning", "ready", "grading", "ended", "expired", "idle-expired", "failed"
+        "provisioning",
+        "ready",
+        "grading",
+        "ended",
+        "expired",
+        "idle-expired",
+        "failed",
+        "ended-by-infrastructure",
     ]
     created_at: datetime
     ttl_at: datetime

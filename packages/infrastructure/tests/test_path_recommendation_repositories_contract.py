@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -45,9 +45,11 @@ class _Backend:
     repo: In_Memory_PathRecommendationRepository | Postgres_PathRecommendationRepository
     ns: str
     engine: Engine | None = None
+    users: list[str] = field(default_factory=list)
 
     def user(self, label: str) -> str:
         stable_id = f"usr-{self.ns}-{label}"
+        self.users.append(stable_id)
         if self.engine is not None:
             with self.engine.begin() as connection:
                 connection.execute(
@@ -100,9 +102,14 @@ def b(request: pytest.FixtureRequest) -> Iterator[_Backend]:
     else:
         engine = create_engine(_POSTGRES_URL)
     metadata.create_all(engine)
+    backend = _Backend(Postgres_PathRecommendationRepository(engine), ns, engine)
     try:
-        yield _Backend(Postgres_PathRecommendationRepository(engine), ns, engine)
+        yield backend
     finally:
+        # A shared PostgreSQL keeps rows between tests, and the retention deletes are global:
+        # remove this test's rows so a later test's counts see only its own.
+        for user in backend.users:
+            backend.repo.delete_for_user(user)
         engine.dispose()
 
 

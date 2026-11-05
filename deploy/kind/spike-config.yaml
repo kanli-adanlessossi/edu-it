@@ -1,0 +1,18 @@
+# kind cluster for the day-one pod layout spike (risk R1, task 1.2 of kubernetes-deployment).
+#
+# One node. The kubelet enforces a per-pod PID limit (podPidsLimit) so the fork-bomb case can be
+# proven. Pod Security Admission "restricted" is enforced on the test namespace by labels set in
+# tests/k8s/spike_pod_layout_kind.py (namespace-level enforcement, standard Kubernetes API only).
+#
+# Create:  kind create cluster --name edu-it-spike --config deploy/kind/spike-config.yaml
+# Delete:  kind delete cluster --name edu-it-spike
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: edu-it-spike
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: KubeletConfiguration
+        # Must equal SANDBOX_PID_LIMIT in packages/domain/edu_it_domain/config.py (128).
+        podPidsLimit: 128

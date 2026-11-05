@@ -32,6 +32,7 @@ from edu_it_infrastructure.persistence.lab_repositories import (
     Postgres_LabSessionRepository,
 )
 from edu_it_infrastructure.persistence.learning_repositories import Postgres_MasteryRepository
+from edu_it_infrastructure.telemetry import RequestIdTaskQueue
 
 __all__ = ["LabPorts", "build_lab_ports"]
 
@@ -62,7 +63,7 @@ def build_lab_ports(settings: CompositionSettings | None = None) -> LabPorts:
         sessions=Postgres_LabSessionRepository(settings.database_url),
         runs=Postgres_GradingRunRepository(settings.database_url),
         mastery=Postgres_MasteryRepository(settings.database_url),
-        queue=Redis_TaskQueue(client),
+        queue=RequestIdTaskQueue(Redis_TaskQueue(client)),
         session_store=Redis_SessionStore(client, clock),
         redis=client,
     )

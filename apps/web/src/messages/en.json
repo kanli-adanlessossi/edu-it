@@ -341,7 +341,11 @@
       "restored": "Connection restored.",
       "serverRestart": "The server is restarting. Reconnecting automatically…",
       "failed": "We could not reconnect. Reload the page to try again.",
-      "reload": "Reload"
+      "reload": "Reload",
+      "terminalFailed": "We could not reconnect to your terminal. Your lab session is unchanged. Try again.",
+      "retry": "Try again",
+      "reauthRequired": "Your sign-in is no longer valid for this lab. Sign in again to continue.",
+      "signIn": "Sign in again"
     },
     "session": {
       "endedTitle": "Your lab session has ended",
@@ -365,7 +369,10 @@
       "sessionNotFound": "This lab session no longer exists.",
       "filesInvalid": "Your files could not be saved. Check their size and names.",
       "sandboxUnavailable": "Labs are temporarily unavailable. Please try again later.",
-      "saveFailed": "We could not save your files. Please try again."
+      "saveFailed": "We could not save your files. Please try again.",
+      "capacity": "Labs are at capacity. Try again shortly.",
+      "sessionInterrupted": "Your lab session was interrupted. Your progress is kept. Start a new lab to continue.",
+      "provisionFailed": "We could not prepare your lab environment. Start a new lab."
     }
   },
   "Learning": {

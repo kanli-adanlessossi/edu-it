@@ -213,7 +213,31 @@ non-positive value.
 | `LAB_ACTIVITY_WRITE_INTERVAL` | 5 s | Minimum spacing of `last_activity_at` writes |
 | `LAB_RECONNECT_BACKOFF` | 1 s, 2 s, 4 s, 8 s (last repeats) | Client reconnect delays |
 | `LAB_RECONNECT_WINDOW` | 60 s | Total reconnect time before giving up |
+| `LAB_DESTROY_TIMEOUT` | 30 s | Bound on destroying a sandbox and waiting until it is gone (Kubernetes) |
+| `LAB_PROVISION_CAPACITY_BACKOFF` | 10 s | Delay before a capacity-rejected request is retried; at least `LAB_PROVISION_MIN_INTERVAL` |
+| `K8S_READY_CEILING` | 60 s | Hard ceiling on waiting for a pod to be Ready; at least `LAB_PROVISION_TIMEOUT` |
+| `LAB_NODE_LOSS_TERMINAL_CLOSE_BOUND` | 10 s | Close terminals within this time of a node drain or failure |
+| `LAB_INFRA_LOSS_MARK_BOUND` | 30 s | Mark a session ended-by-infrastructure within this time of detecting the loss |
+| `LAB_EVICTED_POD_REMOVAL_BOUND` | 60 s | Remove an evicted pod object within this time of detecting it |
+| `TERMINAL_DRAIN_RECONNECT_DELAYS` | 1, 2, 4, 8, 16, 30, 30, 30, 30, 30 s | Reconnect delays after a reconnect message |
+| `TERMINAL_DRAIN_RECONNECT_MAX_ATTEMPTS` | 10 | Most attempts of the drain schedule |
+| `TERMINAL_DRAIN_RECONNECT_CAP` | 30 s | No drain delay exceeds this |
+| `TERMINAL_DRAIN_RECONNECT_FIRST_WITHIN` | 2 s | First drain attempt starts within this time |
+| `TERMINAL_RESTART_RECONNECT_DELAYS` | 1, 2, 4, 5 s (last repeats) | Reconnect delays after an abrupt close |
+| `TERMINAL_RESTART_RECONNECT_MAX_INTERVAL` | 5 s | Largest gap between restart attempts |
+| `TERMINAL_RESTART_RECONNECT_TOTAL` | 60 s | The restart schedule stops after this total time |
+| `API_DRAIN_PERIOD_DEFAULT_SECONDS` | 30 | Default Api drain period |
+| `API_DRAIN_PERIOD_BOUNDS_SECONDS` | 5 to 300 | Allowed drain period range |
+| `API_PRESTOP_DELAY_DEFAULT_SECONDS` | 5 | Default preStop delay before the drain starts |
+| `API_PRESTOP_DELAY_BOUNDS_SECONDS` | 0 to 60 | Allowed preStop delay range |
 | `LAB_FILE_MAX_COUNT` | 10 | Learner files per save |
 | `LAB_FILE_MAX_BYTES` | 64 KiB | Size of one learner file |
 | `LAB_WARNING_THRESHOLD` | 2 minutes | Warn the learner this long before expiry |
 | `LAB_TASK_MASTERY_GAIN` | 15 | Mastery points per first-passed task per concept (hint multiplier applies) |
+| `WORKER_TERMINATION_GRACE_DEFAULT_SECONDS` | 60 s | `terminationGracePeriodSeconds` the Worker assumes when the Chart does not pass one |
+| `WORKER_SHUTDOWN_MARGIN_SECONDS` | 5 s | Time before the Worker pod's `terminationGracePeriodSeconds` elapses at which it re-queues every in-flight job and exits |
+| `API_TERMINATION_GRACE_MARGIN_SECONDS` | 10 s | Margin added to the drain period plus preStop delay for the Api pod's `terminationGracePeriodSeconds` |
+| `K8S_HELPER_CPU_MILLI` | 50 m | CPU request and limit of the `owner` helper container in a Kubernetes Lab_Pod |
+| `K8S_HELPER_MEMORY_BYTES` | 16 MiB | Memory request and limit of the `owner` helper container in a Kubernetes Lab_Pod |
+| `K8S_GRADER_CPU_MILLI` | 500 m | CPU request and limit of the `grader` container (where Checks run) in a Kubernetes Lab_Pod |
+| `K8S_GRADER_MEMORY_BYTES` | 256 MiB | Memory request and limit of the `grader` container in a Kubernetes Lab_Pod |

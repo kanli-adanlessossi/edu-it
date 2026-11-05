@@ -61,6 +61,7 @@ def test_status_values() -> None:
         "expired",
         "idle-expired",
         "failed",
+        "ended-by-infrastructure",
     }
     assert {s.value for s in RunStatus} == {
         "running",

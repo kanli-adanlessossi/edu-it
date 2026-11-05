@@ -1,7 +1,6 @@
 // Pure rules for the TerminalPane (hands-on-labs Req 13.3, 13.4, 15.10, 16.4).
 //
-// No DOM, no clock, no business numbers: the reconnect schedule comes from
-// `reconnectDelays` (lab-state.ts), which derives it from the Config values.
+// No DOM, no clock, no business numbers: the reconnect schedules are in reconnect-schedule.ts.
 
 /** The parts of a keyboard event the exit chord depends on. */
 export interface ChordKeyEvent {

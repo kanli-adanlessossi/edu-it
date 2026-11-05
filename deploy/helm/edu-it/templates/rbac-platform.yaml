@@ -1,0 +1,49 @@
+{{- /*
+Namespaced RBAC in the platform namespace for the post-install CNI check Job (Req 11.9, design
+"Platform RBAC": cni-check ServiceAccount, one Role). The Job creates, reads and deletes its two probe
+pods and its NetworkPolicies, nothing else. No ClusterRole, no ClusterRoleBinding, no wildcards (Req 4.3).
+The ServiceAccount sets automountServiceAccountToken: false (Req 4.6); the Job projects its own token
+(_kube-api-access.tpl).
+*/ -}}
+{{- $ctx := dict "root" . "component" "cni-check" }}
+{{- $ns := include "edu-it.platformNamespace" . }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "edu-it.serviceAccountName" $ctx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["create", "get", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "edu-it.componentName" $ctx }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "edu-it.serviceAccountName" $ctx }}
+    namespace: {{ $ns }}

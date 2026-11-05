@@ -1,0 +1,59 @@
+{{- /*
+Ingress for mode ingress-nginx (Req 9.1, 9.6, 9.8, 9.10). Task 12.5.
+One host: /fr and /en go to the web Service, /v1 (Api routes and the terminal WebSocket) goes to the Api Service.
+TLS comes from a certificate Secret reference in values; no certificate or key material is rendered (Req 9.8).
+*/ -}}
+{{- /* Mode and certificate reference are validated in _validation.tpl. */ -}}
+{{- if eq .Values.ingress.mode "ingress-nginx" -}}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- $apiCtx := dict "root" . "component" "api" }}
+{{- $webCtx := dict "root" . "component" "web" }}
+{{- $ws := .Values.ingress.websocket }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "edu-it.fullname" . }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "ingress") | nindent 4 }}
+  annotations:
+    # WebSocket timeouts in seconds (Req 9.4).
+    nginx.ingress.kubernetes.io/proxy-read-timeout: {{ $ws.readTimeoutSeconds | int | quote }}
+    nginx.ingress.kubernetes.io/proxy-send-timeout: {{ $ws.sendTimeoutSeconds | int | quote }}
+    # Upgrade and Connection header handling for the terminal WebSocket (Req 9.6).
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
+spec:
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName | quote }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /fr
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "edu-it.componentName" $webCtx }}
+                port:
+                  number: {{ int .Values.web.port }}
+          - path: /en
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "edu-it.componentName" $webCtx }}
+                port:
+                  number: {{ int .Values.web.port }}
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "edu-it.componentName" $apiCtx }}
+                port:
+                  number: {{ int .Values.api.port }}
+{{- end }}

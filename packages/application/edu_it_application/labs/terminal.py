@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from edu_it_domain import config as domain_config
 from edu_it_domain.labs.limits import HeartbeatTracker, MessageLimiter, MessageVerdict
+from edu_it_domain.labs.models import SessionStatus
 from edu_it_domain.ports.sandbox import SandboxError
 
 from edu_it_application.labs.save_files import sandbox_handle
@@ -56,6 +57,7 @@ __all__ = [
     "CLOSE_REPLACED",
     "CLOSE_SESSION_REFUSED",
     "CLOSE_UNAUTHENTICATED",
+    "INTERRUPTED_MESSAGE_KEY",
     "AuthorizeTerminal",
     "Frame",
     "SocketPort",
@@ -63,6 +65,7 @@ __all__ = [
     "TerminalGatewayCore",
     "TerminalRefusal",
     "TerminalRegistry",
+    "interrupted_frame",
     "status_frame",
 ]
 
@@ -79,6 +82,11 @@ CLOSE_ORIGIN = 4403
 CLOSE_SESSION_REFUSED = 4404
 CLOSE_HEARTBEAT = 4408
 CLOSE_REPLACED = 4409
+
+#: Translated message key sent when the sandbox was lost to an infrastructure event
+#: (kubernetes-deployment Req 19.1, 20.1). Carries no infrastructure detail.
+INTERRUPTED_MESSAGE_KEY = "labs.session_interrupted"
+_REASON_INTERRUPTED = "session-interrupted"
 
 _REASON_UNAUTHENTICATED = "unauthenticated"
 _REASON_ORIGIN = "origin-not-allowed"
@@ -146,11 +154,19 @@ class AuthorizeTerminal:
         sessions: LabSessionRepository,
         session_store: SessionStore,
         config: object = domain_config,
+        clock: Clock | None = None,
     ) -> None:
-        """Wire the cookie session store and the session repository."""
+        """Wire the cookie session store and the session repository.
+
+        With a ``clock`` the session ``ttl_at`` is re-checked on every connect (Req 14.8).
+        """
         self._sessions = sessions
         self._store = session_store
+        self._clock = clock
         self._allowed = tuple(config.LAB_ALLOWED_WEB_ORIGINS)  # type: ignore[attr-defined]
+
+    def _expired(self, session: LabSession) -> bool:
+        return self._clock is not None and session.ttl_at <= self._clock.now()
 
     def execute(
         self, *, session_ref: str | None, origin: str | None, session_id: StableId
@@ -166,7 +182,7 @@ class AuthorizeTerminal:
         # 3. Active_Session state.
         session = self._sessions.get(session_id)
         refusal = TerminalRefusal(CLOSE_SESSION_REFUSED, _REASON_SESSION)
-        if session is None or not session.status.is_active:
+        if session is None or not session.status.is_active or self._expired(session):
             return refusal
         # 4. Ownership: the only authorization decision on connect.
         if session.user_id != resolved.user_stable_id:
@@ -181,6 +197,12 @@ def status_frame(status: str) -> Frame:
         "status": status,
         "message_key": f"labs.terminal.status.{status}",
     }
+    return Frame(text=json.dumps(payload, separators=(",", ":")))
+
+
+def interrupted_frame() -> Frame:
+    """The translated ``labs.session_interrupted`` frame; no infrastructure detail."""
+    payload = {"type": "status", "status": "interrupted", "message_key": INTERRUPTED_MESSAGE_KEY}
     return Frame(text=json.dumps(payload, separators=(",", ":")))
 
 
@@ -225,11 +247,30 @@ class TerminalRegistry:
 
     def __init__(self) -> None:
         self._connections: dict[StableId, _Connection] = {}
+        self._accepting = True
 
     def __len__(self) -> int:
         return len(self._connections)
 
+    @property
+    def accepting(self) -> bool:
+        """``False`` once the drain has stopped new terminal connections (Req 14.2)."""
+        return self._accepting
+
+    def stop_accepting(self) -> None:
+        """Refuse new terminal connections from now on; idempotent (Req 14.2)."""
+        self._accepting = False
+
+    def open_count(self) -> int:
+        """Number of registered connections that are not yet closed."""
+        return sum(1 for conn in self._connections.values() if not conn.closed.is_set())
+
     async def add(self, conn: _Connection) -> None:
+        if not self._accepting:
+            # A connection that slipped past the route check is told to reconnect.
+            await conn.send(_RECONNECT_FRAME)
+            await conn.close(CLOSE_DRAIN, "server-restarting")
+            return
         previous = self._connections.get(conn.session_id)
         self._connections[conn.session_id] = conn
         if previous is not None and previous is not conn:
@@ -240,10 +281,29 @@ class TerminalRegistry:
             del self._connections[conn.session_id]
 
     async def drain(self) -> None:
-        """Tell every open socket to reconnect, then close it with 1012 (Req 12.8)."""
-        for conn in list(self._connections.values()):
+        """Tell every open socket to reconnect, then close it with 1012 (Req 12.8).
+
+        Sockets are handled concurrently so one slow peer cannot delay the others.
+        """
+
+        async def one(conn: _Connection) -> None:
             await conn.send(_RECONNECT_FRAME)
             await conn.close(CLOSE_DRAIN, "server-restarting")
+
+        await asyncio.gather(*(one(c) for c in list(self._connections.values())))
+
+    async def force_close_all(self) -> None:
+        """Close every connection that is still open, without a reconnect message (Req 14.3).
+
+        Only the socket is closed. The lab session and its sandbox are not touched.
+        """
+        await asyncio.gather(
+            *(
+                conn.close(CLOSE_DRAIN, "drain-period-elapsed")
+                for conn in list(self._connections.values())
+                if not conn.closed.is_set()
+            )
+        )
 
 
 class TerminalGatewayCore:
@@ -279,6 +339,7 @@ class TerminalGatewayCore:
         if (
             session is None
             or not session.status.is_active
+            or session.ttl_at <= self._clock.now()
             or (session.user_id != authorization.user_id)
         ):
             await socket.close(refusal.code, refusal.reason)
@@ -413,9 +474,25 @@ class TerminalGatewayCore:
                 await conn.send(Frame(data=data))
 
     async def _sandbox_closed(self, conn: _Connection) -> None:
-        """The channel ended: report the session status if it is over, then close."""
-        if not await self._check_status(conn, None):
-            await conn.close(CLOSE_INTERNAL, "sandbox-closed")
+        """The sandbox channel ended: close on the session's terms, not the channel's.
+
+        A lost Lab_Pod breaks the channel the instant the node goes, which is *before* the Worker
+        reaper detects the loss and marks the session ended-by-infrastructure (cluster node-loss
+        detection takes far longer than the channel I/O failure). The Req 19.1/20.1 close bound is
+        measured from the platform *detecting* the loss, so the terminal must not close abruptly
+        on the bare channel break: it waits for the session status to change and lets
+        ``_check_status`` send the translated interrupted + reconnect frames and close CLOSE_DRAIN
+        when the mark lands. If the session is already over (``_check_status`` returns True) this
+        returns at once. The heartbeat watcher in ``_supervisor`` still bounds a truly hung peer.
+        """
+        if await self._check_status(conn, None):
+            return
+        while not conn.closed.is_set():
+            await self._sleep(self._tick)
+            if conn.closed.is_set():
+                return
+            if await self._check_status(conn, None):
+                return
 
     # -- supervision ------------------------------------------------------
 
@@ -448,6 +525,12 @@ class TerminalGatewayCore:
             return True
         if session is not None and session.status.is_active:
             return False
+        if session is not None and session.status is SessionStatus.ENDED_BY_INFRASTRUCTURE:
+            # Node loss (Req 19.1, 20.1): translated message and reconnect indication only.
+            await conn.send(interrupted_frame())
+            await conn.send(_RECONNECT_FRAME)
+            await conn.close(CLOSE_DRAIN, _REASON_INTERRUPTED)
+            return True
         status = "ended" if session is None else session.status.value
         await conn.send(status_frame(status))
         await conn.close(CLOSE_NORMAL, "session-over")

@@ -165,6 +165,17 @@ class AiWorker:
             self.threads.append(thread)
         self.scheduler.start()
 
+    def stop_consuming(self) -> None:
+        """Stop the scheduler and the queue's delivery loops; running handlers finish."""
+        self.scheduler.stop()
+        stop = getattr(self.queue, "stop", None)
+        if callable(stop):
+            stop()
+
+    def in_flight(self) -> bool:
+        """Whether a consumer thread is still inside a handler."""
+        return any(thread.is_alive() for thread in self.threads)
+
     def stop(self) -> None:
         """Stop the scheduler and ask the queue (when it supports it) to stop consuming."""
         self.scheduler.stop()

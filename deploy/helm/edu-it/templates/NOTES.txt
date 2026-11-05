@@ -1,0 +1,29 @@
+EDU-IT {{ .Chart.Version }} installed as release "{{ .Release.Name }}".
+
+Namespaces:
+  platform: {{ include "edu-it.platformNamespace" . }}
+  labs:     {{ include "edu-it.labsNamespace" . }}
+  mode:     {{ .Values.namespaces.manage }}
+{{- if eq .Values.namespaces.manage "operator-managed" }}
+
+The Chart rendered no Namespace object. Make sure the operator created both namespaces with these
+Pod Security Admission labels (see the chart README):
+  pod-security.kubernetes.io/enforce: restricted
+  pod-security.kubernetes.io/audit: restricted
+  pod-security.kubernetes.io/warn: restricted
+{{- end }}
+
+NetworkPolicy enforcement:
+  The post-install Job "{{ include "edu-it.componentName" (dict "root" . "component" "cni-check") }}" in namespace {{ include "edu-it.platformNamespace" . }} checks that the CNI enforces NetworkPolicy.
+  Read its result with:
+    kubectl -n {{ include "edu-it.platformNamespace" . }} logs job/{{ include "edu-it.componentName" (dict "root" . "component" "cni-check") }}
+{{- if .Values.networkPolicy.enforcementRequired }}
+  Enforcement is REQUIRED (networkPolicy.enforcementRequired=true). If the CNI does not enforce
+  NetworkPolicy, the install fails with "NetworkPolicy enforcement is absent".
+{{- else }}
+
+WARNING: networkPolicy.enforcementRequired is false. If the CNI does not enforce NetworkPolicy,
+the install still succeeds, but every rendered NetworkPolicy has no effect and NetworkPolicy
+enforcement is absent. Verify enforcement in the cni-check Job log before go-live. Set
+networkPolicy.enforcementRequired=true for production.
+{{- end }}

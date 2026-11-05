@@ -20,6 +20,16 @@ dependencies = [
     "docker==7.2.0",
     # AWS SDK: reads the Live_Provider key from Secrets Manager (ai-content 4.13, ADR 0007).
     "boto3==1.43.123",
+    # Official Kubernetes Python client: production K8sApiPort adapter of the
+    # KubernetesSandboxProvider (kubernetes-deployment task 7, ADR 0009). Loaded lazily.
+    "kubernetes==37.0.1",
+    # OpenTelemetry SDK and OTLP/HTTP exporter: bounded trace export of the Api and the
+    # Worker (kubernetes-deployment task 10.3, Req 13.1, 13.2). HTTP/protobuf avoids grpcio.
+    "opentelemetry-sdk==1.45.2",
+    "opentelemetry-exporter-otlp-proto-http==1.45.2",
+    # Prometheus client: Lab_Metrics on the dedicated metrics port of the Api and the Worker
+    # (kubernetes-deployment task 10.2, Req 13.3, 13.4, 13.12).
+    "prometheus-client==0.26.0",
 ]
 
 [project.scripts]

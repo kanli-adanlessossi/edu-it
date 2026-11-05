@@ -1,0 +1,18 @@
+{{- /*
+Non-secret configuration of the Migration_Job, a pre-install,pre-upgrade hook with weight -10 so
+it exists before the Job (weight 0) on first install (risk R7, Req 21.1). No secret values here.
+*/ -}}
+{{- $ctx := dict "root" . "component" "migration" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ include "edu-it.platformNamespace" . }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  ENVIRONMENT: {{ .Values.environment | quote }}

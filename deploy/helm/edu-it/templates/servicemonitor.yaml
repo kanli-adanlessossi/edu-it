@@ -1,0 +1,53 @@
+{{- /*
+Prometheus scraping in ServiceMonitor mode (Req 13.3, 13.5). Renders only when
+observability.scrapeMode is serviceMonitor; scrape-annotation mode puts annotations on the pods
+instead and renders no ServiceMonitor (Req 13.6, see _observability.tpl).
+ServiceMonitor is a Prometheus Operator CRD, an operator-installed optional prerequisite.
+A dedicated metrics Service per component exposes only the metrics port, which is separate from
+the port that serves learner traffic.
+*/ -}}
+{{- if eq .Values.observability.scrapeMode "serviceMonitor" }}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- range $component := list "api" "worker" }}
+{{- $ctx := dict "root" $ "component" (printf "%s-metrics" $component) }}
+{{- $target := dict "root" $ "component" $component }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+    edu-it.io/metrics: "true"
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "edu-it.selectorLabels" $target | nindent 4 }}
+  ports:
+    - name: metrics
+      port: {{ include "edu-it.metricsPort" $target }}
+      targetPort: {{ include "edu-it.metricsPort" $target }}
+      protocol: TCP
+{{- end }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "metrics") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "metrics") | nindent 4 }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ $ns }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: edu-it
+      edu-it.io/metrics: "true"
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+{{- end }}

@@ -23,6 +23,7 @@ __all__ = [
     "ExecResult",
     "HealthStatus",
     "ProviderUnavailable",
+    "ProvisionCapacityError",
     "ProvisionError",
     "ProvisionTimeout",
     "SandboxError",
@@ -85,6 +86,14 @@ class ProvisionError(SandboxError):
 
 class ProvisionTimeout(ProvisionError):
     """Provisioning exceeded its time bound."""
+
+
+class ProvisionCapacityError(ProvisionError):
+    """Quota rejection or unschedulable pod at the provisioning timeout.
+
+    Lets callers apply capacity-specific handling (requeue, no retry penalty)
+    without parsing messages (kubernetes-deployment Req 22).
+    """
 
 
 class ProviderUnavailable(SandboxError):

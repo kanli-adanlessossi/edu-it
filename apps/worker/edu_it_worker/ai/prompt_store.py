@@ -17,6 +17,7 @@ needs no parser dependency. Stdlib only; no network.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,7 @@ __all__ = [
     "GLOSSARY_PROMPT_ID",
     "NO_INPUT_KIND",
     "NO_OUTPUT_SCHEMA",
+    "PROMPTS_ROOT_ENV",
     "Prompt",
     "PromptFormatError",
     "PromptNotFoundError",
@@ -74,8 +76,16 @@ class Prompt:
     """Hex SHA-256 of the file's bytes (front matter included)."""
 
 
+#: Environment variable that overrides the prompts directory (set in the worker image, where the
+#: package is installed into a virtual environment and the source-tree layout does not hold).
+PROMPTS_ROOT_ENV: Final = "EDU_IT_PROMPTS_ROOT"
+
+
 def default_prompts_dir() -> Path:
-    """Return the repository's ``prompts/`` directory."""
+    """Return the ``prompts/`` directory: ``$EDU_IT_PROMPTS_ROOT`` or the repository's ``prompts/``."""
+    override = os.environ.get(PROMPTS_ROOT_ENV)
+    if override:
+        return Path(override)
     return Path(__file__).resolve().parents[4] / "prompts"
 
 

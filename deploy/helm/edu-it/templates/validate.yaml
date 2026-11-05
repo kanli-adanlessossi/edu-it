@@ -1,0 +1,2 @@
+{{- /* Renders no manifest. Runs every cross-key validation rule (task 12.11, templates/_validation.tpl); a failing rule stops the whole render. */ -}}
+{{- include "edu-it.validate" . -}}

@@ -73,3 +73,15 @@ def test_shipped_verify_answer_is_blind_and_glossary_has_pairs() -> None:
     assert verify.input_kind == "verify_answer"
     assert verify.includes == ()
     assert ("IP address", "adresse IP") in glossary_pairs(store.load("glossary", "1"))
+
+
+def test_default_prompts_dir_honours_the_environment_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from edu_it_worker.ai.prompt_store import PROMPTS_ROOT_ENV, default_prompts_dir
+
+    monkeypatch.delenv(PROMPTS_ROOT_ENV, raising=False)
+    assert default_prompts_dir().name == "prompts"
+
+    monkeypatch.setenv(PROMPTS_ROOT_ENV, str(tmp_path))
+    assert default_prompts_dir() == tmp_path

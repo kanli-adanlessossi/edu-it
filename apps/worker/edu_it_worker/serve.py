@@ -21,8 +21,11 @@ from __future__ import annotations
 
 import logging
 import os
+import signal
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import uvicorn
 from edu_it_content.lab_runtime import load_synced_store, setup_script_resolver
@@ -30,6 +33,7 @@ from edu_it_infrastructure.adapters.lab_catalog import Content_LabCatalog
 from edu_it_infrastructure.adapters.parent_questions import Content_ParentQuestionSource
 from edu_it_infrastructure.composition import (
     CompositionSettings,
+    ProviderSelectionError,
     build_generation_ledger,
     build_sandbox_provider,
 )
@@ -51,6 +55,15 @@ from edu_it_infrastructure.persistence.variants import (
     Postgres_ReviewTaskRepository,
     Postgres_VariantRepository,
 )
+from edu_it_infrastructure.telemetry import (
+    MetricsPortError,
+    PrometheusLabMetrics,
+    configure_logging,
+    configure_tracing_from_env,
+    resolve_metrics_port,
+    shutdown_tracing,
+    start_metrics_server,
+)
 
 from edu_it_worker.ai.composition import (
     AdvisorPorts,
@@ -61,8 +74,83 @@ from edu_it_worker.ai.composition import (
 )
 from edu_it_worker.app import create_health_app
 from edu_it_worker.labs import LabWorker, build_lab_worker
+from edu_it_worker.lifecycle import (
+    ShutdownCoordinator,
+    StartupRefused,
+    run_startup_checks,
+    termination_grace_seconds,
+)
 
-__all__ = ["ServedWorkers", "build_served_worker", "main"]
+if TYPE_CHECKING:
+    from collections.abc import Collection, Mapping
+    from types import FrameType
+    from wsgiref.simple_server import WSGIServer
+
+    from edu_it_domain.ports.lab_metrics import LabMetrics
+    from opentelemetry.sdk.trace import TracerProvider
+    from prometheus_client import CollectorRegistry
+
+__all__ = [
+    "ServedWorkers",
+    "WorkerTelemetry",
+    "build_served_worker",
+    "main",
+    "start_telemetry",
+]
+
+METRICS_PORT_VARIABLE = "WORKER_METRICS_PORT"
+METRICS_HOST_VARIABLE = "WORKER_METRICS_HOST"
+_DEFAULT_METRICS_PORT = 9090
+
+
+@dataclass(frozen=True, slots=True)
+class WorkerTelemetry:
+    """The per-process telemetry: the one Prometheus Lab_Metrics and the tracer provider."""
+
+    metrics: PrometheusLabMetrics
+    metrics_server: WSGIServer
+    tracer_provider: TracerProvider | None
+
+    def shutdown(self) -> None:
+        """Stop the metrics endpoint and flush the trace exporter (best effort)."""
+        try:
+            self.metrics_server.shutdown()
+            self.metrics_server.server_close()
+        finally:
+            shutdown_tracing(self.tracer_provider)
+
+
+def start_telemetry(
+    environ: Mapping[str, str],
+    *,
+    traffic_ports: Collection[int],
+    registry: CollectorRegistry | None = None,
+) -> WorkerTelemetry:
+    """Create the process's one ``PrometheusLabMetrics`` and serve it on the metrics port.
+
+    The port (``WORKER_METRICS_PORT``, default 9090) must differ from the health port
+    (Req 13.3); a clash or malformed value raises :class:`StartupRefused`. Tracing comes from
+    ``OTEL_EXPORTER_OTLP_ENDPOINT`` and is a no-op without it (Req 13.1).
+    """
+    try:
+        port = resolve_metrics_port(
+            environ,
+            METRICS_PORT_VARIABLE,
+            default=_DEFAULT_METRICS_PORT,
+            traffic_ports=traffic_ports,
+        )
+    except MetricsPortError as exc:
+        raise StartupRefused(str(exc)) from exc
+    metrics = PrometheusLabMetrics(registry)
+    provider = configure_tracing_from_env(environ, service_name="edu-it-worker")
+    try:
+        server, _thread = start_metrics_server(
+            port, host=environ.get(METRICS_HOST_VARIABLE, "127.0.0.1"), registry=registry
+        )
+    except OSError as exc:
+        shutdown_tracing(provider)
+        raise StartupRefused(f"{METRICS_PORT_VARIABLE} cannot be bound") from exc
+    return WorkerTelemetry(metrics=metrics, metrics_server=server, tracer_provider=provider)
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,11 +176,38 @@ class ServedWorkers:
         finally:
             self.lab.stop()
 
+    def stop_consuming(self) -> None:
+        """Stop taking new jobs in both workers (SIGTERM); running handlers finish."""
+        try:
+            self.ai.stop_consuming()
+        finally:
+            self.lab.stop_consuming()
+
+    def in_flight(self) -> bool:
+        """Whether a handler of either worker is still running."""
+        return self.lab.in_flight() or self.ai.in_flight()
+
+    def requeue_in_flight(self) -> int:
+        """Re-queue the jobs whose handler has not returned, payload and attempts untouched.
+
+        Both workers share one queue, so one call covers them. A queue without the
+        capability (the in-memory fake) has nothing durable to re-queue.
+        """
+        requeue = getattr(self.lab.queue, "requeue_in_flight", None)
+        return int(requeue()) if callable(requeue) else 0
+
 
 def build_served_worker(
-    *, settings: CompositionSettings | None = None, poll_interval_s: float = 1.0
+    *,
+    settings: CompositionSettings | None = None,
+    poll_interval_s: float = 1.0,
+    metrics: LabMetrics | None = None,
 ) -> ServedWorkers:
-    """Compose the lab and AI workers over the real adapters (nothing is started)."""
+    """Compose the lab and AI workers over the real adapters (nothing is started).
+
+    ``metrics`` is the process's Lab_Metrics; it reaches the provisioning, reaper and
+    infrastructure-loss use cases of the lab worker (Req 13.3, 13.4).
+    """
     settings = settings if settings is not None else CompositionSettings.from_env()
     ports = build_lab_ports(settings)
     bundle_root = Path(os.environ.get("EDU_IT_BUNDLE_ROOT", ".")).resolve()
@@ -109,6 +224,7 @@ def build_served_worker(
         settings=settings,
         setup_scripts=setup_script_resolver(store, bundle_root),
         poll_interval_s=poll_interval_s,
+        metrics=metrics,
     )
     url = settings.database_url
     ai = build_ai_worker(
@@ -145,21 +261,68 @@ def build_served_worker(
     return ServedWorkers(lab=lab, ai=ai)
 
 
-def main() -> None:
-    """Start the lab and AI consumers and serve the health surface until interrupted."""
-    logging.basicConfig(level=os.environ.get("LOG_LEVEL", "info").upper())
-    workers = build_served_worker()
-    health_app = create_health_app()
+class _DrainingServer(uvicorn.Server):
+    """A uvicorn server whose SIGTERM also starts the Worker drain (Req 14.10)."""
+
+    def __init__(self, config: uvicorn.Config, coordinator: ShutdownCoordinator) -> None:
+        super().__init__(config)
+        self._coordinator = coordinator
+
+    def handle_exit(self, sig: int, frame: FrameType | None) -> None:
+        if sig == signal.SIGTERM:
+            self._coordinator.request()
+        super().handle_exit(sig, frame)
+
+
+def main() -> int:
+    """Check the start-up conditions, consume jobs and serve health until SIGTERM.
+
+    Returns the process exit status: ``1`` when a start-up condition refuses the start
+    (nothing was consumed), ``0`` after a drained shutdown.
+    """
+    # JSON records carry the request id the Worker binds from each job envelope.
+    level_name = os.environ.get("LOG_LEVEL", "info").upper()
+    configure_logging(level=logging.getLevelNamesMapping().get(level_name, logging.INFO))
+    log = logging.getLogger(__name__)
+    health_port = int(os.environ.get("WORKER_HEALTH_PORT", "8001"))
+    try:
+        settings = run_startup_checks(os.environ)
+        telemetry = start_telemetry(os.environ, traffic_ports={health_port})
+    except (StartupRefused, ProviderSelectionError) as exc:
+        log.critical("%s", exc)
+        return 1
+
+    try:
+        return _run(settings, telemetry, health_port)
+    finally:
+        telemetry.shutdown()
+
+
+def _run(settings: CompositionSettings, telemetry: WorkerTelemetry, health_port: int) -> int:
+    """Consume jobs and serve health until SIGTERM; the one metrics sink goes to the lab worker."""
+    workers = build_served_worker(settings=settings, metrics=telemetry.metrics)
+    coordinator = ShutdownCoordinator(workers, grace_s=termination_grace_seconds(os.environ))
+    # Installed before uvicorn: uvicorn restores it and re-raises a captured SIGTERM to it, so
+    # the process stays alive until the drain below has finished.
+    signal.signal(signal.SIGTERM, coordinator.request)
+    server = _DrainingServer(
+        uvicorn.Config(
+            create_health_app(),
+            host=os.environ.get("WORKER_HEALTH_HOST", "127.0.0.1"),
+            port=health_port,
+        ),
+        coordinator,
+    )
     workers.start()
     try:
-        uvicorn.run(
-            health_app,
-            host=os.environ.get("WORKER_HEALTH_HOST", "127.0.0.1"),
-            port=int(os.environ.get("WORKER_HEALTH_PORT", "8001")),
-        )
+        server.run()
     finally:
-        workers.stop()
+        coordinator.request()  # no-op after SIGTERM; drains on any other exit
+        requeued = coordinator.wait()
+        if not requeued:  # handlers left running are daemon threads: exit without joining them
+            workers.stop()
+    return 0
 
 
 if __name__ == "__main__":  # pragma: no cover
-    main()
+    sys.exit(main())

@@ -10,6 +10,10 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Self-contained server bundle (`.next/standalone`) so the container image
+  // ships only the traced runtime files and runs on a distroless Node base
+  // (kubernetes-deployment Req 12.3, 12.4).
+  output: 'standalone',
   // The app uses explicit `.js` specifiers on relative imports (the TS
   // ESM/`"Bundler"` convention) so `tsc` and the task runner resolve them.
   // Teach the webpack build to map those `.js` specifiers back to the real

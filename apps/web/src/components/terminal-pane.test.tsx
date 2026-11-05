@@ -5,7 +5,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import en from '../messages/en.json';
-import type { LabClientConfig } from '../lab-state.js';
+import fr from '../messages/fr.json';
+import { reconnectSchedule } from '../reconnect-schedule.js';
 import { TerminalPane } from './terminal-pane.js';
 
 type KeyHandler = (event: KeyboardEvent) => boolean;
@@ -65,15 +66,6 @@ class FakeSocket {
   close() {}
 }
 
-const config: LabClientConfig = {
-  gradingMinIntervalMs: 10_000,
-  warningThresholdMs: 300_000,
-  resultPollIntervalMs: 1_000,
-  provisionSlowMs: 20_000,
-  reconnectWindowMs: 600_000,
-  reconnectBackoffMs: [300_000],
-};
-
 let container: HTMLElement;
 let root: Root;
 
@@ -84,13 +76,13 @@ async function flush() {
   });
 }
 
-async function mount(checkWork: HTMLElement) {
+async function mount(checkWork: HTMLElement, locale: 'en' | 'fr' = 'en') {
   const ref = createRef<HTMLElement>();
   (ref as { current: HTMLElement | null }).current = checkWork;
   await act(async () => {
     root.render(
-      <NextIntlClientProvider locale="en" messages={en}>
-        <TerminalPane url="ws://test/terminal" config={config} checkWorkRef={ref} />
+      <NextIntlClientProvider locale={locale} messages={locale === 'fr' ? fr : en}>
+        <TerminalPane url="ws://test/terminal" checkWorkRef={ref} />
       </NextIntlClientProvider>,
     );
   });
@@ -181,10 +173,220 @@ describe('TerminalPane reconnect indication', () => {
     expect(container.textContent).toContain('The server is restarting');
   });
 
+  // Validates: Requirement 14.5
+  it('shows the indication as soon as the reconnect message arrives, before the close', async () => {
+    await mount(document.createElement('button'));
+    const socket = FakeSocket.instances[0] as FakeSocket;
+    await act(async () => socket.onopen?.());
+    await act(async () => socket.onmessage?.({ data: '{"type":"reconnect"}' }));
+    expect(container.textContent).toContain('The server is restarting');
+  });
+
+  // Validates: Requirements 14.5, 14.6
+  it('follows the drain schedule, then offers a manual retry that reconnects', async () => {
+    await mount(document.createElement('button'));
+    vi.useFakeTimers();
+    try {
+      const drain = reconnectSchedule('drain');
+      let socket = FakeSocket.instances[0] as FakeSocket;
+      await act(async () => socket.onmessage?.({ data: '{"type":"reconnect"}' }));
+      await act(async () => socket.onclose?.({ code: 1012 }));
+      for (const delay of drain) {
+        const before = FakeSocket.instances.length;
+        await act(async () => vi.advanceTimersByTime(delay - 1));
+        expect(FakeSocket.instances.length).toBe(before);
+        await act(async () => vi.advanceTimersByTime(1));
+        expect(FakeSocket.instances.length).toBe(before + 1);
+        socket = FakeSocket.instances.at(-1) as FakeSocket;
+        await act(async () => socket.onclose?.({ code: 1006 }));
+      }
+      expect(FakeSocket.instances).toHaveLength(drain.length + 1);
+      expect(container.textContent).toContain('We could not reconnect to your terminal');
+      const retry = [...container.querySelectorAll('button')].find(
+        (b) => b.textContent === 'Try again',
+      );
+      expect(retry).toBeDefined();
+      await act(async () => retry?.click());
+      expect(FakeSocket.instances).toHaveLength(drain.length + 2);
+      await act(async () => (FakeSocket.instances.at(-1) as FakeSocket).onopen?.());
+      expect(container.textContent).toContain('Connection restored');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Validates: Requirement 14.8
+  it('asks for re-authentication, without retrying, when ownership is refused', async () => {
+    await mount(document.createElement('button'));
+    const socket = FakeSocket.instances[0] as FakeSocket;
+    await act(async () => socket.onopen?.());
+    await act(async () => socket.onclose?.({ code: 4404 }));
+    expect(container.textContent).toContain('Sign in again to continue');
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('/en/sign-in');
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
   it('does not reconnect after a normal close', async () => {
     await mount(document.createElement('button'));
     const socket = FakeSocket.instances[0] as FakeSocket;
     await act(async () => socket.onclose?.({ code: 1000 }));
     expect(container.querySelector('[data-testid="terminal-connection"]')?.textContent).toBe('');
   });
+});
+
+const statusText = () =>
+  container.querySelector('[data-testid="terminal-connection"]')?.textContent ?? '';
+const retryButton = (label: string) =>
+  [...container.querySelectorAll('button')].find((b) => b.textContent === label);
+
+// Claims: 14.6, 20.1, 20.2
+describe('TerminalPane restart schedule', () => {
+  it('shows the indication on close, stays within 60 s, then offers a manual retry', async () => {
+    await mount(document.createElement('button'));
+    vi.useFakeTimers();
+    try {
+      const restart = reconnectSchedule('restart');
+      expect(restart.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(60_000);
+      let socket = FakeSocket.instances[0] as FakeSocket;
+      await act(async () => socket.onopen?.());
+      await act(async () => socket.onclose?.({ code: 1006 }));
+      // Indication is set in the same tick as the close (within the 2 s bound).
+      expect(statusText()).toContain('Connection lost. Reconnecting');
+      expect(statusText()).not.toContain('The server is restarting');
+
+      let elapsed = 0;
+      for (const delay of restart) {
+        expect(delay).toBeLessThanOrEqual(5_000);
+        const before = FakeSocket.instances.length;
+        await act(async () => vi.advanceTimersByTime(delay - 1));
+        expect(FakeSocket.instances.length).toBe(before);
+        await act(async () => vi.advanceTimersByTime(1));
+        elapsed += delay;
+        expect(FakeSocket.instances.length).toBe(before + 1);
+        socket = FakeSocket.instances.at(-1) as FakeSocket;
+        await act(async () => socket.onclose?.({ code: 1006 }));
+      }
+      expect(elapsed).toBeLessThanOrEqual(60_000);
+      expect(FakeSocket.instances).toHaveLength(restart.length + 1);
+      expect(statusText()).toContain('We could not reconnect to your terminal');
+      expect(statusText()).toContain('Your lab session is unchanged');
+
+      // No further attempt happens by itself once the schedule is exhausted.
+      await act(async () => vi.advanceTimersByTime(120_000));
+      expect(FakeSocket.instances).toHaveLength(restart.length + 1);
+
+      await act(async () => retryButton('Try again')?.click());
+      expect(FakeSocket.instances).toHaveLength(restart.length + 2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('starts a fresh schedule after the manual retry fails again', async () => {
+    await mount(document.createElement('button'));
+    vi.useFakeTimers();
+    try {
+      const restart = reconnectSchedule('restart');
+      let socket = FakeSocket.instances[0] as FakeSocket;
+      await act(async () => socket.onclose?.({ code: 1006 }));
+      for (const delay of restart) {
+        await act(async () => vi.advanceTimersByTime(delay));
+        socket = FakeSocket.instances.at(-1) as FakeSocket;
+        await act(async () => socket.onclose?.({ code: 1006 }));
+      }
+      await act(async () => retryButton('Try again')?.click());
+      const count = FakeSocket.instances.length;
+      await act(async () => (FakeSocket.instances.at(-1) as FakeSocket).onclose?.({ code: 1006 }));
+      await act(async () => vi.advanceTimersByTime(restart[0] as number));
+      expect(FakeSocket.instances).toHaveLength(count + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+// Claims: 14.6, 14.8, 20.1, 20.2
+describe('TerminalPane French messages', () => {
+  it('shows the French reconnect indication, restart message and attempt counter', async () => {
+    await mount(document.createElement('button'), 'fr');
+    vi.useFakeTimers();
+    try {
+      let socket = FakeSocket.instances[0] as FakeSocket;
+      await act(async () => socket.onclose?.({ code: 1006 }));
+      expect(statusText()).toBe(fr.Labs.reconnect.indicator);
+      await act(async () => vi.advanceTimersByTime(reconnectSchedule('restart')[0] as number));
+      socket = FakeSocket.instances.at(-1) as FakeSocket;
+      await act(async () => socket.onmessage?.({ data: '{"type":"reconnect"}' }));
+      expect(statusText()).toContain(fr.Labs.reconnect.serverRestart);
+      expect(statusText()).toContain('Tentative de reconnexion 1');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows the French exhausted error with a French retry action, then the restored message', async () => {
+    await mount(document.createElement('button'), 'fr');
+    vi.useFakeTimers();
+    try {
+      const drain = reconnectSchedule('drain');
+      let socket = FakeSocket.instances[0] as FakeSocket;
+      await act(async () => socket.onmessage?.({ data: '{"type":"reconnect"}' }));
+      await act(async () => socket.onclose?.({ code: 1012 }));
+      for (const delay of drain) {
+        await act(async () => vi.advanceTimersByTime(delay));
+        socket = FakeSocket.instances.at(-1) as FakeSocket;
+        await act(async () => socket.onclose?.({ code: 1006 }));
+      }
+      expect(statusText()).toBe(fr.Labs.reconnect.terminalFailed);
+      await act(async () => retryButton('Réessayer')?.click());
+      await act(async () => (FakeSocket.instances.at(-1) as FakeSocket).onopen?.());
+      expect(statusText()).toBe(fr.Labs.reconnect.restored);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('asks for re-authentication in French and links to the French sign-in page', async () => {
+    await mount(document.createElement('button'), 'fr');
+    const socket = FakeSocket.instances[0] as FakeSocket;
+    await act(async () => socket.onclose?.({ code: 4401 }));
+    expect(statusText()).toBe(fr.Labs.reconnect.reauthRequired);
+    const link = container.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('/fr/sign-in');
+    expect(link?.textContent).toBe(fr.Labs.reconnect.signIn);
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
+  it('has a non-empty French and English text for every reconnect key', () => {
+    const keys = Object.keys(en.Labs.reconnect) as (keyof typeof en.Labs.reconnect)[];
+    expect(Object.keys(fr.Labs.reconnect).sort()).toEqual([...keys].sort());
+    for (const key of keys) {
+      expect(en.Labs.reconnect[key]).not.toBe('');
+      expect(fr.Labs.reconnect[key]).not.toBe('');
+    }
+    expect(fr.Labs.reconnect.terminalFailed).not.toBe(en.Labs.reconnect.terminalFailed);
+    expect(fr.Labs.reconnect.reauthRequired).not.toBe(en.Labs.reconnect.reauthRequired);
+  });
+});
+
+// Claims: 14.8, 20.4
+describe('TerminalPane ownership failure', () => {
+  it.each([4401, 4404])(
+    'does not retry after close code %i and leaves no retry action',
+    async (code) => {
+      await mount(document.createElement('button'));
+      vi.useFakeTimers();
+      try {
+        const socket = FakeSocket.instances[0] as FakeSocket;
+        await act(async () => socket.onopen?.());
+        await act(async () => socket.onclose?.({ code }));
+        await act(async () => vi.advanceTimersByTime(120_000));
+        expect(FakeSocket.instances).toHaveLength(1);
+        expect(statusText()).toContain('Sign in again to continue');
+        expect(retryButton('Try again')).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 });

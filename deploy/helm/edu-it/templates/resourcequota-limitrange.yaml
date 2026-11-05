@@ -1,0 +1,42 @@
+{{- /* Labs_Namespace ResourceQuota and LimitRange; every cap comes from labs.quota and labs.limitRange (Req 3.3, 3.4, 3.5). */ -}}
+{{- $q := .Values.labs.quota }}
+{{- $l := .Values.labs.limitRange }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "labs-quota") }}
+  namespace: {{ include "edu-it.labsNamespace" . }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "labs-quota") | nindent 4 }}
+spec:
+  hard:
+    pods: {{ $q.pods | quote }}
+    requests.cpu: {{ $q.requestsCpu | quote }}
+    limits.cpu: {{ $q.limitsCpu | quote }}
+    requests.memory: {{ $q.requestsMemory | quote }}
+    limits.memory: {{ $q.limitsMemory | quote }}
+    requests.ephemeral-storage: {{ $q.requestsEphemeralStorage | quote }}
+    limits.ephemeral-storage: {{ $q.limitsEphemeralStorage | quote }}
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "labs-limits") }}
+  namespace: {{ include "edu-it.labsNamespace" . }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "labs-limits") | nindent 4 }}
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: {{ $l.defaultCpu | quote }}
+        memory: {{ $l.defaultMemory | quote }}
+        ephemeral-storage: {{ $l.defaultEphemeralStorage | quote }}
+      defaultRequest:
+        cpu: {{ $l.defaultRequestCpu | quote }}
+        memory: {{ $l.defaultRequestMemory | quote }}
+        ephemeral-storage: {{ $l.defaultRequestEphemeralStorage | quote }}
+      max:
+        cpu: {{ $l.maxCpu | quote }}
+        memory: {{ $l.maxMemory | quote }}
+        ephemeral-storage: {{ $l.maxEphemeralStorage | quote }}

@@ -1,0 +1,67 @@
+{{- /*
+Migration_Job: Helm pre-install and pre-upgrade hook (weight 0) running the migrations image
+entrypoint `python -m edu_it_infrastructure.migrate`. A failed hook stops Helm before it touches
+the Deployments (Req 21.1). The Job is kept after failure (before-hook-creation only) so its log
+stays available. Its ServiceAccount and the database Secret are weight -10 hooks (design R7).
+*/ -}}
+{{- $ctx := dict "root" . "component" "migration" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ include "edu-it.platformNamespace" . }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ int .Values.migration.backoffLimit }}
+  activeDeadlineSeconds: {{ int .Values.migration.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "edu-it.labels" $ctx | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "edu-it.serviceAccountName" $ctx }}
+      automountServiceAccountToken: false
+      priorityClassName: {{ .Values.priorityClass.name }}
+      securityContext:
+        {{- include "edu-it.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "edu-it.image" (dict "root" . "name" "migrations") | quote }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "edu-it.containerSecurityContext" . | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "edu-it.componentName" $ctx }}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "edu-it.componentName" (dict "root" . "component" "database") }}
+                  key: url
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: secret-database
+              mountPath: /var/run/secrets/edu-it/database
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: secret-database
+          secret:
+            secretName: {{ include "edu-it.componentName" (dict "root" . "component" "database") }}
+            optional: true

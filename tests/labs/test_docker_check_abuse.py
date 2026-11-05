@@ -1,7 +1,7 @@
 """Docker Check-timeout and abuse tests (hands-on-labs task 8.4).
 
 Requirements 11.3, 11.7, 28.1 to 28.7 and 28.9, evidenced with the real ``GradeRun`` against
-``DockerSandboxProvider``. An infinite loop, a fork bomb and an unbounded allocation inside a
+``SandboxProvider``. An infinite loop, a fork bomb and an unbounded allocation inside a
 Check each: finish the run inside the 15 s deadline, record ``could_not_complete`` like a
 timeout, leave later Checks to run, make the run ``failed`` and deliver no raw output.
 
@@ -35,6 +35,7 @@ from edu_it_domain.ports.lab_catalog import (
     LabDefinition,
     LabTaskDefinition,
 )
+from edu_it_domain.ports.sandbox import SandboxProvider
 from edu_it_infrastructure.clock import System_Clock
 from edu_it_infrastructure.fakes import (
     Fake_LabCatalog,
@@ -42,7 +43,8 @@ from edu_it_infrastructure.fakes import (
     In_Memory_LabSessionRepository,
     In_Memory_MasteryRepository,
 )
-from edu_it_infrastructure.sandbox.docker_provider import DockerSandboxProvider
+
+from tests.labs.sandbox_backend import backend_name, make_provider, provider_ready, skip_reason
 
 IMAGE = "edu-it/lab-linux-base:dev"
 MARKER = "RAW-OUTPUT-MARKER-8f3a9c"
@@ -55,20 +57,12 @@ class _Img:
 
 
 def _daemon_ready() -> bool:
-    try:
-        import docker
-
-        client = docker.from_env(timeout=3)
-        client.ping()
-        client.images.get(IMAGE)
-    except Exception:
-        return False
-    return True
+    return provider_ready(IMAGE)
 
 
 pytestmark = [
     pytest.mark.docker,
-    pytest.mark.skipif(not _daemon_ready(), reason="no Docker daemon or lab image"),
+    pytest.mark.skipif(not _daemon_ready(), reason=skip_reason()),
 ]
 
 # Every script first prints a planted marker to stdout and stderr: it must never be delivered.
@@ -95,14 +89,14 @@ def _write_bundle(root: Path) -> None:
 
 
 @pytest.fixture(scope="module")
-def provider() -> DockerSandboxProvider:
-    return DockerSandboxProvider()
+def provider() -> SandboxProvider:
+    return make_provider()
 
 
 class _Run:
     """One real GradeRun over a freshly provisioned Docker Sandbox."""
 
-    def __init__(self, provider: DockerSandboxProvider, tmp_path: Path, check_ids: list[str]):
+    def __init__(self, provider: SandboxProvider, tmp_path: Path, check_ids: list[str]):
         _write_bundle(tmp_path)
         self.provider = provider
         self.clock = System_Clock()
@@ -115,7 +109,11 @@ class _Run:
             checks=tuple(LabCheckDefinition(c, "t1", CHECK_TIMEOUT_S) for c in check_ids),
             bundle_path="abuse",
         )
-        self.handle = provider.provision(build_sandbox_spec(_Img(), "pytest-abuse"))
+        # One session id per run: the Kubernetes pod name is derived from it (ADR 0009), so a
+        # reused id would adopt the pod of the previous run instead of a fresh Sandbox.
+        self.handle = provider.provision(
+            build_sandbox_spec(_Img(), f"pytest-abuse-{'-'.join(check_ids)}")
+        )
         self.runs = In_Memory_GradingRunRepository()
         self.sessions = In_Memory_LabSessionRepository(self.runs)
         now = self.clock.now()
@@ -141,6 +139,7 @@ class _Run:
             ),
             clock=self.clock,
             bundle_root=tmp_path,
+            provider_name=backend_name(),  # as the Worker composition passes it
         )
 
     def execute(self) -> tuple[RunStatus | None, float]:
@@ -155,7 +154,7 @@ class _Run:
 
 
 @pytest.fixture
-def make_run(provider: DockerSandboxProvider, tmp_path: Path) -> Iterator[object]:
+def make_run(provider: SandboxProvider, tmp_path: Path) -> Iterator[object]:
     created: list[_Run] = []
 
     def _make(check_ids: list[str]) -> _Run:

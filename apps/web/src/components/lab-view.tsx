@@ -653,7 +653,6 @@ function ActiveLab({ lab, locale, session, onPollNow, onReplaced, describe }: Ac
         ) : (
           <TerminalPane
             url={terminalUrl(labApiBaseUrl(), session.stableId)}
-            config={config}
             checkWorkRef={checkWorkRef}
             onSessionStatus={onPollNow}
           />

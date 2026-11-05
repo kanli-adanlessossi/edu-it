@@ -147,6 +147,9 @@ different version or without a pin here.
 | `websockets` | 17.3 | PyPI | `apps/api/pyproject.toml` | WebSocket protocol implementation used by uvicorn for the terminal route |
 | `uvicorn` | 0.54.0 | PyPI | `apps/api/pyproject.toml` | ASGI server (already in the manifest at this version; the draining `uvicorn.Server` subclass depends on it) |
 | `docker` | 7.2.0 | PyPI | `packages/infrastructure/pyproject.toml` | Docker SDK for Python, used by the dev-only `DockerSandboxProvider` |
+| `opentelemetry-sdk` | 1.45.2 | PyPI | `packages/infrastructure/pyproject.toml` | OpenTelemetry tracing SDK with the bounded `BatchSpanProcessor` (kubernetes-deployment Req 13.1, 13.2) |
+| `opentelemetry-exporter-otlp-proto-http` | 1.45.2 | PyPI | `packages/infrastructure/pyproject.toml` | OTLP/HTTP span exporter, built only when a collector endpoint is set (HTTP avoids `grpcio`) |
+| `prometheus-client` | 0.26.0 | PyPI | `packages/infrastructure/pyproject.toml` | Prometheus client for the Lab_Metrics collectors served on the dedicated metrics port (kubernetes-deployment Req 13.3, 13.4, 13.12) |
 | `trivy` | 0.76.1 | GitHub release (aquasecurity/trivy) | `.github/workflows/lab-images.yml` | vulnerability scanner for Lab_Images, configured to fail on any finding |
 | `aquasecurity/trivy-action` | 0.36.0 | GitHub Action | `.github/workflows/lab-images.yml` | runs Trivy in CI; the `version:` input is set to the Trivy pin above |
 

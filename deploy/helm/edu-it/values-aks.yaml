@@ -1,0 +1,255 @@
+# AKS Values_File. Provider-specific settings live here only (Req 7.3).
+# No secret values: secrets come from External Secrets or, in dev only, devSecrets.
+# Image digests are all-zero placeholders; CI or the operator pins real sha256 digests (Req 7.11).
+environment: production
+devSecrets:
+  enabled: false
+devDatastores:
+  enabled: false
+namespaces:
+  manage: create
+  platform: platform
+  labs: labs
+images:
+  web:
+    repository: ghcr.io/edu-it/edu-it-web
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  api:
+    repository: ghcr.io/edu-it/edu-it-api
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  worker:
+    repository: ghcr.io/edu-it/edu-it-worker
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  migrations:
+    repository: ghcr.io/edu-it/edu-it-migrations
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+labs:
+  sessionTtlSeconds: 3600
+  podPriorityValue: 0
+  runtimeClass:
+    name: kata
+    kind: kata
+    create: true
+    handler: kata
+  nodePool:
+    nodeSelector:
+      edu-it.io/pool: lab
+    tolerations:
+    - key: edu-it.io/lab
+      operator: Equal
+      value: 'true'
+      effect: NoSchedule
+  nodeLossTolerationSeconds: 30
+  quota:
+    pods: 50
+    requestsCpu: '25'
+    requestsMemory: 50Gi
+    limitsCpu: '50'
+    limitsMemory: 100Gi
+    requestsEphemeralStorage: 100Gi
+    limitsEphemeralStorage: 200Gi
+  limitRange:
+    defaultCpu: 500m
+    defaultMemory: 512Mi
+    defaultRequestCpu: 250m
+    defaultRequestMemory: 256Mi
+    maxCpu: '2'
+    maxMemory: 2Gi
+    defaultEphemeralStorage: 1Gi
+    defaultRequestEphemeralStorage: 512Mi
+    maxEphemeralStorage: 4Gi
+  dnsEgress: false
+  drainProtection:
+    enabled: true
+    waitLimitSeconds: 300
+api:
+  port: 8000
+  adminPort: 8001
+  metricsPort: 9090
+  drainPeriodSeconds: 30
+  preStopDelaySeconds: 5
+  terminationGracePeriodSeconds: 60
+  replicas: 2
+  probes:
+    liveness:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      path: /health
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 30
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCpuUtilizationPercentage: 70
+  pdb:
+    enabled: true
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: '1'
+      memory: 512Mi
+worker:
+  adminPort: 8081
+  metricsPort: 9090
+  terminationGracePeriodSeconds: 60
+  replicas: 2
+  probes:
+    liveness:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      path: /health
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 30
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    metric: cpu
+    targetCpuUtilizationPercentage: 70
+    queueDepthTarget: 10
+  pdb:
+    enabled: true
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: '1'
+      memory: 768Mi
+web:
+  port: 3000
+  replicas: 2
+  probes:
+    liveness:
+      path: /api/healthz
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      path: /api/healthz
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      path: /api/healthz
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 30
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCpuUtilizationPercentage: 70
+  pdb:
+    enabled: true
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+metricsAdapter:
+  enabled: false
+priorityClass:
+  name: edu-it-platform
+  value: 1000000
+networkPolicy:
+  enforcementRequired: true
+  kubernetesApi:
+    # PLACEHOLDER for AKS: replace with the API server endpoint addresses (/32 each).
+    # Find the real value: kubectl get endpoints kubernetes -n default
+    cidrs:
+    - 10.0.0.1/32
+  # Optional (OQ-4): admit the monitoring namespace to the Api and Worker metrics port only. Off by default (Req 11.4).
+  monitoringIngress:
+    enabled: false
+  monitoringNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: monitoring
+  ingressControllerNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+migration:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+ingress:
+  mode: ingress-nginx
+  className: nginx
+  host: edu-it.example.com
+  gateway:
+    name: edu-it-gateway
+    namespace: gateway-system
+  tls:
+    secretName: edu-it-tls
+  websocket:
+    readTimeoutSeconds: 3600
+    sendTimeoutSeconds: 3600
+externalSecrets:
+  storeName: edu-it-store
+  storeKind: ClusterSecretStore
+  refreshInterval: 1h
+  remoteKeys:
+    database: edu-it/database
+    redis: edu-it/redis
+    session: edu-it/session
+    llm: edu-it/llm
+    objectStorage: edu-it/object-storage
+llm:
+  provider: bedrock
+  model: eu.anthropic.claude-sonnet-4-6
+  region: eu-central-1
+  endpoint: https://bedrock-runtime.eu-central-1.amazonaws.com
+objectStorage:
+  type: azureblob
+  bucket: edu-it-artifacts
+  endpoint: https://edu-it.blob.core.windows.net
+workloadIdentity:
+  type: azure
+  annotations:
+    azure.workload.identity/client-id: 00000000-0000-0000-0000-000000000000
+observability:
+  collectorEndpoint: http://otel-collector.monitoring.svc:4318
+  scrapeMode: serviceMonitor
+imagePolicy:
+  enabled: false
+prometheusRules:
+  enabled: true
+  quotaRejection:
+    threshold: 5
+    windowMinutes: 10
+  externalSecret:
+    staleMinutes: 30

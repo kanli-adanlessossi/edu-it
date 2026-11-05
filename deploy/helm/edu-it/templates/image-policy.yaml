@@ -1,0 +1,57 @@
+{{- /*
+Image signature admission (Req 12.10). Renders only when imagePolicy.enabled is true (default
+false). Kyverno is an operator-installed optional prerequisite; this chart never installs it.
+ClusterPolicy is cluster-scoped, but the rule matches pods in the platform and labs namespaces
+only. It admits only images that carry a valid keyless (OIDC) signature and rejects the rest.
+Optional overrides: imagePolicy.keyless.issuer, imagePolicy.keyless.subject (regex),
+imagePolicy.keyless.rekorUrl, imagePolicy.imageReferences (list of globs).
+*/ -}}
+{{- if .Values.imagePolicy.enabled }}
+{{- $keyless := default dict .Values.imagePolicy.keyless }}
+{{- $refs := .Values.imagePolicy.imageReferences }}
+{{- if not $refs }}
+{{- $refs = list }}
+{{- range $name, $img := .Values.images }}
+{{- $refs = append $refs (printf "%s*" $img.repository) }}
+{{- end }}
+{{- $labPrefix := regexReplaceAll "/[^/]*$" .Values.images.api.repository "" }}
+{{- $refs = append $refs (printf "%s/*" $labPrefix) }}
+{{- end }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "verify-image-signatures") }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "verify-image-signatures") | nindent 4 }}
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 30
+  failurePolicy: Fail
+  rules:
+    - name: verify-image-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - {{ include "edu-it.platformNamespace" . }}
+                - {{ include "edu-it.labsNamespace" . }}
+      verifyImages:
+        - imageReferences:
+            {{- range $refs | uniq | sortAlpha }}
+            - {{ . | quote }}
+            {{- end }}
+          mutateDigest: false
+          verifyDigest: true
+          required: true
+          attestors:
+            - count: 1
+              entries:
+                - keyless:
+                    issuer: {{ default "https://token.actions.githubusercontent.com" $keyless.issuer | quote }}
+                    subjectRegExp: {{ default "^https://github\\.com/edu-it/edu-it/.*$" $keyless.subject | quote }}
+                    rekor:
+                      url: {{ default "https://rekor.sigstore.dev" $keyless.rekorUrl | quote }}
+{{- end }}

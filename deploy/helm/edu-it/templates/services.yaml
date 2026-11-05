@@ -1,0 +1,55 @@
+{{- /* ClusterIP Services for the Api (api.port), the Worker health surface (worker.adminPort) and the Web (web.port). Tasks 6.13, 12.1. */ -}}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- $apiCtx := dict "root" . "component" "api" }}
+{{- $workerCtx := dict "root" . "component" "worker" }}
+{{- $webCtx := dict "root" . "component" "web" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "edu-it.componentName" $apiCtx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $apiCtx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "edu-it.selectorLabels" $apiCtx | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ int .Values.api.port }}
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "edu-it.componentName" $workerCtx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $workerCtx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "edu-it.selectorLabels" $workerCtx | nindent 4 }}
+  ports:
+    - name: health
+      port: {{ int .Values.worker.adminPort }}
+      targetPort: health
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "edu-it.componentName" $webCtx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $webCtx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "edu-it.selectorLabels" $webCtx | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ int .Values.web.port }}
+      targetPort: http
+      protocol: TCP

@@ -1,0 +1,19 @@
+{{- /* Namespaces with Pod Security Admission labels (Req 4.1, 7.9, 7.10). Rendered only when namespaces.manage is "create". */ -}}
+{{- if eq .Values.namespaces.manage "create" }}
+{{- range $ns := list (include "edu-it.platformNamespace" .) (include "edu-it.labsNamespace" .) }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $ns }}
+  labels:
+    app.kubernetes.io/part-of: edu-it
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+{{- end }}
+{{- end }}

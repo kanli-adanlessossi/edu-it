@@ -1,0 +1,136 @@
+{{- /*
+Api Deployment (tasks 6.13, 12.1). Requirements: 8.1 probes, 8.5 resources, 8.6 security contexts,
+8.7 topology spread, 8.12 priority class, 14.4 and 14.12 graceful shutdown, 23.1 optional secret
+volumes, 25.6 rolling update with at least 2 replicas.
+
+- Probes follow the paths the Api serves (GET /health, GET /ready; apps/api/edu_it_api/health.py).
+- The preStop hook calls GET /internal/drain on the admin port (apps/api/edu_it_api/drain.py). That
+  endpoint answers after the drain finished, so the kubelet sends SIGTERM once the sockets are closed.
+- `replicas` is omitted when the HPA owns the count, so a `helm upgrade` never resets it.
+- Secrets are mounted as optional volumes at /var/run/secrets/edu-it/<name>/ (SecretSource). The
+  images read DATABASE_URL and REDIS_URL from the environment today, so those two are also
+  injected with secretKeyRef from the same Secrets.
+*/ -}}
+{{- $ctx := dict "root" . "component" "api" }}
+{{- $name := include "edu-it.componentName" $ctx }}
+{{- $port := int .Values.api.port }}
+{{- $adminPort := int .Values.api.adminPort }}
+{{- $metricsPort := int .Values.api.metricsPort }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ include "edu-it.platformNamespace" . }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+spec:
+  {{- if not .Values.api.hpa.enabled }}
+  replicas: {{ .Values.api.replicas }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "edu-it.labels" $ctx | nindent 8 }}
+      {{- with (include "edu-it.scrapeAnnotations" $ctx | trim) }}
+      annotations:
+        {{- . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "edu-it.serviceAccountName" $ctx }}
+      {{- /* The ServiceAccount sets automountServiceAccountToken: false (Req 4.6); the Api calls the
+      Kubernetes API (terminals attach through pods/exec), so its pod spec sets it to true. The
+      projected, 600 s token below (_kube-api-access.tpl) is what the client reads. */}}
+      automountServiceAccountToken: true
+      priorityClassName: {{ .Values.priorityClass.name }}
+      terminationGracePeriodSeconds: {{ .Values.api.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- include "edu-it.podSecurityContext" . | nindent 8 }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" $ctx | nindent 14 }}
+      containers:
+        - name: api
+          image: {{ include "edu-it.image" (dict "root" . "name" "api") | quote }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "edu-it.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ $port }}
+              protocol: TCP
+            - name: admin
+              containerPort: {{ $adminPort }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ $metricsPort }}
+              protocol: TCP
+          env:
+            - name: API_HOST
+              value: "0.0.0.0"
+            - name: API_PORT
+              value: {{ $port | quote }}
+            - name: API_ADMIN_HOST
+              value: "0.0.0.0"
+            - name: API_ADMIN_PORT
+              value: {{ $adminPort | quote }}
+            - name: API_METRICS_HOST
+              value: "0.0.0.0"
+            - name: API_METRICS_PORT
+              value: {{ $metricsPort | quote }}
+            - name: API_DRAIN_PERIOD_SECONDS
+              value: {{ .Values.api.drainPeriodSeconds | quote }}
+            - name: API_PRESTOP_DELAY_SECONDS
+              value: {{ .Values.api.preStopDelaySeconds | quote }}
+            - name: EDU_IT_ENV
+              value: {{ .Values.environment | quote }}
+            - name: SANDBOX_PROVIDER
+              value: kubernetes
+            - name: K8S_LABS_NAMESPACE
+              value: {{ include "edu-it.labsNamespace" . | quote }}
+            - name: SANDBOX_RUNTIME_KIND
+              value: {{ .Values.labs.runtimeClass.kind | quote }}
+            - name: SANDBOX_RUNTIME_CLASS
+              value: {{ .Values.labs.runtimeClass.name | quote }}
+            - name: SANDBOX_PRIORITY_CLASS
+              value: ""
+            {{- include "edu-it.otelEnv" . | nindent 12 }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "edu-it.componentName" (dict "root" . "component" "database") }}
+                  key: url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "edu-it.componentName" (dict "root" . "component" "redis") }}
+                  key: url
+          lifecycle:
+            preStop:
+              httpGet:
+                path: /internal/drain
+                port: admin
+          {{- include "edu-it.probes" (dict "root" . "component" "api" "port" "http") | nindent 10 }}
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- include "edu-it.kubeApiAccess.volumeMount" . | nindent 12 }}
+            {{- include "edu-it.secretVolumeMounts" . | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- include "edu-it.kubeApiAccess.volume" . | nindent 8 }}
+        {{- include "edu-it.secretVolumes" (dict "root" .) | nindent 8 }}

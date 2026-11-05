@@ -1,0 +1,49 @@
+{{- /*
+HTTPRoute for mode gateway-api (Req 9.2, 9.7, 9.8, 9.10). Task 12.5.
+The Gateway is a reference to an operator-owned object (ingress.gateway.name/namespace); the chart does not create it.
+TLS terminates on that Gateway's listener using the certificate Secret named by ingress.tls.secretName.
+A WebSocket upgrade is plain HTTP routing in Gateway API, so the /v1 rule (which includes the terminal path) goes to the
+Api Service; its request timeout keeps the connection open for at least the larger of the configured WebSocket timeouts.
+*/ -}}
+{{- if eq .Values.ingress.mode "gateway-api" -}}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- $apiCtx := dict "root" . "component" "api" }}
+{{- $webCtx := dict "root" . "component" "web" }}
+{{- $ws := .Values.ingress.websocket }}
+{{- $timeout := max (int $ws.readTimeoutSeconds) (int $ws.sendTimeoutSeconds) }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "edu-it.fullname" . }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "ingress") | nindent 4 }}
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Values.ingress.gateway.name | quote }}
+      namespace: {{ .Values.ingress.gateway.namespace | quote }}
+  hostnames:
+    - {{ .Values.ingress.host | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /fr
+        - path:
+            type: PathPrefix
+            value: /en
+      backendRefs:
+        - name: {{ include "edu-it.componentName" $webCtx }}
+          port: {{ int .Values.web.port }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1
+      timeouts:
+        request: {{ printf "%ds" $timeout | quote }}
+      backendRefs:
+        - name: {{ include "edu-it.componentName" $apiCtx }}
+          port: {{ int .Values.api.port }}
+{{- end }}

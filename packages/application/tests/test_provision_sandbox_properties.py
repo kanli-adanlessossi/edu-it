@@ -32,7 +32,10 @@ _LAB = LabDefinition(
 _MAX_ATTEMPTS = config.LAB_PROVISION_MAX_RETRIES + 1
 _MIN_INTERVAL = config.LAB_PROVISION_MIN_INTERVAL
 
-_modes = st.lists(st.sampled_from(list(ProvisionMode)), min_size=0, max_size=6)
+_NON_CAPACITY_MODES = [
+    m for m in ProvisionMode if m not in (ProvisionMode.CAPACITY, ProvisionMode.CAPACITY_PARTIAL)
+]
+_modes = st.lists(st.sampled_from(_NON_CAPACITY_MODES), min_size=0, max_size=6)
 # Each delivery is preceded by a clock advance (0 = duplicate/early delivery).
 _advances = st.lists(st.integers(min_value=0, max_value=25), min_size=1, max_size=12)
 

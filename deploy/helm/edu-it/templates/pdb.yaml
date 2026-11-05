@@ -1,0 +1,49 @@
+{{- /*
+PodDisruptionBudgets (task 12.2, Req 8.4, 19.6, 20.8).
+Api and Worker: `minAvailable` from values, each only when its own `pdb.enabled` is true.
+Lab pods: `maxUnavailable: 0` when labs.drainProtection.enabled (OQ-3), so a planned node drain
+waits instead of evicting a learner's lab. The operator drains with
+`kubectl drain --timeout=<labs.drainProtection.waitLimitSeconds>` and forces removal afterwards;
+the Worker then sees the pod disappear and applies the infrastructure-loss path.
+*/ -}}
+{{- $first := true }}
+{{- range $component := list "api" "worker" }}
+{{- $cfg := index $.Values $component }}
+{{- if $cfg.pdb.enabled }}
+{{- $ctx := dict "root" $ "component" $component }}
+{{- if not $first }}
+---
+{{- end }}
+{{- $first = false }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ include "edu-it.platformNamespace" $ }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+spec:
+  minAvailable: {{ int $cfg.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $ctx | nindent 6 }}
+{{- end }}
+{{- end }}
+{{- if .Values.labs.drainProtection.enabled }}
+{{- $ctx := dict "root" . "component" "labs-drain-protection" }}
+{{- if not $first }}
+---
+{{- end }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ include "edu-it.labsNamespace" . }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      edu-it.managed: '1'
+{{- end }}
