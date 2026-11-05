@@ -21,10 +21,11 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: {{ $ws.readTimeoutSeconds | int | quote }}
     nginx.ingress.kubernetes.io/proxy-send-timeout: {{ $ws.sendTimeoutSeconds | int | quote }}
     # Upgrade and Connection header handling for the terminal WebSocket (Req 9.6).
+    # ingress-nginx forwards the Upgrade/Connection headers automatically for WebSocket
+    # backends, so no configuration-snippet is needed; omitting it keeps the chart
+    # installable on hardened clusters where snippet annotations are disabled by default
+    # (ingress-nginx allow-snippet-annotations=false, CVE-2023-5044 hardening).
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header Upgrade $http_upgrade;
-      proxy_set_header Connection $connection_upgrade;
 spec:
   ingressClassName: {{ .Values.ingress.className | quote }}
   tls:
