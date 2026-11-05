@@ -187,6 +187,25 @@ class _Release:
         self.hooks_after_install: dict[str, str] = {}
 
 
+def _wait_namespace_not_terminating(context: str, namespace: str, timeout_s: int = 240) -> None:
+    """Block while ``namespace`` is Terminating (earlier tests delete it with ``--wait=false``).
+
+    Applying a namespace that is being terminated succeeds but leaves it terminating, and
+    ``helm install`` then fails creating its release Secret. A missing namespace is fine.
+    """
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        done = subprocess.run(
+            ["kubectl", "--context", context, "get", "namespace", namespace,
+             "-o", "jsonpath={.status.phase}"],
+            capture_output=True, text=True, timeout=60, check=False,
+        )
+        if done.returncode != 0 or done.stdout.strip() != "Terminating":
+            return
+        time.sleep(3)
+    pytest.fail(f"namespace {namespace} still Terminating after {timeout_s} s")
+
+
 @pytest.fixture(scope="module")
 def release(request: pytest.FixtureRequest, kind_context: str) -> Iterator[_Release]:
     if shutil.which("helm") is None:
@@ -196,6 +215,7 @@ def release(request: pytest.FixtureRequest, kind_context: str) -> Iterator[_Rele
     rel = _Release(kind_context, args)
     # An empty cluster: only the namespaces (pre-created with PSA labels, like the smoke test).
     for namespace in (PLATFORM_NAMESPACE, LABS_NAMESPACE):
+        _wait_namespace_not_terminating(kind_context, namespace)
         manifest = json.dumps(
             {"apiVersion": "v1", "kind": "Namespace",
              "metadata": {"name": namespace, "labels": PSA_LABELS}}

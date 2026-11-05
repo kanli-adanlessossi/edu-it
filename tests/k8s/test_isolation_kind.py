@@ -400,8 +400,11 @@ def lab(provider: SandboxProvider) -> Iterator[SandboxHandle]:
         provider.destroy(handle)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def other_lab(provider: SandboxProvider) -> Iterator[SandboxHandle]:
+    # Function scope on purpose: one test uses it, and a Lab_Pod requests ~1.6 CPU (learner 1,
+    # grader 0.5, two helpers). Holding it for the module leaves the TTL and fork-bomb pods
+    # Pending ("Insufficient cpu") on a small CI lab node.
     handle = _provision(provider)
     try:
         yield handle
