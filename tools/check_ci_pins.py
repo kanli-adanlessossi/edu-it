@@ -27,7 +27,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-__all__ = ["Finding", "find_unpinned_actions", "default_files", "main"]
+__all__ = ["Finding", "default_files", "find_unpinned_actions", "main"]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -85,7 +85,12 @@ def default_files(repo: Path) -> list[Path]:
     """Workflow files and composite actions under ``.github``."""
     github = repo / ".github"
     files: set[Path] = set()
-    for pattern in ("workflows/*.yml", "workflows/*.yaml", "actions/**/action.yml", "actions/**/action.yaml"):
+    for pattern in (
+        "workflows/*.yml",
+        "workflows/*.yaml",
+        "actions/**/action.yml",
+        "actions/**/action.yaml",
+    ):
         files.update(p for p in github.glob(pattern) if p.is_file())
     return sorted(files)
 

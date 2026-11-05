@@ -40,12 +40,12 @@ from typing import Any
 __all__ = [
     "CLUSTER_NAME",
     "CRD_SOURCES",
+    "KIND_TEST_VALUES",
     "LAB_IMAGES",
     "REGISTRY_PORT",
     "Step",
     "api_address_cidr",
     "build_plan",
-    "KIND_TEST_VALUES",
     "check_kind_config",
     "helm_values_args",
     "main",
@@ -118,7 +118,9 @@ def _kubectl(*args: str) -> tuple[str, ...]:
 
 #: Components that ``--skip`` may leave out (a network that cannot pull their images). Nothing the
 #: walking skeleton tests depends on ``ingress-nginx``; the skip is reported in the output.
-SKIPPABLE: Mapping[str, tuple[str, ...]] = {"ingress-nginx": ("ingress-nginx", "ingress-nginx-ready")}
+SKIPPABLE: Mapping[str, tuple[str, ...]] = {
+    "ingress-nginx": ("ingress-nginx", "ingress-nginx-ready")
+}
 
 
 def build_plan(
@@ -145,7 +147,12 @@ def build_plan(
         Step(
             "metrics-server-insecure-tls",
             _kubectl(
-                "patch", "deployment", "metrics-server", "-n", "kube-system", "--type=json",
+                "patch",
+                "deployment",
+                "metrics-server",
+                "-n",
+                "kube-system",
+                "--type=json",
                 "-p",
                 '[{"op":"add","path":"/spec/template/spec/containers/0/args/-",'
                 '"value":"--kubelet-insecure-tls"}]',
@@ -154,7 +161,11 @@ def build_plan(
         Step(
             "metrics-server-ready",
             _kubectl(
-                "rollout", "status", "deployment/metrics-server", "-n", "kube-system",
+                "rollout",
+                "status",
+                "deployment/metrics-server",
+                "-n",
+                "kube-system",
                 "--timeout=300s",
             ),
         ),
@@ -162,8 +173,13 @@ def build_plan(
         Step(
             "ingress-nginx-ready",
             _kubectl(
-                "wait", "-n", "ingress-nginx", "--for=condition=ready", "pod",
-                "--selector=app.kubernetes.io/component=controller", "--timeout=300s",
+                "wait",
+                "-n",
+                "ingress-nginx",
+                "--for=condition=ready",
+                "pod",
+                "--selector=app.kubernetes.io/component=controller",
+                "--timeout=300s",
             ),
         ),
     ]
@@ -181,8 +197,10 @@ def build_plan(
             )
         )
     plan.extend(registry_steps())
-    plan.extend(Step(f"preload-{img}", ("kind", "load", "docker-image", img, "--name", CLUSTER_NAME))
-                for img in lab_images)
+    plan.extend(
+        Step(f"preload-{img}", ("kind", "load", "docker-image", img, "--name", CLUSTER_NAME))
+        for img in lab_images
+    )
     skipped = {name for component in skip for name in SKIPPABLE[component]}
     return [step for step in plan if step.name not in skipped]
 
@@ -202,9 +220,17 @@ def registry_steps() -> list[Step]:
         Step(
             "registry",
             (
-                "docker", "run", "-d", "--restart=always",
-                "-p", f"127.0.0.1:{REGISTRY_PORT}:5000",
-                "--network", "bridge", "--name", REGISTRY_NAME, REGISTRY_IMAGE,
+                "docker",
+                "run",
+                "-d",
+                "--restart=always",
+                "-p",
+                f"127.0.0.1:{REGISTRY_PORT}:5000",
+                "--network",
+                "bridge",
+                "--name",
+                REGISTRY_NAME,
+                REGISTRY_IMAGE,
             ),
         ),
         Step("registry-network", ("docker", "network", "connect", "kind", REGISTRY_NAME)),
@@ -283,7 +309,7 @@ def check_kind_config(kind_config_text: str, domain_config_text: str) -> list[st
 
 
 def _run(argv: Sequence[str], *, input_text: str | None = None, check: bool = True) -> str:
-    proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    proc = subprocess.run(
         list(argv),
         input=input_text,
         text=True,
@@ -330,10 +356,15 @@ def _check_prerequisites(lab_images: Sequence[str]) -> None:
         KIND_CONFIG.read_text(encoding="utf-8"), DOMAIN_CONFIG.read_text(encoding="utf-8")
     )
     for image in lab_images:
-        if subprocess.run(  # noqa: S603
-            ["docker", "image", "inspect", image], capture_output=True, check=False
-        ).returncode != 0:
-            errors.append(f"lab image {image} is not built (docker buildx bake -f lab-images/docker-bake.hcl)")
+        if (
+            subprocess.run(
+                ["docker", "image", "inspect", image], capture_output=True, check=False
+            ).returncode
+            != 0
+        ):
+            errors.append(
+                f"lab image {image} is not built (docker buildx bake -f lab-images/docker-bake.hcl)"
+            )
     if errors:
         raise RuntimeError("; ".join(errors))
 

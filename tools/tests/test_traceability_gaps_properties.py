@@ -35,9 +35,7 @@ def test_gaps_are_the_two_set_differences(criteria: list[str], claims: list[str]
 
 @settings(max_examples=100)
 @given(criteria=_id_collections, claims=_id_collections)
-def test_spec_exit_code_is_nonzero_iff_a_gap_exists(
-    criteria: list[str], claims: list[str]
-) -> None:
+def test_spec_exit_code_is_nonzero_iff_a_gap_exists(criteria: list[str], claims: list[str]) -> None:
     import check_traceability as module
 
     unclaimed, unknown = compute_traceability_gaps(criteria, claims)

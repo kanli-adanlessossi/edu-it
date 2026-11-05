@@ -129,7 +129,9 @@ def build_labs_router(services: LabServices) -> APIRouter:
             # A capacity failure does not use up the retry allowance, so it is the one
             # failure that ends with attempts left (kubernetes-deployment Req 22.2, 22.4).
             max_attempts = services.config.LAB_PROVISION_MAX_RETRIES + 1  # type: ignore[attr-defined]
-            at_capacity = session.capacity_attempts > 0 and session.provision_attempts < max_attempts
+            at_capacity = (
+                session.capacity_attempts > 0 and session.provision_attempts < max_attempts
+            )
             problem = LAB_CAPACITY if at_capacity else LAB_PROVISION_FAILED
             error = SessionErrorResponse(
                 type=problem.type_uri,

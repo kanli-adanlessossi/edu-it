@@ -160,8 +160,16 @@ def test_base_mode_checks_only_changed_migrations(tmp_path: Path) -> None:
     def git(*args: str) -> None:
         subprocess.run(
             [
-                "git", "-C", str(tmp_path), "-c", "user.name=t", "-c", "user.email=t@e.invalid",
-                "-c", "commit.gpgsign=false", *args,
+                "git",
+                "-C",
+                str(tmp_path),
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@e.invalid",
+                "-c",
+                "commit.gpgsign=false",
+                *args,
             ],
             check=True,
             capture_output=True,

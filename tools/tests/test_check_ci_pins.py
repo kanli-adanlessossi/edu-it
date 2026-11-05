@@ -33,7 +33,9 @@ _TAG = st.builds(
 _BAD_SHA = st.builds(
     lambda r, s: ("bad", f"{r}@{s}"),
     _REPO,
-    st.integers(1, 64).filter(lambda n: n != 40).flatmap(lambda n: st.text(alphabet=_HEX, min_size=n, max_size=n)),
+    st.integers(1, 64)
+    .filter(lambda n: n != 40)
+    .flatmap(lambda n: st.text(alphabet=_HEX, min_size=n, max_size=n)),
 )
 _NO_REF = st.builds(lambda r: ("bad", r), _REPO)
 _DOCKER = st.builds(lambda n: ("bad", f"docker://{n}:latest"), _NAME)
@@ -64,7 +66,9 @@ def _workflows(draw: st.DrawFn) -> tuple[str, list[tuple[int, str]]]:
 # Claims: 15.11
 @settings(max_examples=200, deadline=None)
 @given(_workflows())
-def test_reports_exactly_the_unpinned_third_party_references(case: tuple[str, list[tuple[int, str]]]) -> None:
+def test_reports_exactly_the_unpinned_third_party_references(
+    case: tuple[str, list[tuple[int, str]]],
+) -> None:
     text, expected = case
     found = [(f.line, f.reference) for f in find_unpinned_actions(text)]
     assert found == expected

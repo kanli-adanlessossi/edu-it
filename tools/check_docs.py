@@ -33,10 +33,10 @@ from urllib.parse import urlsplit
 __all__ = [
     "GO_LIVE_CHECKLIST_ITEMS",
     "LinkFinding",
-    "find_missing_checklist_items",
-    "find_go_live_blocking_gaps",
-    "find_broken_links",
     "extract_french_section",
+    "find_broken_links",
+    "find_go_live_blocking_gaps",
+    "find_missing_checklist_items",
     "french_section_word_count",
     "main",
 ]
@@ -121,11 +121,7 @@ def find_go_live_blocking_gaps(text: str) -> list[str]:
     problems: list[str] = []
     if not re.search(r"go-live is blocked until", text, re.IGNORECASE):
         problems.append("no statement that go-live is blocked until a failing item passes")
-    anchors = {
-        _slug(m.group(2))
-        for line in text.splitlines()
-        if (m := _HEADING.match(line))
-    }
+    anchors = {_slug(m.group(2)) for line in text.splitlines() if (m := _HEADING.match(line))}
     for item in _checklist_items(text):
         label = item.split(".", 1)[0].strip("* ")
         _, sep, fix = item.partition("fix:")
@@ -244,8 +240,7 @@ def main(argv: list[str] | None = None) -> int:
     missing = find_missing_checklist_items(deployment_text)
     if missing:
         problems.append(
-            f"{DEPLOYMENT_GUIDE}: missing Go_Live_Checklist item(s) for: "
-            + ", ".join(missing)
+            f"{DEPLOYMENT_GUIDE}: missing Go_Live_Checklist item(s) for: " + ", ".join(missing)
         )
 
     for gap in find_go_live_blocking_gaps(deployment_text):

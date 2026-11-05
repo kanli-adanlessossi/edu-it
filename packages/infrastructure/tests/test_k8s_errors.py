@@ -27,7 +27,7 @@ class MaxRetryError(Exception):
     pass
 
 
-class WebSocketConnectionClosedException(Exception):  # noqa: N818
+class WebSocketConnectionClosedException(Exception):
     pass
 
 

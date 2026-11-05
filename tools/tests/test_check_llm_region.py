@@ -17,18 +17,20 @@ def test_eu_regions_of_adr_0007_are_accepted(region: str) -> None:
 
 # Claims: 10.6
 def test_eu_list_matches_adr_0007_destination_regions() -> None:
-    assert EU_LLM_REGIONS == {
+    assert {
         "eu-central-1",
         "eu-north-1",
         "eu-south-1",
         "eu-south-2",
         "eu-west-1",
         "eu-west-3",
-    }
+    } == EU_LLM_REGIONS
 
 
 # Claims: 10.6
-@pytest.mark.parametrize("region", ["us-east-1", "ap-southeast-1", "global", "", "EU-CENTRAL-1", "eu-central-1 "])
+@pytest.mark.parametrize(
+    "region", ["us-east-1", "ap-southeast-1", "global", "", "EU-CENTRAL-1", "eu-central-1 "]
+)
 def test_non_eu_region_is_rejected_and_named(region: str) -> None:
     message = check_llm_region(region, dev=False)
     assert message is not None

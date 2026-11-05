@@ -1,4 +1,4 @@
-﻿"""Basic tests for the documents check (tools/check_docs.py).
+"""Basic tests for the documents check (tools/check_docs.py).
 
 **Validates: Requirements 17.6, 17.8, 18.2, 18.5**
 """
@@ -10,7 +10,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from check_docs import (
     GO_LIVE_CHECKLIST_ITEMS,
     find_broken_links,
@@ -24,7 +23,8 @@ from check_docs import (
 def _checklist(skip: str | None = None) -> str:
     items = [i for i in GO_LIVE_CHECKLIST_ITEMS if i != skip]
     return (
-        "## Install\n\nSteps.\n\n## Go-live checklist\n\nGo-live is blocked until each item passes.\n\n"
+        "## Install\n\nSteps.\n\n## Go-live checklist\n\n"
+        "Go-live is blocked until each item passes.\n\n"
         + "\n".join(f"- [ ] **Verify {i}.** Pass: `cmd`. Fix: [Install](#install)." for i in items)
         + "\n"
     )
@@ -168,7 +168,9 @@ def test_item_without_fix_or_with_dangling_anchor_is_reported() -> None:
 def test_main_fails_when_an_item_names_no_corrective_section(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _write_repo(tmp_path, 10, _checklist() + "- [ ] **Extra.** Pass: `cmd`.\n", "docs/DEPLOYMENT.md")
+    _write_repo(
+        tmp_path, 10, _checklist() + "- [ ] **Extra.** Pass: `cmd`.\n", "docs/DEPLOYMENT.md"
+    )
     assert main(["--repo", str(tmp_path)]) == 1
     assert "has no 'Fix:' corrective section" in capsys.readouterr().err
 

@@ -50,7 +50,12 @@ def test_every_lab_image_is_preloaded_into_the_cluster() -> None:
     steps = {s.name: s.argv for s in harness.build_plan()}
     for image in harness.LAB_IMAGES:
         assert steps[f"preload-{image}"] == (
-            "kind", "load", "docker-image", image, "--name", harness.CLUSTER_NAME,
+            "kind",
+            "load",
+            "docker-image",
+            image,
+            "--name",
+            harness.CLUSTER_NAME,
         )
 
 
@@ -118,7 +123,9 @@ def test_helm_values_args_only_with_short_ttl() -> None:
     assert harness.KIND_TEST_VALUES == _CHART / "ci" / "values-kind-test.yaml"
 
 
-def test_values_args_command_prints_override_only_on_request(capsys: pytest.CaptureFixture[str]) -> None:
+def test_values_args_command_prints_override_only_on_request(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     assert harness.main(["values-args"]) == 0
     assert capsys.readouterr().out.strip() == ""
     assert harness.main(["values-args", "--short-ttl"]) == 0

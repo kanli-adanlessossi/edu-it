@@ -201,7 +201,7 @@ class Kubectl:
     def run(
         self, *args: str, stdin: str | None = None, timeout: float = 60
     ) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(  # noqa: S603 - fixed argv, no shell
+        return subprocess.run(
             ["kubectl", "--context", self.context, *args],
             input=stdin,
             capture_output=True,
@@ -312,8 +312,14 @@ class RunnerSampler:
         return {
             "interval_seconds": self.interval_s,
             "sample_count": len(self.samples),
-            "cpu_percent": {"avg": sum(cpu) / len(cpu) if cpu else None, "max": max(cpu, default=None)},
-            "memory_mib": {"avg": sum(mem) / len(mem) if mem else None, "max": max(mem, default=None)},
+            "cpu_percent": {
+                "avg": sum(cpu) / len(cpu) if cpu else None,
+                "max": max(cpu, default=None),
+            },
+            "memory_mib": {
+                "avg": sum(mem) / len(mem) if mem else None,
+                "max": max(mem, default=None),
+            },
             "samples": self.samples,
         }
 
@@ -349,7 +355,9 @@ class LoadTest:
             raise Aborted("load test timed out")
 
     def my_pods(self) -> list[dict[str, Any]]:
-        return self.k.json("get", "pods", "-n", self.args.namespace, "-l", f"{LABEL}={self.run_id}").get("items", [])
+        return self.k.json(
+            "get", "pods", "-n", self.args.namespace, "-l", f"{LABEL}={self.run_id}"
+        ).get("items", [])
 
     @staticmethod
     def is_ready(pod: Mapping[str, Any]) -> bool:
@@ -363,10 +371,14 @@ class LoadTest:
         requested: dict[str, float] = {}
 
         def create(name: str) -> None:
-            manifest = pod_manifest(name, self.run_id, self.args.image, self.args.namespace, self.args.runtime_class)
+            manifest = pod_manifest(
+                name, self.run_id, self.args.image, self.args.namespace, self.args.runtime_class
+            )
             requested[name] = time.monotonic()
             self.created.add(name)  # register before the call so a half-created pod is cleaned
-            done = self.k.run("create", "-n", self.args.namespace, "-f", "-", stdin=json.dumps(manifest))
+            done = self.k.run(
+                "create", "-n", self.args.namespace, "-f", "-", stdin=json.dumps(manifest)
+            )
             if done.returncode != 0:
                 self.created.discard(name)
                 requested.pop(name, None)
@@ -385,12 +397,14 @@ class LoadTest:
                 if n in requested and n not in ready_at and self.is_ready(pod):
                     ready_at[n] = now
             time.sleep(0.25)
-        for n, t in ready_at.items():
+        for n in ready_at:
             self.ready_seconds.append(ready_at[n] - requested[n])
         self.started_peak = max(self.started_peak, len(ready_at))
         self.record_pulls()
         if len(ready_at) < self.args.sessions:
-            self.errors.append(f"wave {index}: only {len(ready_at)} of {self.args.sessions} sessions became ready")
+            self.errors.append(
+                f"wave {index}: only {len(ready_at)} of {self.args.sessions} sessions became ready"
+            )
             return
 
         self.hold(sorted(ready_at))
@@ -402,7 +416,9 @@ class LoadTest:
         last_cost = 0.0
         while time.monotonic() - started < self.args.hold:
             self.check_deadline()
-            ready = sum(1 for p in self.my_pods() if p["metadata"]["name"] in names and self.is_ready(p))
+            ready = sum(
+                1 for p in self.my_pods() if p["metadata"]["name"] in names and self.is_ready(p)
+            )
             self.held_min = ready if self.held_min is None else min(self.held_min, ready)
             if time.monotonic() - last_cost >= 10 or last_cost == 0.0:
                 last_cost = time.monotonic()
@@ -414,7 +430,9 @@ class LoadTest:
         """Per-session CPU, memory (metrics-server) and ephemeral storage (kubelet stats)."""
 
         usage: dict[str, dict[str, float | None]] = {n: {} for n in names}
-        done = self.k.run("top", "pods", "-n", self.args.namespace, "-l", f"{LABEL}={self.run_id}", "--no-headers")
+        done = self.k.run(
+            "top", "pods", "-n", self.args.namespace, "-l", f"{LABEL}={self.run_id}", "--no-headers"
+        )
         if done.returncode == 0:
             for line in done.stdout.splitlines():
                 parts = line.split()
@@ -422,7 +440,9 @@ class LoadTest:
                     usage[parts[0]]["cpu_millicores"] = parse_cpu_millicores(parts[1])
                     usage[parts[0]]["memory_mib"] = parse_mebibytes(parts[2])
         else:
-            self.errors.append("kubectl top unavailable (metrics-server): CPU and memory per session not measured")
+            self.errors.append(
+                "kubectl top unavailable (metrics-server): CPU and memory per session not measured"
+            )
         for pod in self.my_pods():
             name, node = pod["metadata"]["name"], (pod.get("spec") or {}).get("nodeName")
             if name not in usage or not node:
@@ -443,8 +463,21 @@ class LoadTest:
         """Terminal round trips and grading runs, all sessions at once (24.3, 24.4)."""
 
         def terminal(name: str) -> list[float]:
-            proc = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
-                ["kubectl", "--context", self.args.context, "exec", "-i", "-n", self.args.namespace, name, "-c", "learner", "--", "sh"],
+            proc = subprocess.Popen(
+                [
+                    "kubectl",
+                    "--context",
+                    self.args.context,
+                    "exec",
+                    "-i",
+                    "-n",
+                    self.args.namespace,
+                    name,
+                    "-c",
+                    "learner",
+                    "--",
+                    "sh",
+                ],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
@@ -472,7 +505,16 @@ class LoadTest:
         def grade(name: str) -> float | None:
             t0 = time.monotonic()
             done = self.k.run(
-                "exec", "-n", self.args.namespace, name, "-c", "learner", "--", "sh", "-c", self.args.grade_cmd,
+                "exec",
+                "-n",
+                self.args.namespace,
+                name,
+                "-c",
+                "learner",
+                "--",
+                "sh",
+                "-c",
+                self.args.grade_cmd,
                 timeout=GRADING_MAX_S * 4,
             )
             dt = time.monotonic() - t0
@@ -492,7 +534,14 @@ class LoadTest:
         """Image pull time from kubelet events, kept apart from Sandbox_Ready_Time (risk R4)."""
 
         try:
-            events = self.k.json("get", "events", "-n", self.args.namespace, "--field-selector", "involvedObject.kind=Pod")
+            events = self.k.json(
+                "get",
+                "events",
+                "-n",
+                self.args.namespace,
+                "--field-selector",
+                "involvedObject.kind=Pod",
+            )
         except RuntimeError:
             return
         mine = {p["metadata"]["name"] for p in self.my_pods()}
@@ -503,7 +552,17 @@ class LoadTest:
                     self.pull_seconds.append(seconds)
 
     def delete_wave(self, names: list[str]) -> None:
-        self.k.run("delete", "pod", *names, "-n", self.args.namespace, "--grace-period=0", "--wait=true", "--ignore-not-found", timeout=120)
+        self.k.run(
+            "delete",
+            "pod",
+            *names,
+            "-n",
+            self.args.namespace,
+            "--grace-period=0",
+            "--wait=true",
+            "--ignore-not-found",
+            timeout=120,
+        )
         self.created.difference_update(names)
 
     # -- cleanup (24.7, 24.8)
@@ -516,8 +575,16 @@ class LoadTest:
         while time.monotonic() - t0 < CLEANUP_MAX_S + 5:
             try:
                 self.k.run(
-                    "delete", "pods", "-n", self.args.namespace, "-l", f"{LABEL}={self.run_id}",
-                    "--grace-period=0", "--wait=false", "--ignore-not-found", timeout=60,
+                    "delete",
+                    "pods",
+                    "-n",
+                    self.args.namespace,
+                    "-l",
+                    f"{LABEL}={self.run_id}",
+                    "--grace-period=0",
+                    "--wait=false",
+                    "--ignore-not-found",
+                    timeout=60,
                 )
                 remaining = len(self.my_pods())
             except (RuntimeError, subprocess.TimeoutExpired, json.JSONDecodeError):
@@ -544,7 +611,7 @@ class LoadTest:
         except Aborted as exc:
             status = "aborted"
             self.errors.append(str(exc))
-        except BaseException as exc:  # noqa: BLE001 - includes KeyboardInterrupt, always cleaned up
+        except BaseException as exc:
             status = "failed"
             self.errors.append(f"{type(exc).__name__}: {exc}")
         finally:
@@ -553,12 +620,16 @@ class LoadTest:
 
         measurements: dict[str, float | None] = {
             "sandbox_ready_samples": float(len(self.ready_seconds)),
-            "sandbox_ready_p95_seconds": nearest_rank_percentile(self.ready_seconds, 95) if self.ready_seconds else None,
+            "sandbox_ready_p95_seconds": nearest_rank_percentile(self.ready_seconds, 95)
+            if self.ready_seconds
+            else None,
             "sandbox_ready_max_seconds": max(self.ready_seconds, default=None),
             "concurrent_sessions_started": float(self.started_peak),
             "concurrent_sessions_held": float(self.held_min) if self.held_min is not None else None,
             "hold_seconds": self.hold_achieved if self.held_min is not None else None,
-            "terminal_p95_seconds": nearest_rank_percentile(self.terminal_seconds, 95) if self.terminal_seconds else None,
+            "terminal_p95_seconds": nearest_rank_percentile(self.terminal_seconds, 95)
+            if self.terminal_seconds
+            else None,
             "grading_max_seconds": max(self.grading_seconds, default=None),
             "cleanup_seconds": cleanup_s if remaining == 0 else None,
         }
@@ -566,10 +637,7 @@ class LoadTest:
             sessions=self.args.sessions, hold_s=self.args.hold, min_samples=self.args.min_samples
         )
         misses = evaluate_targets(measurements, targets)
-        if status != "completed":
-            passed = False
-        else:
-            passed = not misses
+        passed = False if status != "completed" else not misses
         return {
             "schema": "edu-it.lab-load-k8s/1",
             "run_id": self.run_id,
@@ -582,9 +650,15 @@ class LoadTest:
             "sessions_requested": self.args.sessions,
             # Req 24.9: number of Lab_Sessions that were started when 10 could not be.
             "sessions_started": self.started_peak,
-            "sandbox_ready_seconds": {**summarize(self.ready_seconds), "values": self.ready_seconds},
-            "image_pull_seconds": {**summarize(self.pull_seconds), "values": self.pull_seconds,
-                                   "note": "reported separately from sandbox_ready_seconds (risk R4)"},
+            "sandbox_ready_seconds": {
+                **summarize(self.ready_seconds),
+                "values": self.ready_seconds,
+            },
+            "image_pull_seconds": {
+                **summarize(self.pull_seconds),
+                "values": self.pull_seconds,
+                "note": "reported separately from sandbox_ready_seconds (risk R4)",
+            },
             "terminal_round_trip_seconds": summarize(self.terminal_seconds),
             "grading_seconds": {**summarize(self.grading_seconds), "values": self.grading_seconds},
             "runner": runner,
@@ -597,7 +671,9 @@ class LoadTest:
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("--context", default=os.environ.get("EDU_IT_KIND_CONTEXT", "kind-edu-it"))
     p.add_argument("--namespace", default="labs")
     p.add_argument("--image", default="busybox:1.36.1")
@@ -621,11 +697,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     probe = Kubectl(args.context, args.namespace)
     try:
-        ok = probe.run("--request-timeout=5s", "get", "--raw", "/readyz", timeout=30).returncode == 0
+        ok = (
+            probe.run("--request-timeout=5s", "get", "--raw", "/readyz", timeout=30).returncode == 0
+        )
     except (OSError, subprocess.TimeoutExpired):
         ok = False
     if not ok:
-        print(f"no reachable cluster for context {args.context}; nothing was measured", file=sys.stderr)
+        print(
+            f"no reachable cluster for context {args.context}; nothing was measured",
+            file=sys.stderr,
+        )
         return 2
 
     def on_signal(signum: int, _frame: object) -> None:
@@ -639,11 +720,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         json.dump(result, fh, indent=2)
     print(f"load test {result['status']}: passed={result['passed']} results in {args.out}")
     for miss in result["missed_targets"]:
-        print(f"MISSED {miss['target']}: measured {miss['measured']} threshold {miss['threshold']} ({miss['kind']})")
+        print(
+            f"MISSED {miss['target']}: measured {miss['measured']} "
+            f"threshold {miss['threshold']} ({miss['kind']})"
+        )
     if result["sessions_started"] < args.sessions:
         print(f"only {result['sessions_started']} of {args.sessions} Lab_Sessions were started")
     if result["cleanup"]["remaining_pods"] != 0:
-        print(f"WARNING: {result['cleanup']['remaining_pods']} pods remain (run {result['run_id']})")
+        print(
+            f"WARNING: {result['cleanup']['remaining_pods']} pods remain (run {result['run_id']})"
+        )
     return 0 if result["passed"] else 1
 
 

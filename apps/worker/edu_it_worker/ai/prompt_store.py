@@ -82,7 +82,7 @@ PROMPTS_ROOT_ENV: Final = "EDU_IT_PROMPTS_ROOT"
 
 
 def default_prompts_dir() -> Path:
-    """Return the ``prompts/`` directory: ``$EDU_IT_PROMPTS_ROOT`` or the repository's ``prompts/``."""
+    """Return the ``prompts/`` dir: ``$EDU_IT_PROMPTS_ROOT`` or the repository's ``prompts/``."""
     override = os.environ.get(PROMPTS_ROOT_ENV)
     if override:
         return Path(override)

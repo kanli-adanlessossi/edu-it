@@ -1,4 +1,4 @@
-"""Property test for the Lab_Pod hardening and placement rules (kubernetes-deployment Property 2)."""
+"""Property test for the Lab_Pod hardening and placement rules (kubernetes-deployment Prop 2)."""
 
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ def _inputs(draw: st.DrawFn):  # type: ignore[no-untyped-def]
     return spec, settings
 
 
-# Feature: kubernetes-deployment, Property 2: Pod manifest satisfies the hardening and placement rules
+# Feature: kubernetes-deployment, Property 2: Pod manifest satisfies hardening and placement rules
 # Claims: 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8
 # **Validates: Requirements 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8**
 @hsettings(max_examples=100, deadline=None)

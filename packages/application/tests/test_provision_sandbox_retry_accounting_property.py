@@ -46,13 +46,10 @@ _CONFIG = SimpleNamespace(
 _CAPACITY = (ProvisionMode.CAPACITY, ProvisionMode.CAPACITY_PARTIAL)
 # Non-terminal outcomes: capacity rejections (either kind) and ordinary failures, with at
 # most MAX_RETRIES ordinary failures so the allowance is never exhausted mid-sequence.
-_outcomes = (
-    st.lists(
-        st.sampled_from([*_CAPACITY, ProvisionMode.FAIL]),
-        max_size=25,
-    )
-    .filter(lambda ms: ms.count(ProvisionMode.FAIL) <= config.LAB_PROVISION_MAX_RETRIES)
-)
+_outcomes = st.lists(
+    st.sampled_from([*_CAPACITY, ProvisionMode.FAIL]),
+    max_size=25,
+).filter(lambda ms: ms.count(ProvisionMode.FAIL) <= config.LAB_PROVISION_MAX_RETRIES)
 
 
 @settings(max_examples=150, deadline=None)

@@ -38,9 +38,7 @@ class _ScriptedExporter:
 
 # A failure script has at most 3 entries (max_attempts) all failing or raising; a success script
 # has a success somewhere within the first 3 entries, with failures/raises before it.
-_failure_outcomes = st.lists(
-    st.sampled_from([False, "raise"]), min_size=1, max_size=3
-)
+_failure_outcomes = st.lists(st.sampled_from([False, "raise"]), min_size=1, max_size=3)
 _success_at = st.integers(min_value=1, max_value=3)
 
 
@@ -70,7 +68,9 @@ def test_batch_that_eventually_succeeds_within_max_attempts_reports_success(
     success_at: int, data: st.DataObject
 ) -> None:
     failures_before = data.draw(
-        st.lists(st.sampled_from([False, "raise"]), min_size=success_at - 1, max_size=success_at - 1)
+        st.lists(
+            st.sampled_from([False, "raise"]), min_size=success_at - 1, max_size=success_at - 1
+        )
     )
     script = [*failures_before, True]
     inner = _ScriptedExporter(script)
@@ -118,9 +118,7 @@ def test_traced_operation_result_is_unchanged_by_a_failing_exporter(
             super().__init__([mode] * 1000)
 
     failing = _AlwaysFailing()
-    provider = configure_tracing(
-        None, service_name="test", exporter=failing, set_global=False
-    )
+    provider = configure_tracing(None, service_name="test", exporter=failing, set_global=False)
     assert provider is not None
     try:
         traced = operation(provider.get_tracer("test"))

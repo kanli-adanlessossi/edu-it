@@ -34,7 +34,7 @@ def _file(path: str) -> tuple[str, bool]:
 
 # Claims: 12.3, 12.4, 12.11
 def test_forbidden_set_is_exactly_the_required_binaries() -> None:
-    assert FORBIDDEN_BINARIES == frozenset(FORBIDDEN)
+    assert frozenset(FORBIDDEN) == FORBIDDEN_BINARIES
 
 
 # Claims: 12.3, 12.4, 12.11

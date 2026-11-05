@@ -19,7 +19,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "perf"))
-import lab_load_k8s as lt  # noqa: E402
+import lab_load_k8s as lt
 
 _finite = st.floats(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False)
 _measured = st.one_of(st.none(), _finite, st.just(math.nan))
@@ -27,7 +27,11 @@ _measured = st.one_of(st.none(), _finite, st.just(math.nan))
 
 @st.composite
 def _targets(draw: st.DrawFn) -> list[lt.Target]:
-    names = draw(st.lists(st.text("abcdefghij_", min_size=1, max_size=8), min_size=0, max_size=10, unique=True))
+    names = draw(
+        st.lists(
+            st.text("abcdefghij_", min_size=1, max_size=8), min_size=0, max_size=10, unique=True
+        )
+    )
     return [lt.Target(n, draw(_finite), draw(st.sampled_from(["max", "min"]))) for n in names]
 
 
@@ -76,11 +80,19 @@ def test_property_29_misses_are_exactly_the_missed_targets(data) -> None:
     min_samples=st.integers(1, 100),
     ready_p95=st.floats(0.1, 300, allow_nan=False),
     terminal_p95=st.floats(0.01, 5, allow_nan=False),
-    values=st.lists(st.one_of(st.none(), st.floats(0, 1000, allow_nan=False)), min_size=9, max_size=9),
+    values=st.lists(
+        st.one_of(st.none(), st.floats(0, 1000, allow_nan=False)), min_size=9, max_size=9
+    ),
 )
-def test_property_29_default_targets(sessions, hold, min_samples, ready_p95, terminal_p95, values) -> None:
+def test_property_29_default_targets(
+    sessions, hold, min_samples, ready_p95, terminal_p95, values
+) -> None:
     targets = lt.default_targets(
-        sessions=sessions, hold_s=hold, min_samples=min_samples, ready_p95_s=ready_p95, terminal_p95_s=terminal_p95
+        sessions=sessions,
+        hold_s=hold,
+        min_samples=min_samples,
+        ready_p95_s=ready_p95,
+        terminal_p95_s=terminal_p95,
     )
     measurements = {t.name: v for t, v in zip(targets, values, strict=True)}
     misses = lt.evaluate_targets(measurements, targets)
@@ -93,4 +105,6 @@ def test_property_29_default_targets(sessions, hold, min_samples, ready_p95, ter
     assert lt.evaluate_targets(at_limit, targets) == []
     # Any removed measurement is a miss and fails the run.
     for t in targets:
-        assert [m.target for m in lt.evaluate_targets({**at_limit, t.name: None}, targets)] == [t.name]
+        assert [m.target for m in lt.evaluate_targets({**at_limit, t.name: None}, targets)] == [
+            t.name
+        ]

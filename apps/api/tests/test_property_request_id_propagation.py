@@ -101,9 +101,7 @@ def _handle(
     try:
         middleware = RequestLoggingMiddleware(_unused_asgi_app)
         headers = (
-            []
-            if header_value is None
-            else [(b"x-request-id", header_value.encode("latin-1"))]
+            [] if header_value is None else [(b"x-request-id", header_value.encode("latin-1"))]
         )
         response = asyncio.run(middleware.dispatch(_request(headers), route))
     finally:
