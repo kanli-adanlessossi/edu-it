@@ -544,7 +544,8 @@ jobs:
       # The harness preloads these into the node containerd stores (kind and kubectl are
       # preinstalled on GitHub-hosted runners).
       - name: Build the lab images
-        run: docker buildx bake -f lab-images/docker-bake.hcl --load
+        run: docker buildx bake --load
+        working-directory: lab-images
 
       - name: Run the kind harness
         run: uv run --frozen python tools/kind_harness.py up
