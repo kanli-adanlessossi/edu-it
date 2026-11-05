@@ -13,7 +13,7 @@ import {
   type PathRecommendation,
   type PathRecommendationApi,
 } from './path-recommendation.js';
-import { SESSION_COOKIE } from './session.js';
+import { SESSION_COOKIE } from './session-shared.js';
 
 export function createPathRecommendationApi(
   localeInput: string,

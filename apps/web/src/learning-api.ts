@@ -8,7 +8,7 @@ import { createApiClient } from './create-api-client.js';
 import type { GeneratedClient } from './generated/api-client.js';
 import { routing } from './i18n/routing.js';
 import { isLocale } from './locale.js';
-import { SESSION_COOKIE } from './session.js';
+import { SESSION_COOKIE } from './session-shared.js';
 import {
   enrollmentPageSchema,
   enrollmentSchema,

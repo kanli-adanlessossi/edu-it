@@ -6,7 +6,7 @@ import {
   SIGN_IN_PATH,
   signInRedirectPath,
 } from './dashboard-access.js';
-import { sessionStateFromResponse } from './session.js';
+import { sessionStateFromResponse } from './session-shared.js';
 
 // Targeted unit tests for the pure dashboard session-gating logic (task 24.1),
 // covering the specific session states behind Req 17.4.

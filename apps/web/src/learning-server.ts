@@ -8,7 +8,8 @@ import { resolveDashboardAccess } from './dashboard-access.js';
 import { createLearningApi } from './learning-api.js';
 import { type LearningApi } from './learning.js';
 import { type Locale } from './locale.js';
-import { SESSION_COOKIE, resolveSessionState } from './session.js';
+import { resolveSessionState } from './session.js';
+import { SESSION_COOKIE } from './session-shared.js';
 
 /** Redirect visitors without an active Session; otherwise return the API port. */
 export async function requireLearningApi(

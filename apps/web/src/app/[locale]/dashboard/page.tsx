@@ -21,7 +21,7 @@ import {
 import { isLocale } from '../../../locale.js';
 import { createPathRecommendationApi } from '../../../path-recommendation-api.js';
 import type { PathRecommendation } from '../../../path-recommendation.js';
-import { SESSION_COOKIE } from '../../../session.js';
+import { SESSION_COOKIE } from '../../../session-shared.js';
 import { pageMetadata } from '../page-metadata.js';
 import { enrollAction } from './enroll-action.js';
 
