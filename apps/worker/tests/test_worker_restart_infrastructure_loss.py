@@ -44,7 +44,7 @@ from edu_it_infrastructure.fakes.learning_repositories import (
 )
 from edu_it_infrastructure.fakes.sandbox_provider import ProvisionMode
 from edu_it_infrastructure.fakes.task_queue import In_Memory_TaskQueue
-from edu_it_worker.labs import build_lab_worker
+from edu_it_worker.labs import LabWorker, build_lab_worker
 
 T0 = datetime(2024, 1, 1, tzinfo=UTC)
 LAB = LabDefinition(
@@ -218,7 +218,9 @@ def test_failed_attempt_is_retried_by_the_next_delivery_after_the_min_interval()
 # --- grading run interrupted by a restart (Req 20.6) --------------------------------
 
 
-def _worker(env: _Env, mastery: In_Memory_MasteryRepository | None = None, **kw: object):  # type: ignore[no-untyped-def]
+def _worker(
+    env: _Env, mastery: In_Memory_MasteryRepository | None = None, **kw: object
+) -> LabWorker:
     return build_lab_worker(
         queue=In_Memory_TaskQueue(),
         sessions=env.sessions,
@@ -228,7 +230,7 @@ def _worker(env: _Env, mastery: In_Memory_MasteryRepository | None = None, **kw:
         clock=env.clock,
         bundle_root=Path("."),
         sandbox=env.sandbox,
-        **kw,
+        **kw,  # type: ignore[arg-type]
     )
 
 

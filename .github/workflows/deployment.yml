@@ -206,6 +206,26 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
+      # The web image only: materialise the targeted major version's OpenAPI document into
+      # the build context. The Next.js builder stage has no uv, so build-client.mjs cannot
+      # export the document itself and falls back to apps/web/openapi/v{major}.json, which is
+      # a gitignored build artifact absent from a fresh checkout. Exporting it here (the same
+      # fake-backed export ci.yml and the kind job use) keeps the generated client in sync
+      # with apps/api and lets the image build succeed. The other images do not read it.
+      - name: Set up uv (pinned Python toolchain)
+        if: ${{ matrix.image.name == 'web' }}
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Install Python workspace (frozen to uv.lock)
+        if: ${{ matrix.image.name == 'web' }}
+        run: uv sync --frozen --all-packages
+
+      - name: Export the OpenAPI document for the web build context
+        if: ${{ matrix.image.name == 'web' }}
+        run: uv run --frozen python -m edu_it_api.openapi_export --major 1 --out apps/web/openapi/v1.json
+
       - name: Name the archive
         id: archive
         shell: bash
@@ -528,6 +548,13 @@ jobs:
 
       - name: Run the kind harness
         run: uv run --frozen python tools/kind_harness.py up
+
+      # The web image build below has no uv in its Next.js builder stage, so it cannot export
+      # the OpenAPI document itself; build-client.mjs falls back to apps/web/openapi/v{major}.json,
+      # a gitignored build artifact absent from a fresh checkout. Export it here (uv is already
+      # set up for this job) so the web `docker build` finds it in the context.
+      - name: Export the OpenAPI document for the web build context
+        run: uv run --frozen python -m edu_it_api.openapi_export --major 1 --out apps/web/openapi/v1.json
 
       # Build into the harness registry and record the local-registry digests (Req 15.8).
       - name: Build and push web, api, worker and migrations to the local registry

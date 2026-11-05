@@ -5,13 +5,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import cast
+
 from edu_it_infrastructure.telemetry.tracing import BoundedSpanExporter
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from opentelemetry.sdk.trace.export import SpanExportResult
+from opentelemetry.sdk.trace import ReadableSpan
+from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
 
-class _ScriptedExporter:
+class _ScriptedExporter(SpanExporter):
     """An inner exporter whose ``export`` outcome for each call is fixed by a script.
 
     Each entry is ``True`` (succeed), ``False`` (return ``FAILURE``) or ``"raise"`` (raise an
@@ -22,7 +26,7 @@ class _ScriptedExporter:
         self._outcomes = list(outcomes)
         self.calls = 0
 
-    def export(self, spans):
+    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         self.calls += 1
         outcome = self._outcomes[self.calls - 1]
         if outcome == "raise":
@@ -34,6 +38,11 @@ class _ScriptedExporter:
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:  # pragma: no cover
         return True
+
+
+def _spans(count: int) -> Sequence[ReadableSpan]:
+    """A sequence of ``count`` placeholder spans (only ever counted, never inspected)."""
+    return [cast("ReadableSpan", object()) for _ in range(count)]
 
 
 # A failure script has at most 3 entries (max_attempts) all failing or raising; a success script
@@ -56,7 +65,7 @@ def test_failing_batch_is_tried_at_most_max_attempts_then_dropped(
     inner = _ScriptedExporter(padded)
     exporter = BoundedSpanExporter(inner, max_attempts=3, backoff_seconds=0.0, sleep=lambda _: None)
 
-    result = exporter.export(spans=[])
+    result = exporter.export(_spans(0))
 
     assert result is SpanExportResult.FAILURE
     assert inner.calls <= 3
@@ -72,11 +81,11 @@ def test_batch_that_eventually_succeeds_within_max_attempts_reports_success(
             st.sampled_from([False, "raise"]), min_size=success_at - 1, max_size=success_at - 1
         )
     )
-    script = [*failures_before, True]
+    script: list[bool | str] = [*cast("list[bool | str]", failures_before), True]
     inner = _ScriptedExporter(script)
     exporter = BoundedSpanExporter(inner, max_attempts=3, backoff_seconds=0.0, sleep=lambda _: None)
 
-    result = exporter.export(spans=[])
+    result = exporter.export(_spans(0))
 
     assert result is SpanExportResult.SUCCESS
     assert inner.calls == success_at
@@ -84,12 +93,12 @@ def test_batch_that_eventually_succeeds_within_max_attempts_reports_success(
 
 
 @settings(max_examples=50, deadline=None)
-@given(spans=st.lists(st.just(object()), max_size=5))
-def test_export_never_raises_even_when_inner_always_raises(spans: list[object]) -> None:
+@given(count=st.integers(min_value=0, max_value=5))
+def test_export_never_raises_even_when_inner_always_raises(count: int) -> None:
     inner = _ScriptedExporter(["raise", "raise", "raise"])
     exporter = BoundedSpanExporter(inner, max_attempts=3, backoff_seconds=0.0, sleep=lambda _: None)
 
-    result = exporter.export(spans=spans)  # must not raise
+    result = exporter.export(_spans(count))  # must not raise
 
     assert result is SpanExportResult.FAILURE
     assert inner.calls == 3
@@ -105,8 +114,9 @@ def test_traced_operation_result_is_unchanged_by_a_failing_exporter(
     values: list[int], mode: bool | str
 ) -> None:
     from edu_it_infrastructure.telemetry.tracing import configure_tracing, shutdown_tracing
+    from opentelemetry.trace import Tracer
 
-    def operation(tracer) -> int:
+    def operation(tracer: Tracer) -> int:
         total = 0
         for value in values:
             with tracer.start_as_current_span("op"):

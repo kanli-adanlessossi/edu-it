@@ -36,8 +36,8 @@ _other_status = st.one_of(
 )
 
 
-def _make(name: str, text: str, status: int | None) -> BaseException:
-    exc = type(name, (Exception,), {})(text)
+def _make(name: str, text: str, status: int | None) -> Exception:
+    exc: Exception = type(name, (Exception,), {})(text)
     if status is not None:
         exc.status = status  # type: ignore[attr-defined]
     return exc

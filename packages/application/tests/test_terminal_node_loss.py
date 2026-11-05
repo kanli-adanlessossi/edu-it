@@ -153,7 +153,7 @@ def test_interrupted_message_precedes_reconnect_indication_and_close() -> None:
 
 # Claims: 19.1
 def test_interrupted_message_is_translated_in_both_locales_without_infrastructure_detail() -> None:
-    from edu_it_api.errors.labs import LAB_MESSAGES  # type: ignore[import-not-found]
+    from edu_it_api.errors.labs import LAB_MESSAGES
 
     problem = LAB_MESSAGES["labs.session_interrupted"]
     for locale in ("fr", "en"):

@@ -63,9 +63,8 @@ def test_ended_by_infrastructure_fits_the_status_column(tmp_path: Path) -> None:
         column = next(
             c for c in inspect(engine).get_columns("lab_session") if c["name"] == "status"
         )
-        assert getattr(column["type"], "length", None) is None or column["type"].length >= len(
-            "ended-by-infrastructure"
-        )
+        length = getattr(column["type"], "length", None)
+        assert length is None or length >= len("ended-by-infrastructure")
         assert not inspect(engine).get_check_constraints("lab_session")
     finally:
         engine.dispose()

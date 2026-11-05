@@ -160,6 +160,7 @@ def test_property_32_failed_migration_leaves_schema_unchanged(data: st.DataObjec
         for source in _VERSIONS.glob("2024*.py"):
             shutil.copy2(source, versions / source.name)
         real_head = Migration_Runner(url, version_locations=versions).head()
+        assert real_head is not None
         (versions / "99990101_9999_prop32_failing.py").write_text(
             _SOURCE.format(revision=_FAILING_REVISION, head=real_head, statements=statements),
             encoding="utf-8",

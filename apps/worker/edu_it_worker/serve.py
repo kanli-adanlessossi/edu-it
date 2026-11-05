@@ -93,6 +93,7 @@ if TYPE_CHECKING:
 __all__ = [
     "ServedWorkers",
     "WorkerTelemetry",
+    "build_lab_worker",
     "build_served_worker",
     "main",
     "start_telemetry",

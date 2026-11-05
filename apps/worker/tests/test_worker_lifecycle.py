@@ -23,7 +23,7 @@ from edu_it_infrastructure.fakes.lab_repositories import (
 )
 from edu_it_infrastructure.fakes.task_queue import In_Memory_TaskQueue
 from edu_it_worker import serve
-from edu_it_worker.labs import build_lab_worker
+from edu_it_worker.labs import LabWorker, build_lab_worker
 from edu_it_worker.lifecycle import (
     REQUIRED_SECRET_KEYS,
     ShutdownCoordinator,
@@ -230,7 +230,11 @@ def _session(sid: str, status: SessionStatus, sandbox_ref: str | None = None) ->
     )
 
 
-def _build(sessions, runs, **kw):  # type: ignore[no-untyped-def]
+def _build(
+    sessions: In_Memory_LabSessionRepository,
+    runs: In_Memory_GradingRunRepository,
+    **kw: object,
+) -> tuple[LabWorker, In_Memory_TaskQueue]:
     clock = Test_Clock(T0)
     queue = In_Memory_TaskQueue()
     worker = build_lab_worker(
@@ -242,7 +246,7 @@ def _build(sessions, runs, **kw):  # type: ignore[no-untyped-def]
         clock=clock,
         bundle_root=Path("."),
         sandbox=Fake_SandboxProvider(clock),
-        **kw,
+        **kw,  # type: ignore[arg-type]
     )
     return worker, queue
 

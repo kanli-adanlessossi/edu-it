@@ -222,7 +222,7 @@ def test_event_handling_survives_a_failing_destroy() -> None:
     def boom(_handle: SandboxHandle) -> None:
         raise RuntimeError("api down")
 
-    env.sandbox.destroy = boom  # type: ignore[method-assign]
+    env.sandbox.destroy = boom  # type: ignore[method-assign,assignment]
     _watch_job(env).handle(LabPodEvent(handle, PodLossKind.EVICTED))
     assert env.get().status is SessionStatus.ENDED_BY_INFRASTRUCTURE
     assert env.metrics.deletions == []  # not counted; the reaper retries

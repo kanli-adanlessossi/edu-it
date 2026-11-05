@@ -14,7 +14,7 @@ import threading
 from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 import uvicorn
@@ -88,6 +88,11 @@ class FakeSocket:
 
     async def close(self, code: int, reason: str = "") -> None:
         self.closes.append((code, reason))
+
+
+def _ep(route: object) -> Callable[[], Any]:
+    """Return a route's endpoint (Starlette `Route`; typed as `BaseRoute`)."""
+    return cast("Callable[[], Any]", cast(Any, route).endpoint)
 
 
 def _connection(session_id: str, socket: FakeSocket) -> _Connection:
@@ -185,7 +190,7 @@ def test_readiness_is_503_before_the_prestop_delay_and_sockets_stay_open() -> No
         assert sock.sent == [] and sock.closes == []
 
         router = build_health_router(lambda: [], is_draining=lambda: coordinator.draining)
-        ready = next(r.endpoint for r in router.routes if getattr(r, "path", "") == "/ready")
+        ready = next(_ep(r) for r in router.routes if getattr(r, "path", "") == "/ready")
         response = ready()
         assert response.status_code == 503
 
@@ -390,8 +395,8 @@ def test_readiness_is_not_ready_while_draining_even_if_dependencies_are_reachabl
     reachable = [DependencyProbe(name="postgresql", is_reachable=lambda: True)]
     draining = {"value": False}
     router = build_health_router(lambda: reachable, is_draining=lambda: draining["value"])
-    ready = next(r.endpoint for r in router.routes if getattr(r, "path", "") == "/ready")
-    live = next(r.endpoint for r in router.routes if getattr(r, "path", "") == "/health")
+    ready = next(_ep(r) for r in router.routes if getattr(r, "path", "") == "/ready")
+    live = next(_ep(r) for r in router.routes if getattr(r, "path", "") == "/health")
 
     assert ready().status_code == 200
     draining["value"] = True
@@ -483,7 +488,7 @@ def test_property_16_drain_closes_or_force_closes_every_socket(
             sleep=vt.sleep,
         )
         router = build_health_router(lambda: [], is_draining=lambda: coordinator.draining)
-        ready = next(r.endpoint for r in router.routes if getattr(r, "path", "") == "/ready")
+        ready = next(_ep(r) for r in router.routes if getattr(r, "path", "") == "/ready")
 
         task = asyncio.ensure_future(coordinator.start_drain())
         await vt.settle()

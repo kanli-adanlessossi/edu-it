@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Any, Literal, cast
 
 from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
 from edu_it_infrastructure.sandbox.k8s_pod_spec import K8sSettings, Toleration, build_lab_pod
@@ -24,7 +25,9 @@ class _Lab:
 
 
 _session_ids = st.text(
-    alphabet=st.characters(blacklist_categories=("Cs",)), min_size=1, max_size=64
+    alphabet=st.characters(blacklist_categories=cast('list[Literal["Cs"]]', ["Cs"])),
+    min_size=1,
+    max_size=64,
 )
 _label_text = st.text(alphabet="abcdefghij-", min_size=1, max_size=12)
 
@@ -56,7 +59,7 @@ def _k8s_settings(draw: st.DrawFn) -> K8sSettings:
     )
 
 
-def _pod(session_id: str, settings: K8sSettings) -> dict:
+def _pod(session_id: str, settings: K8sSettings) -> dict[str, Any]:
     return build_lab_pod(build_sandbox_spec(_Lab(), session_id), settings)
 
 

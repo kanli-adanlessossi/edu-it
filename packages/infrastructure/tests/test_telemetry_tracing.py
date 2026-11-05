@@ -280,8 +280,8 @@ def test_queue_is_bounded_by_the_domain_config() -> None:
     )
     assert provider is not None
     try:
-        processor = provider._active_span_processor._span_processors[0]  # type: ignore[attr-defined]
-        batch = processor._batch_processor
+        processor = provider._active_span_processor._span_processors[0]
+        batch = processor._batch_processor  # type: ignore[attr-defined]
         assert batch._max_queue_size == config.TRACE_QUEUE_MAX_SPANS
         assert batch._max_export_batch_size == config.TRACE_EXPORT_BATCH_MAX_SPANS
         assert batch._queue.maxlen == config.TRACE_QUEUE_MAX_SPANS

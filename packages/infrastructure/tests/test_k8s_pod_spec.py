@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from typing import Any
 
 import pytest
 from edu_it_domain import config as cfg
@@ -41,7 +42,7 @@ def _settings(**over: object) -> K8sSettings:
     return K8sSettings(**base)  # type: ignore[arg-type]
 
 
-def _pod(session: str = "sess-1", **over: object) -> dict:
+def _pod(session: str = "sess-1", **over: object) -> dict[str, Any]:
     return build_lab_pod(build_sandbox_spec(_Lab(), session), _settings(**over))
 
 

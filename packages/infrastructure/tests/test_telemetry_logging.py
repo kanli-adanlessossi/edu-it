@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+from typing import cast
 
 from edu_it_infrastructure.telemetry import (
     REDACTED,
@@ -37,7 +38,7 @@ def _emit(record: logging.LogRecord) -> dict[str, object]:
     RedactionFilter().filter(record)
     line = JsonLogFormatter().format(record)
     assert "\n" not in line
-    return json.loads(line)
+    return cast("dict[str, object]", json.loads(line))
 
 
 def test_record_is_single_line_json_with_core_fields() -> None:

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -57,7 +57,7 @@ class _Pods:
     stop_works: bool = True
     listings: list[tuple[str, list[str]]] = field(default_factory=list)
 
-    def handle(self, _sb: object, command: list[str], as_user: str) -> ExecResult | None:
+    def handle(self, _sb: object, command: Sequence[str], as_user: str) -> ExecResult | None:
         container = _CONTAINER[as_user]
         command = list(command)
         if command == _STOP:

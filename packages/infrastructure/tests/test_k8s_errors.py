@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 from edu_it_domain.ports.sandbox import (
     ProviderUnavailable,
@@ -123,8 +125,10 @@ def test_classifier_on_real_api_server_messages(
 
 # Claims: 2.11, 2.12
 def test_real_messages_do_not_cross_classify() -> None:
-    rows = [p.values for p in _REAL_API_MESSAGES]
-    kinds = [classify_create_rejection(s, r, m) for s, r, m, _ in rows]
+    kinds = [
+        classify_create_rejection(cast("int", row[0]), cast("str", row[1]), cast("str", row[2]))
+        for row in (p.values for p in _REAL_API_MESSAGES)
+    ]
     assert len(set(kinds)) == len(kinds)
 
 
