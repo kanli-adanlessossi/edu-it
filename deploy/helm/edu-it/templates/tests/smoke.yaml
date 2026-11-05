@@ -40,7 +40,7 @@ spec:
 
           TARGETS = {
               "api": {{ printf "http://%s:%d/ready" $apiHost (int .Values.api.port) | quote }},
-              "worker": {{ printf "http://%s:8001/ready" $workerHost | quote }},
+              "worker": {{ printf "http://%s:%d/ready" $workerHost (int .Values.worker.adminPort) | quote }},
           }
           DEADLINE_S = 120
 

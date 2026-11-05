@@ -1,0 +1,104 @@
+{{- /*
+Test-hook-gated NetworkPolicies for the Helm test smoke pod (tests/smoke.yaml).
+The platform-default-deny policy (networkpolicy-platform.yaml, podSelector {}, Ingress+Egress)
+denies all traffic in both directions, and ingress/egress are evaluated independently, so the
+smoke-test pod needs: egress to the Api (api.port), the Worker health surface (worker.adminPort)
+and cluster DNS; plus ingress admitting the smoke-test pod on the Api and Worker health ports.
+
+These policies carry the same `helm.sh/hook: test` /
+`helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded` annotations as the smoke pod, so
+they are created and torn down WITH `helm test` and never ship to a normal install/upgrade. The
+production platform NetworkPolicy surface (networkpolicy-platform.yaml) is unchanged.
+
+A NetworkPolicy's spec.podSelector selects a single pod set, so this is three policies: one egress
+policy selecting the smoke-test pod, one ingress policy selecting the Api, one ingress policy
+selecting the Worker.
+*/ -}}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- $apiPort := int .Values.api.port }}
+{{- $workerHealthPort := int .Values.worker.adminPort }}
+{{- $smoke := dict "root" . "component" "smoke-test" }}
+{{- $api := dict "root" . "component" "api" }}
+{{- $worker := dict "root" . "component" "worker" }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "smoke-test-egress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "smoke-test-egress") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $smoke | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" $api | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ $apiPort }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" $worker | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ $workerHealthPort }}
+    {{- include "edu-it.dnsEgressRule" . | nindent 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "smoke-test-api-ingress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "smoke-test-api-ingress") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $api | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" $smoke | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ $apiPort }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "smoke-test-worker-ingress") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "smoke-test-worker-ingress") | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $worker | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" $smoke | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ $workerHealthPort }}
