@@ -312,6 +312,15 @@ def release(request: pytest.FixtureRequest, kind_context: str) -> Iterator[_Rele
          "-n", PLATFORM_NAMESPACE, "--wait"],
         capture_output=True, timeout=300, check=False,
     )
+    # The journeys' Lab_Pods outlive the release: the uninstall removes the Worker whose reaper
+    # would end them, and they sit on the lab node pool. Left there (about 1.6 CPU each) they
+    # exhaust the small CI lab node and the next suite's Lab_Pods stay Pending
+    # ("Insufficient cpu"). Delete them and wait, so the lab node is free for the next suite.
+    subprocess.run(
+        ["kubectl", "--context", kind_context, "delete", "pods", "-n", LABS_NAMESPACE,
+         "-l", "edu-it.managed=1", "--ignore-not-found", "--wait=true", "--timeout=120s"],
+        capture_output=True, timeout=180, check=False,
+    )
     subprocess.run(
         ["kubectl", "--context", kind_context, "delete", "namespace", PLATFORM_NAMESPACE,
          "--ignore-not-found", "--wait=false"],
