@@ -457,7 +457,7 @@ Allowed kinds: `Namespace`, `PriorityClass`, `StatefulSet` and `PersistentVolume
 | Subject | Where | Rules |
 |---------|-------|-------|
 | Worker ServiceAccount | One `Role` and one `RoleBinding` in `labs` | `pods`: `create`, `get`, `list`, `watch`, `delete`. `pods/exec`: `create`, `get`. No wildcard, no `resourceNames`. |
-| Api ServiceAccount | One `Role` and one `RoleBinding` in `labs` | `pods`: `get`. `pods/exec`: `create`. No pod `create`, `update`, `patch`, `delete` or `deletecollection`. |
+| Api ServiceAccount | One `Role` and one `RoleBinding` in `labs` | `pods`: `get`. `pods/exec`: `create`, `get` (the WebSocket exec is a GET upgrade, authorized as `get`). No pod `create`, `update`, `patch`, `delete` or `deletecollection`. |
 | Migration_Job ServiceAccount | none | No Kubernetes API access. |
 | cni-check ServiceAccount | One `Role` in `platform` | `pods` and `networkpolicies`: `create`, `get`, `delete`. |
 

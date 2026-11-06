@@ -37,7 +37,7 @@ from edu_it_infrastructure.fakes import (
 _STOP = ["/bin/kill", "-s", "STOP", "-1"]
 _CONT = ["/bin/kill", "-s", "CONT", "-1"]
 _CONTAINER = {"learner": "learner", "grader": "grader", "root": "owner"}
-_UID = {"learner": "10000", "grader": "10001", "owner": "10002"}
+_UID = {"learner": "learner", "grader": "grader", "owner": "1002"}
 _SELF_PID = 4242
 
 

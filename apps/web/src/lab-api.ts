@@ -5,7 +5,7 @@
 // epoch milliseconds together with a server clock offset taken from `server_now`
 // (see lab-state.ts), so the view never trusts the client clock.
 
-import { apiBaseUrl, createApiClient } from './create-api-client.js';
+import { createApiClient, publicApiBaseUrl } from './create-api-client.js';
 import type { GeneratedClient } from './generated/api-client.js';
 import { routing } from './i18n/routing.js';
 import { clockOffsetMs, type CheckResultView, type RunStatus } from './lab-state.js';
@@ -54,9 +54,9 @@ export class LabApiError extends Error {
 
 type Json = Record<string, unknown>;
 
-/** Base URL of the API, also used to derive the terminal WebSocket URL. */
+/** Browser-facing base URL of the API, used to derive the terminal WebSocket URL. */
 export function labApiBaseUrl(): string {
-  return apiBaseUrl();
+  return publicApiBaseUrl();
 }
 
 function resolveLocale(locale: string): Locale {

@@ -1,10 +1,14 @@
 """E2E test on kind (kubernetes-deployment task 14.3, Req 16.1, 16.2, 8.8, 8.9).
 
-Installs the Chart with ``values-dev.yaml`` on an *empty* cluster in one ``helm install`` (no
-``--no-hooks`` bootstrap, unlike the 6.14 smoke test), which proves the hook order of task 12.3:
-the Migration_Job ServiceAccount, database Secret and ConfigMap are weight ``-10`` hooks that
-exist before the weight ``0`` Job runs. It then waits up to 600 s after the install command
-completes for every Platform workload to be Ready. If they are not, the test fails, names the
+Installs the Chart with ``values-dev.yaml`` on an *empty* cluster (only the two namespaces) with
+the two-phase first-install bootstrap of ADR 0010 ("Known gap (first install on kind)"), as the
+6.14 smoke test does: Helm runs pre-install hooks before the release's normal resources, so a
+single ``helm install`` cannot migrate the bundled dev PostgreSQL. Phase 1 is
+``helm install --no-hooks`` and waits for the dev datastores; phase 2 is a ``helm upgrade`` whose
+pre-upgrade hooks prove the hook order of task 12.3: the PriorityClass, Migration_Job
+ServiceAccount, database Secret and ConfigMap are weight ``-10`` hooks that exist before the
+weight ``0`` Job runs. It then waits up to 600 s after the bootstrap completes for every Platform
+workload to be Ready. If they are not, the test fails, names the
 workloads that are not Ready and leaves the cluster and the release in place (Req 16.2). When they
 are Ready it runs the Phase 3 end-to-end flow (the real-stack Playwright journeys of
 ``apps/web/e2e/real``) against the ingress, and finally upgrades once and checks that the hook
@@ -42,6 +46,7 @@ PLATFORM_NAMESPACE = "platform"
 READY_WAIT_SECONDS = 600
 INGRESS_HOST = "edu-it.localtest.me"
 INGRESS_LOCAL_PORT = 18443
+PUBLIC_WEB_URL = f"https://{INGRESS_HOST}:{INGRESS_LOCAL_PORT}"
 DIGEST_ENV = {
     "web": "EDU_IT_KIND_DIGEST_WEB",
     "api": "EDU_IT_KIND_DIGEST_API",
@@ -135,6 +140,9 @@ def _helm_args(context: str, digests: Mapping[str, str], cidr: str) -> list[str]
         "-f", str(CHART / "values-dev.yaml"),
         "--set", "namespaces.manage=operator-managed",
         "--set", f"networkPolicy.kubernetesApi.cidrs={{{cidr}}}",
+        # The browser reaches the ingress through the port-forward below, so email links and
+        # the Api's CORS / terminal Origin allowlist must use that origin, not https://<host>.
+        "--set", f"ingress.publicBaseUrl={PUBLIC_WEB_URL}",
     ]
     for name, digest in digests.items():
         args += ["--set", f"images.{name}.digest={digest}"]
@@ -168,6 +176,28 @@ def _hook_uids(context: str) -> dict[str, str]:
         )
         uids[f"{kind}/{name}"] = out.strip()
     return uids
+
+
+#: The content sync of tools/e2e_stack.py, run in the Worker image: it ships the authored content
+#: (/app/content, EDU_IT_CONTENT_ROOT) and lab-images/, and its DATABASE_URL comes from the
+#: database Secret. Idempotent (upsert keyed by stable id), so a rerun changes nothing.
+CONTENT_SYNC = (
+    "import os, sys; from edu_it_content.cli import main; "
+    "sys.exit(main(['sync', '--database-url', os.environ['DATABASE_URL']]))"
+)
+
+
+def _seed_content(context: str) -> str:
+    """Sync the seed tracks, lessons and labs into the release's PostgreSQL; return the summary.
+
+    The real journeys enroll in a track and start Seed_Labs, which need the content rows;
+    without them enrollment answers 404 and starting a lab fails on the unknown lab.
+    """
+
+    return _kubectl(
+        context, "exec", "-n", PLATFORM_NAMESPACE, f"deployment/{RELEASE}-worker", "-c", "worker",
+        "--", "/opt/venv/bin/python", "-c", CONTENT_SYNC,
+    ).strip()
 
 
 def _port_open(port: int) -> bool:
@@ -206,6 +236,38 @@ def _wait_namespace_not_terminating(context: str, namespace: str, timeout_s: int
     pytest.fail(f"namespace {namespace} still Terminating after {timeout_s} s")
 
 
+def _bootstrap_install(context: str, args: list[str]) -> str | None:
+    """First install in two phases (ADR 0010, known gap); return the failure text, or None.
+
+    Helm runs pre-install hooks before the release's normal resources, so on a single
+    ``helm install`` the weight-0 Migration_Job finds no dev PostgreSQL. Phase 1 installs
+    without hooks so the dev datastores exist and become ready; phase 2 is a ``helm upgrade``
+    whose pre-upgrade hooks (weight -10 bootstrap resources, then the Job) run against them.
+    """
+
+    phases: list[tuple[str, list[str], int]] = [
+        ("helm install --no-hooks", ["helm", "install", RELEASE, *args, "--no-hooks"], 300),
+        *[
+            (
+                f"rollout of {store}",
+                ["kubectl", "--context", context, "rollout", "status",
+                 f"statefulset/{RELEASE}-{store}", "-n", PLATFORM_NAMESPACE, "--timeout=300s"],
+                360,
+            )
+            for store in ("dev-postgres", "dev-redis")
+        ],
+        ("helm upgrade (hooks)", ["helm", "upgrade", RELEASE, *args], READY_WAIT_SECONDS + 300),
+    ]
+    for label, argv, timeout in phases:
+        done = subprocess.run(argv, capture_output=True, text=True, timeout=timeout, check=False)
+        if done.returncode != 0:
+            return (
+                f"{label} failed ({done.returncode}):\n"
+                f"{done.stdout[-1500:]}\n{done.stderr[-3000:]}"
+            )
+    return None
+
+
 @pytest.fixture(scope="module")
 def release(request: pytest.FixtureRequest, kind_context: str) -> Iterator[_Release]:
     if shutil.which("helm") is None:
@@ -221,13 +283,7 @@ def release(request: pytest.FixtureRequest, kind_context: str) -> Iterator[_Rele
              "metadata": {"name": namespace, "labels": PSA_LABELS}}
         )
         _kubectl(kind_context, "apply", "-f", "-", input_text=manifest)
-    # One install, hooks enabled: the hook order of task 12.3 must make this work on its own.
-    done = subprocess.run(
-        ["helm", "install", RELEASE, *args], capture_output=True, text=True,
-        timeout=READY_WAIT_SECONDS + 300, check=False,
-    )
-    if done.returncode != 0:
-        rel.install_failure = f"helm install failed ({done.returncode}):\n{done.stderr[-3000:]}"
+    rel.install_failure = _bootstrap_install(kind_context, args)
     yield rel
     if request.session.testsfailed:
         # Req 16.2: leave the Kind_Cluster and the release in place for inspection.
@@ -273,6 +329,8 @@ def test_phase3_end_to_end_flow_passes(release: _Release) -> None:
     npx = shutil.which("npx")
     if npx is None:
         pytest.skip("npx is not on PATH")
+    # The journeys need the seed content in the database (playwright.e2e.config.ts prerequisites).
+    assert "content synced" in _seed_content(release.context)
     work = WEB_APP / KIND_PLAYWRIGHT_CONFIG
     mail_log = REPO_ROOT / ".e2e" / "kind-api-mail.log"
     mail_log.parent.mkdir(exist_ok=True)
@@ -304,7 +362,7 @@ def test_phase3_end_to_end_flow_passes(release: _Release) -> None:
                 pytest.fail("ingress port-forward did not open")
             env = {
                 **os.environ,
-                "E2E_WEB_URL": f"https://{INGRESS_HOST}:{INGRESS_LOCAL_PORT}",
+                "E2E_WEB_URL": PUBLIC_WEB_URL,
                 "E2E_MAIL_LOG": str(mail_log),
             }
             done = subprocess.run(
@@ -333,7 +391,8 @@ def test_upgrade_replaces_hook_resources_cleanly(release: _Release) -> None:
         _run(["helm", "status", RELEASE, "--kube-context", release.context,
               "-n", PLATFORM_NAMESPACE, "-o", "json"], timeout=60)
     )
-    assert status["info"]["status"] == "deployed" and status["version"] == 2
+    # Revision 1 is the --no-hooks install, 2 the bootstrap upgrade, 3 this upgrade.
+    assert status["info"]["status"] == "deployed" and status["version"] == 3
     job = json.loads(
         _kubectl(release.context, "get", "job", f"{RELEASE}-migration",
                  "-n", PLATFORM_NAMESPACE, "-o", "json")

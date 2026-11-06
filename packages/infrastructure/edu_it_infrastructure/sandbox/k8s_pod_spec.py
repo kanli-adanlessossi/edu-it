@@ -4,7 +4,8 @@ No Kubernetes client import and no I/O, so the hardening and placement rules can
 tested without a cluster (kubernetes-deployment Req 1.4, 1.6, 2.2-2.8, 19.1).
 
 The layout follows ADR 0009 ("Spike result"): layout B. Three containers with distinct non-root
-UIDs (``learner`` 10000, ``grader`` 10001, ``owner`` 10002) and ``shareProcessNamespace: false``.
+UIDs (``learner`` 1000 and ``grader`` 1001, the Lab_Image users, and ``owner`` 1002) and
+``shareProcessNamespace: false``.
 If the recorded layout changes, this module, the ``as_user`` table and Property 2 change together.
 """
 
@@ -19,6 +20,9 @@ from typing import Any, Final, Literal
 from edu_it_domain import config as _cfg
 from edu_it_domain.labs.models import SandboxSpec, TmpfsMount
 from edu_it_domain.ports.sandbox import SandboxError
+
+# Pure (no Docker SDK): the catalog-name convention is the same for every provider.
+from edu_it_infrastructure.sandbox.docker_spec import DEFAULT_LAB_IMAGE_TAG, resolve_image
 
 __all__ = [
     "ANNOTATION_PID_LIMIT",
@@ -45,9 +49,15 @@ CONTAINER_LEARNER: Final[str] = "learner"
 CONTAINER_GRADER: Final[str] = "grader"
 CONTAINER_OWNER: Final[str] = "owner"
 
-LEARNER_UID: Final[int] = 10000
-GRADER_UID: Final[int] = 10001
-OWNER_UID: Final[int] = 10002
+#: The Lab_Image users (lab-images/linux-base): ``learner`` 1000:1000 and ``grader`` 1001:1001,
+#: the identities lab content is written against. Running as them gives the containers the
+#: image's names and its ``/etc/group`` memberships (``learner`` in ``devs``), as in Docker. The
+#: owner has no image entry: it only needs a UID that is neither of them nor root.
+LEARNER_UID: Final[int] = 1000
+LEARNER_GID: Final[int] = 1000
+GRADER_UID: Final[int] = 1001
+GRADER_GID: Final[int] = 1001
+OWNER_UID: Final[int] = 1002
 
 #: ``as_user`` of ``SandboxProvider.exec`` to the container that runs the command (layout B).
 #: ``root`` is the "owner of the grading bundle" identity of ``GradeRun``, mapped to a non-root UID.
@@ -125,6 +135,8 @@ class K8sSettings:
     grader_gid: int
     #: Optional PriorityClass of Lab_Pods (task 6.9); ``None`` leaves the cluster default.
     priority_class_name: str | None = None
+    #: Tag a catalog image name resolves to (``LAB_IMAGE_TAG``), as in the Docker provider.
+    lab_image_tag: str = DEFAULT_LAB_IMAGE_TAG
 
 
 def pod_name(session_stable_id: str) -> str:
@@ -145,9 +157,12 @@ def container_for_user(as_user: str) -> str:
         ) from None
 
 
-def _security_context(uid: int, read_only_root: bool) -> dict[str, Any]:
+def _security_context(uid: int, read_only_root: bool, gid: int | None = None) -> dict[str, Any]:
+    context: dict[str, Any] = {"runAsUser": uid}
+    if gid is not None:
+        context["runAsGroup"] = gid
     return {
-        "runAsUser": uid,
+        **context,
         "runAsNonRoot": True,
         "allowPrivilegeEscalation": False,
         "readOnlyRootFilesystem": read_only_root,
@@ -237,6 +252,9 @@ def build_lab_pod(spec: SandboxSpec, settings: K8sSettings) -> dict[str, Any]:
     """Build the Lab_Pod manifest for ``spec`` (layout B of ADR 0009)."""
 
     _validate(spec, settings)
+    # Content names a Lab_Image by its lab-images/ directory (``linux-base``); a bare name would
+    # be pulled as docker.io/library/<name>. Full references and digests pass through unchanged.
+    image = resolve_image(spec.image, settings.lab_image_tag)
     helper_cpu = f"{_cfg.K8S_HELPER_CPU_MILLI}m"
     helper_memory = str(_cfg.K8S_HELPER_MEMORY_BYTES)
     grader_cpu = f"{_cfg.K8S_GRADER_CPU_MILLI}m"
@@ -245,9 +263,9 @@ def build_lab_pod(spec: SandboxSpec, settings: K8sSettings) -> dict[str, Any]:
     containers: list[dict[str, Any]] = [
         {
             "name": CONTAINER_LEARNER,
-            "image": spec.image,
+            "image": image,
             "command": list(_REAPING_INIT),
-            "securityContext": _security_context(LEARNER_UID, spec.read_only_root),
+            "securityContext": _security_context(LEARNER_UID, spec.read_only_root, LEARNER_GID),
             "resources": _resources(
                 str(spec.cpu_limit),
                 str(spec.memory_limit_bytes),
@@ -257,9 +275,9 @@ def build_lab_pod(spec: SandboxSpec, settings: K8sSettings) -> dict[str, Any]:
         },
         {
             "name": CONTAINER_GRADER,
-            "image": spec.image,
+            "image": image,
             "command": list(_REAPING_INIT),
-            "securityContext": _security_context(GRADER_UID, spec.read_only_root),
+            "securityContext": _security_context(GRADER_UID, spec.read_only_root, GRADER_GID),
             "resources": _resources(grader_cpu, grader_memory, None),
             "volumeMounts": [
                 _mount(_WORKSPACE, read_only=True),
@@ -268,7 +286,7 @@ def build_lab_pod(spec: SandboxSpec, settings: K8sSettings) -> dict[str, Any]:
         },
         {
             "name": CONTAINER_OWNER,
-            "image": spec.image,
+            "image": image,
             "command": list(_REAPING_INIT),
             "securityContext": _owner_context(spec.read_only_root, settings.grader_gid),
             "resources": _resources(helper_cpu, helper_memory, None),
@@ -284,7 +302,7 @@ def build_lab_pod(spec: SandboxSpec, settings: K8sSettings) -> dict[str, Any]:
     init_containers: list[dict[str, Any]] = [
         {
             "name": INIT_GRADER_DIR,
-            "image": spec.image,
+            "image": image,
             "command": ["/bin/mkdir", "-m", GRADER_DIR_MODE, f"{_GRADER}/{GRADER_SUBPATH}"],
             "securityContext": _owner_context(spec.read_only_root, settings.grader_gid),
             "resources": _resources(helper_cpu, helper_memory, None),

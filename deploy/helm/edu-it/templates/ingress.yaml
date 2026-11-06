@@ -1,6 +1,7 @@
 {{- /*
 Ingress for mode ingress-nginx (Req 9.1, 9.6, 9.8, 9.10). Task 12.5.
-One host: /fr and /en go to the web Service, /v1 (Api routes and the terminal WebSocket) goes to the Api Service.
+One host: /v1 (Api routes and the terminal WebSocket) goes to the Api Service, every other path
+(the /fr and /en trees and the web app's root-level assets) goes to the web Service.
 TLS comes from a certificate Secret reference in values; no certificate or key material is rendered (Req 9.8).
 */ -}}
 {{- /* Mode and certificate reference are validated in _validation.tpl. */ -}}
@@ -36,14 +37,10 @@ spec:
     - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
-          - path: /fr
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "edu-it.componentName" $webCtx }}
-                port:
-                  number: {{ int .Values.web.port }}
-          - path: /en
+          # Everything except /v1 is the web app: the /fr and /en trees, the root locale redirect,
+          # and its root-level assets (/_next/static chunks, /monaco). Without those the pages
+          # never hydrate. The longest matching prefix wins, so /v1 still reaches the Api.
+          - path: /
             pathType: Prefix
             backend:
               service:

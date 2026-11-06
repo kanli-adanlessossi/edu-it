@@ -95,6 +95,12 @@ spec:
               value: {{ .Values.api.preStopDelaySeconds | quote }}
             - name: EDU_IT_ENV
               value: {{ .Values.environment | quote }}
+            {{- /* The public Web_App URL: ingress.publicBaseUrl, else https://<ingress.host> (TLS
+            terminates at the ingress, Req 9.8). Email and OAuth links are built from it, and its
+            origin is the CORS and terminal WebSocket Origin allowlist (CompositionSettings
+            derives allowed_web_origins). */}}
+            - name: WEB_BASE_URL
+              value: {{ .Values.ingress.publicBaseUrl | default (printf "https://%s" .Values.ingress.host) | quote }}
             - name: SANDBOX_PROVIDER
               value: kubernetes
             - name: K8S_LABS_NAMESPACE

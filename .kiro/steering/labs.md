@@ -95,8 +95,9 @@ evidence table of ADR 0009.
   agent runs in the lab image and no listening port is opened in the lab pod.
   Reason: standard Kubernetes API only, and the RBAC grant is the access control.
 - Worker RBAC: one `Role` in `labs`, `create`, `get`, `list`, `watch`, `delete` on `pods` and
-  `create`, `get` on `pods/exec`. Api RBAC: one `Role` in `labs`, `get` on `pods` and `create` on
-  `pods/exec`, with no pod create, update, patch, delete or deletecollection. No `ClusterRole` or
+  `create`, `get` on `pods/exec`. Api RBAC: one `Role` in `labs`, `get` on `pods` and `create`,
+  `get` on `pods/exec` (the terminal's WebSocket exec is a GET upgrade, authorized as `get`), with
+  no pod create, update, patch, delete or deletecollection. No `ClusterRole` or
   `ClusterRoleBinding` for platform ServiceAccounts. The chart renders these roles (tasks 6.10 and
   12.x); the RBAC grants were proven by the spike on kind (check 3).
 - Api exec admission policy: RBAC cannot scope `pods/exec` by container, so a
@@ -109,12 +110,13 @@ evidence table of ADR 0009.
   `deployment.md`).
   Reason: the Api terminal must never reach the `grader` or `owner` containers.
 - Pod layout B is chosen and spike-proven (task 1.2) and built by `build_lab_pod`: three
-  containers `learner` (UID 10000), `grader` (UID 10001) and `owner` (UID 10002), all non-root, all
+  containers `learner` (UID:GID 1000:1000) and `grader` (1001:1001), the Lab_Image users so lab
+  content sees the same names and groups as on Docker, and `owner` (UID 1002), all non-root, all
   capabilities dropped, `RuntimeDefault` seccomp, and `shareProcessNamespace: false`. `as_user`
   maps `learner` to `learner`, `grader` to `grader` and `root` to `owner`; any other `as_user` is a
   `SandboxError`. The `learner` container mounts `/workspace`, `/home/learner` and `/tmp`; the
   `grader` container mounts `/workspace` read-only and `/grader`; the `owner` container mounts
-  `/grader`; the pod `fsGroup` is the grader GID (10001) and the `owner` runs with that GID as
+  `/grader`; the pod `fsGroup` is the grader GID (1001) and the `owner` runs with that GID as
   primary group. Every writable mount is a memory-backed `emptyDir` of exactly the Docker tmpfs
   size, so a write past the size fails at once with `ENOSPC`, as in Docker.
   `/grader` is a `subPath` (`bundle`) of the `v-grader` volume. The kubelet creates the volume

@@ -27,13 +27,12 @@ spec:
   hostnames:
     - {{ .Values.ingress.host | quote }}
   rules:
+    # Everything except /v1 is the web app (locale trees, root redirect, /_next and /monaco assets);
+    # the longest matching prefix wins, so /v1 below still reaches the Api.
     - matches:
         - path:
             type: PathPrefix
-            value: /fr
-        - path:
-            type: PathPrefix
-            value: /en
+            value: /
       backendRefs:
         - name: {{ include "edu-it.componentName" $webCtx }}
           port: {{ int .Values.web.port }}

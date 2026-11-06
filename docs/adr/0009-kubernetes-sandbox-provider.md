@@ -36,7 +36,7 @@ scope, is the access control:
 
 - Worker: one `Role` in `labs` with `create`, `get`, `list`, `watch`, `delete` on `pods` and
   `create`, `get` on `pods/exec`.
-- Api: one `Role` in `labs` with `get` on `pods` and `create` on `pods/exec`; no pod create,
+- Api: one `Role` in `labs` with `get` on `pods` and `create`, `get` on `pods/exec`; no pod create,
   update, patch, delete or deletecollection. RBAC cannot scope `pods/exec` by container, so a
   `ValidatingAdmissionPolicy` on `CONNECT pods/exec` restricts the Api identity to the `learner`
   container (proven by the spike, see "Spike result").
@@ -49,11 +49,13 @@ rendered as defense in depth only.
 **Three-container identity model (D3, OQ-2).** The baseline is layout B: the Lab_Pod has three
 containers with distinct non-root UIDs and no shared process namespace.
 
-| Container | UID | Role |
-|-----------|-----|------|
-| `learner` | 10000 | Learner terminal, workspace, freeze target |
-| `grader` | 10001 | Runs Checks; reads `/workspace` read-only, owns `/grader` group access |
-| `owner` | 10002 | Owns the grading bundle (the "root" identity of `GradeRun`, mapped to a non-root UID) |
+| Container | UID:GID | Role |
+|-----------|---------|------|
+| `learner` | 1000:1000 | Learner terminal, workspace, freeze target (the Lab_Image `learner` user) |
+| `grader` | 1001:1001 | Runs Checks; reads `/workspace` read-only, owns `/grader` group access (the Lab_Image `grader` user) |
+| `owner` | 1002:1001 | Owns the grading bundle (the "root" identity of `GradeRun`, mapped to a non-root UID with no image entry) |
+
+The UIDs were 10000, 10001 and 10002 until the amendment "Lab_Image identities" below.
 
 `as_user` maps to a container: `learner` to `learner`, `grader` to `grader`, `root` to `owner`.
 `shareProcessNamespace` is `false`, so learner processes cannot see `/proc` entries of helper
@@ -105,7 +107,7 @@ subresource behind the `K8sApiPort` adapter interface.
 
 **Pod layout as built (`build_lab_pod`).** `learner` mounts `/workspace`, `/home/learner` and
 `/tmp`; `grader` mounts `/workspace` read-only and `/grader`; `owner` mounts `/grader`; the pod
-`fsGroup` is the grader GID (10001) and the `owner` runs with that GID as its primary group. Every
+`fsGroup` is the grader GID (1001) and the `owner` runs with that GID as its primary group. Every
 writable mount is a memory-backed `emptyDir` of exactly the Docker tmpfs size (`ENOSPC` at the size,
 as in Docker). The `owner` container uses `K8S_HELPER_CPU_MILLI` (50 m) and
 `K8S_HELPER_MEMORY_BYTES` (16 MiB), requests equal to limits. The builder sets the command of
@@ -137,7 +139,7 @@ real-cluster run of `GradeRun` against layout B found two defects. The grading s
 (fail-closed freeze, bundle isolation, argv forms) are unchanged; the pod layout details change.
 
 1. *`/grader` was root-owned.* The kubelet creates an `emptyDir` root as `root:fsGroup`, mode 2777.
-   `chmod 0775 /grader` as `root` maps to the `owner` container (UID 10002), which is neither the
+   `chmod 0775 /grader` as `root` maps to the `owner` container (UID 1002), which is neither the
    owner of that directory nor holds `CAP_FOWNER` (all capabilities are dropped), so the housekeeping
    failed with `EPERM`. The directory also stayed writable by the grader group at Check time, so it
    could not be closed. *Fix:* an init container (same image, owner UID, grader GID) creates the
@@ -206,8 +208,10 @@ Further pod/node settings found by the shared suites on kind, and the equivalent
   verified listing as the proof; the listing runs without `timeout_s`, because a learner-owned
   `timeout` wrapper would itself be a running learner process. The Docker path is unchanged.
 - *Fixture identities.* The grading-isolation fixture Checks (`c_identity`, `c_bundle`,
-  `c_frozen`) derive the identity table from the UID they run as (Docker 1001, Kubernetes 10001),
-  and on Kubernetes `c_frozen` requires that the grader sees no learner process at all; the
+  `c_frozen`) run as grader 1001 on both providers and tell them apart by the owner of `/grader`
+  (root on Docker, the owner UID 1002 on Kubernetes; until the Lab_Image identities amendment they
+  keyed on the grader UID, 1001 or 10001), and on Kubernetes `c_frozen` requires that the grader
+  sees no learner process at all; the
   learner counter sampled around each Check still proves the freeze. `c_env` allows the
   provider-injected `EDU_IT_EXEC` marker as it allows Docker's `HOSTNAME`. The abuse and
   grading-isolation tests pass the provider name to `GradeRun` (as the Worker composition does)
@@ -282,6 +286,45 @@ Findings that bind the provider code (tasks 4.3, 4.4, 5.2 to 5.10):
   The lab image entrypoint must meet the same contract (a reaping init).
 - **The freeze is verified with shell builtins only, timed inside the container.** No fork after
   `SIGSTOP`, so the check cannot be skewed by kubectl exec overhead or blocked by the PID limit.
+
+### Amendment: Api `get` on `pods/exec`
+
+The spike granted the Api only `create` on `pods/exec` and attached a terminal through `kubectl`,
+which posts the exec. The Api's Kubernetes client opens the exec as a WebSocket upgrade, an HTTP
+GET, which the API server authorizes as `get` on `pods/exec`. The first terminal attach on kind
+was refused with `cannot get resource "pods/exec"`. *Decision:* the Api Role grants `create` and
+`get` on `pods/exec`, the same verbs as the Worker (Req 4.7 amended). *Consequences:* both verbs
+open the same exec stream, so the Api gains no capability; the `ValidatingAdmissionPolicy` on
+`CONNECT` of `pods/exec` still limits the Api to the `learner` container whatever the verb, and
+the Api still has no pod create, update, patch, delete or deletecollection.
+
+### Amendment: Lab_Image identities
+
+The spike ran layout B with UIDs 10000, 10001 and 10002, which have no entry in the Lab_Images.
+The first end-to-end run of a Seed_Lab on kind showed what that breaks: lab content is written
+against the image users, as on Docker. The setup script of "Fix the shared folder" requires the
+`learner` user to be a member of the image group `devs`; in the pod the learner had no name, was
+not in `devs`, and `id` failed with "cannot find name for group ID 10001", so provisioning failed
+on every attempt. Any lab that names users or groups fails the same way.
+
+*Decision.* The `learner` and `grader` containers run as the Lab_Image users, `learner` 1000:1000
+and `grader` 1001:1001, with `runAsGroup` set explicitly. The container runtime adds the user's
+`/etc/group` memberships (`learner` in `devs`), so the identities are the ones Docker gives. The
+`owner` keeps a UID of its own, 1002, which has no image entry and needs none (it runs only
+`tar`, `chmod` and `mkdir`); its primary group, the pod `fsGroup` and the `grader_gid` default
+(`SANDBOX_GRADER_GID`) are the image `grader` group, 1001. Layout B is otherwise unchanged: three
+containers, three distinct non-root UIDs, `shareProcessNamespace: false`, all capabilities
+dropped, the same `as_user` table, and `GradeRun` (which already treats every process of the
+learner container as a learner process, whatever its UID) is unchanged.
+
+*Consequences.* Lab authors write against one set of identities on both providers. The isolation
+argument does not change: it rests on distinct UIDs, separate containers and the `/grader` mount,
+not on the UID values. As before, `fsGroup` adds the grader GID as a supplementary group to every
+container, so `id` in the learner container lists `grader` (it listed the unnamed 10001 before);
+the learner container mounts no `/grader` volume and the Lab_Image holds no grader-group data, so
+this grants nothing. The Lab_Images must keep `learner` at 1000:1000 and `grader` at 1001:1001; a
+Lab_Image that moves them breaks this mapping. The spike, the isolation suite and the shared labs
+suites (`tests/k8s/test_provider_suites_kind.py`) check the new values on kind.
 
 ## Consequences
 

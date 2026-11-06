@@ -75,7 +75,7 @@ def test_httproute_routes_the_terminal_websocket_path_to_api_and_outlasts_both_t
 
 # Claims: 9.10
 @pytest.mark.parametrize("values_file", VALUES_FILES)
-def test_ingress_exposes_fr_en_and_api_routes_on_the_single_configured_host(
+def test_ingress_exposes_web_and_api_routes_on_the_single_configured_host(
     values_file: str,
 ) -> None:
     host = "learn.example.org"
@@ -87,12 +87,17 @@ def test_ingress_exposes_fr_en_and_api_routes_on_the_single_configured_host(
         p["path"]: p["backend"]["service"]["name"].removeprefix(PREFIX)
         for p in rule["http"]["paths"]
     }
-    assert routes == {"/fr": "web", "/en": "web", "/v1": "api"}
+    # "/" carries the locale trees and the web app's root-level assets (/_next, /monaco).
+    assert routes == {"/": "web", "/v1": "api"}
+    assert {p["pathType"] for p in rule["http"]["paths"]} == {"Prefix"}
+    assert _route_target(routes, "/_next/static/chunks/main.js") == "web"
+    assert _route_target(routes, "/fr/dashboard") == "web"
+    assert _route_target(routes, "/v1/lab-sessions/s/terminal") == "api"
 
 
 # Claims: 9.10
 @pytest.mark.parametrize("values_file", VALUES_FILES)
-def test_httproute_exposes_fr_en_and_api_routes_on_the_single_configured_host(
+def test_httproute_exposes_web_and_api_routes_on_the_single_configured_host(
     values_file: str,
 ) -> None:
     host = "learn.example.org"
@@ -104,4 +109,15 @@ def test_httproute_exposes_fr_en_and_api_routes_on_the_single_configured_host(
         for rule in route["spec"]["rules"]
         for m in rule["matches"]
     }
-    assert routes == {"/fr": "web", "/en": "web", "/v1": "api"}
+    assert routes == {"/": "web", "/v1": "api"}
+    assert _route_target(routes, "/_next/static/chunks/main.js") == "web"
+    assert _route_target(routes, "/v1/auth/sign-up") == "api"
+
+
+def _route_target(routes: dict[str, str], path: str) -> str:
+    """Longest-prefix match on whole path segments (Ingress Prefix, HTTPRoute PathPrefix)."""
+
+    def matches(prefix: str) -> bool:
+        return prefix == "/" or path == prefix or path.startswith(prefix.rstrip("/") + "/")
+
+    return routes[max((p for p in routes if matches(p)), key=len)]

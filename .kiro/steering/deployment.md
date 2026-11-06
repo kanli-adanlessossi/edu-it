@@ -95,11 +95,13 @@ catalog; this file links them instead of copying them.
   `repository@sha256:<64 hex>`. No mutable tag alone.
 - The migration Job is a `pre-install,pre-upgrade` hook (`backoffLimit` 0 to 6, default 0;
   `activeDeadlineSeconds` 30 to 3600, default 600). Its bootstrap resources are hooks with weight
-  `-10` and `hook-delete-policy: before-hook-creation` (the `migration` ServiceAccount, the
-  migration ConfigMap, the database ExternalSecret, or the dev database Secret); the Job has weight
-  `0`; the database ExternalSecret uses `creationPolicy: Orphan`. The `cni-check` Job is a
-  `post-install` hook (120 s). Namespaces and the bundled dev datastores are not hooks, so a first
-  install that creates them uses the two-phase procedure of the kind smoke test (ADR 0010).
+  `-10` and `hook-delete-policy: before-hook-creation` (the Platform_Priority_Class, the
+  `migration` ServiceAccount, the migration ConfigMap, the database ExternalSecret, or the dev
+  database Secret); the Job has weight `0`; the database ExternalSecret uses
+  `creationPolicy: Orphan`. The `cni-check` Job is a `post-install` hook (120 s). Namespaces and
+  the bundled dev datastores are not hooks, so a first install that creates them uses the
+  two-phase procedure of the kind smoke test (ADR 0010); the kind E2E and failure-scenario tests
+  use it too.
 - Allowed extension kinds beyond upstream: `ExternalSecret` and `SecretStore`, `Gateway` reference
   and `HTTPRoute`, `ServiceMonitor` and `PrometheusRule` (only when enabled), and a Kyverno
   `ClusterPolicy` (only when `imagePolicy.enabled`, default false). A kind allowlist test fails on
@@ -112,6 +114,9 @@ catalog; this file links them instead of copying them.
 - The chart renders a `web` Deployment and Service in `platform` with the same probes, HPA,
   priority class and security context as the Api; it uses the default ServiceAccount with
   `automountServiceAccountToken: false`.
+- The web image bakes in no Api URL (`NEXT_PUBLIC_API_BASE_URL` unset): the browser calls the Api
+  same-origin under `/v1` through the ingress, and server-side calls use the run-time
+  `API_INTERNAL_BASE_URL` that the web Deployment sets to the in-cluster Api Service (ADR 0010).
 - The Api and Worker ServiceAccounts set `automountServiceAccountToken: false`; only the Api and
   Worker pod specs set it to `true` and project a 600 s token (`_kube-api-access.tpl`).
 - `priorityClass.value` must exceed `labs.podPriorityValue`; `kindTest.sessionTtlSeconds` is allowed
@@ -130,8 +135,9 @@ catalog; this file links them instead of copying them.
   ServiceAccount gets a `ClusterRole` or `ClusterRoleBinding`.
   Reason: an unavailable policy must deny rather than allow Api exec into `grader` or `owner`.
 - Lab pod layout (ADR 0009): layout B is chosen and spike-proven, with three containers `learner`
-  (10000), `grader` (10001) and `owner` (10002), `shareProcessNamespace: false` and all
-  capabilities dropped. The lab image entrypoint must be a reaping init: the `learner` container
+  (1000:1000) and `grader` (1001:1001), the Lab_Image users, and `owner` (1002),
+  `shareProcessNamespace: false` and all capabilities dropped. Lab_Images keep `learner` at
+  1000:1000 and `grader` at 1001:1001. The lab image entrypoint must be a reaping init: the `learner` container
   PID 1 runs no learner code, survives its children being stopped and reaps orphans.
 
 ## Image Supply Chain (ADR 0011)

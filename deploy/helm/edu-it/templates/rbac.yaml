@@ -46,9 +46,12 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get"]
+  # The terminal exec is a WebSocket upgrade (an HTTP GET), which the API server authorizes as
+  # `get` on pods/exec; `create` covers the POST form. Both only open an exec stream, and the
+  # Api exec admission policy still limits the Api to the learner container (ADR 0009).
   - apiGroups: [""]
     resources: ["pods/exec"]
-    verbs: ["create"]
+    verbs: ["create", "get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

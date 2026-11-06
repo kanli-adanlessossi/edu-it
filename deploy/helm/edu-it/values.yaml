@@ -209,6 +209,10 @@ ingress:
   mode: ingress-nginx
   className: nginx
   host: edu-it.example.com
+  # Public Web_App URL the Api builds email and OAuth links from and whose origin it allows for
+  # CORS and the terminal WebSocket (WEB_BASE_URL). Empty means https://<host>; set it when the
+  # edge serves the host on a non-default port (for example a port-forward in a kind test).
+  publicBaseUrl: ""
   gateway:
     name: edu-it-gateway
     namespace: gateway-system

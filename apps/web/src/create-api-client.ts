@@ -21,7 +21,7 @@ const SAFE_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD', 'OPTIONS', 'TR
 export interface CreateApiClientOptions {
   /** The incoming request's `Cookie` header, forwarded when running on the server. */
   cookie?: string;
-  /** Override the API base URL (defaults to `NEXT_PUBLIC_API_BASE_URL`). */
+  /** Override the API base URL (defaults to {@link apiBaseUrl}). */
   baseUrl?: string;
   /** Underlying fetch implementation (defaults to the global fetch). */
   fetch?: typeof fetch;
@@ -31,10 +31,41 @@ export interface CreateApiClientOptions {
   readCsrfCookie?: () => string | undefined;
 }
 
-/** The API base URL, from the environment with the local development default. */
+/** Same-origin API path the ingress routes to the Api (the default public base). */
+export const SAME_ORIGIN_API_BASE = '/v1';
+
+/** Local development default for server-side calls when nothing is configured. */
+const LOCAL_SERVER_API_BASE = 'http://localhost:8000/v1';
+
+function nonEmpty(value: string | undefined): string | undefined {
+  return value !== undefined && value.length > 0 ? value : undefined;
+}
+
+/**
+ * The API base URL the browser uses, and that any browser-facing URL (links, the terminal
+ * WebSocket) is built from, so server-rendered and hydrated markup agree.
+ *
+ * `NEXT_PUBLIC_API_BASE_URL` is inlined at build time; the deployed image leaves it unset, so the
+ * browser calls the Api on its own origin under `/v1`, which the ingress routes to the Api.
+ */
+export function publicApiBaseUrl(): string {
+  return nonEmpty(process.env.NEXT_PUBLIC_API_BASE_URL) ?? SAME_ORIGIN_API_BASE;
+}
+
+/**
+ * The API base URL for requests made from the current runtime.
+ *
+ * In the browser it is {@link publicApiBaseUrl}. On the server a relative URL cannot be fetched,
+ * so it reads `API_INTERNAL_BASE_URL` at run time (the Chart sets the in-cluster Api Service),
+ * then `NEXT_PUBLIC_API_BASE_URL`, then the local development default.
+ */
 export function apiBaseUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
-  return fromEnv && fromEnv.length > 0 ? fromEnv : 'http://localhost:8000/v1';
+  if (typeof document !== 'undefined') return publicApiBaseUrl();
+  return (
+    nonEmpty(process.env.API_INTERNAL_BASE_URL) ??
+    nonEmpty(process.env.NEXT_PUBLIC_API_BASE_URL) ??
+    LOCAL_SERVER_API_BASE
+  );
 }
 
 function documentCsrfCookie(): string | undefined {

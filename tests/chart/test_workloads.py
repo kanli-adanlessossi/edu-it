@@ -229,3 +229,33 @@ def test_web_service_exposes_web_port_and_selects_web_pods() -> None:
     assert service["spec"]["ports"][0]["port"] == 3000
     assert service["spec"]["selector"]["app.kubernetes.io/component"] == "web"
     assert _container(docs, "web")["ports"][0]["containerPort"] == 3000
+
+
+# Claims: 8.1 (carry-over: the web server reaches the Api Service the web egress policy allows)
+@pytest.mark.parametrize("values_file", ["values-dev.yaml", "values-eks.yaml"])
+def test_web_server_side_api_url_is_the_in_cluster_api_service(values_file: str) -> None:
+    """Browser calls stay same-origin (/v1 through the ingress); server-side calls need this."""
+
+    docs = _render(values_file)
+    env = _env(_container(docs, "web"))
+    (api_service,) = [
+        d for d in docs if d["kind"] == "Service" and d["metadata"]["name"].endswith("-api")
+    ]
+    meta = api_service["metadata"]
+    port = api_service["spec"]["ports"][0]["port"]
+    assert env["API_INTERNAL_BASE_URL"] == (
+        f"http://{meta['name']}.{meta['namespace']}.svc:{port}/v1"
+    )
+    # The public base is not a runtime setting: it is inlined at build time and stays unset.
+    assert "NEXT_PUBLIC_API_BASE_URL" not in env
+
+
+# Claims: 9.8 (carry-over: links and the browser-origin allowlist use the public TLS host)
+@pytest.mark.parametrize("values_file", ["values-dev.yaml", "values-eks.yaml"])
+def test_api_web_base_url_is_the_public_https_host_unless_overridden(values_file: str) -> None:
+    def web_base_url(*sets: str) -> str:
+        return _env(_container(_render(values_file, *sets), "api"))["WEB_BASE_URL"]
+
+    assert web_base_url("ingress.host=learn.example.org") == "https://learn.example.org"
+    override = "https://learn.example.org:8443"
+    assert web_base_url(f"ingress.publicBaseUrl={override}") == override

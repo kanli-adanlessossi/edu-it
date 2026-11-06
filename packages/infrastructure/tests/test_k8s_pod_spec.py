@@ -36,7 +36,7 @@ def _settings(**over: object) -> K8sSettings:
         "node_selector": {"edu-it/pool": "labs"},
         "tolerations": (Toleration("edu-it/lab", "Equal", "true", "NoSchedule"),),
         "node_loss_toleration_seconds": 30,
-        "grader_gid": 10001,
+        "grader_gid": 1001,
     }
     base.update(over)
     return K8sSettings(**base)  # type: ignore[arg-type]
@@ -62,11 +62,34 @@ def test_name_equal_iff_ids_equal(a: str, b: str) -> None:
     assert (pod_name(a) == pod_name(b)) == (a == b)
 
 
+# Claims: 1.4 (carry-over: the same catalog image convention as the Docker provider)
+@pytest.mark.parametrize(
+    ("catalog", "tag", "expected"),
+    [
+        ("linux-base", "dev", "edu-it/lab-linux-base:dev"),
+        ("python", "ci-42", "edu-it/lab-python:ci-42"),
+        ("registry.example/lab@sha256:abc", "dev", "registry.example/lab@sha256:abc"),
+        ("edu-it/lab-linux-base:dev", "other", "edu-it/lab-linux-base:dev"),
+    ],
+)
+def test_catalog_image_names_resolve_like_the_docker_provider(
+    catalog: str, tag: str, expected: str
+) -> None:
+    """Content names ``linux-base``; unresolved, Kubernetes pulls docker.io/library/linux-base."""
+
+    pod = build_lab_pod(build_sandbox_spec(_Lab(catalog), "s"), _settings(lab_image_tag=tag))
+    images = {c["image"] for c in [*pod["spec"]["containers"], *pod["spec"]["initContainers"]]}
+    assert images == {expected}
+
+
 # Claims: 2.2, 2.3, 2.4
 def test_every_container_is_hardened_with_distinct_uids() -> None:
     containers = _pod()["spec"]["containers"]
     assert [c["name"] for c in containers] == ["learner", "grader", "owner"]
-    assert [c["securityContext"]["runAsUser"] for c in containers] == [10000, 10001, 10002]
+    assert [c["securityContext"]["runAsUser"] for c in containers] == [1000, 1001, 1002]
+    # learner and grader are the Lab_Image users (lab-images/linux-base), so the runtime gives
+    # them the image's names and /etc/group memberships, the identities lab content relies on.
+    assert [c["securityContext"]["runAsGroup"] for c in containers] == [1000, 1001, 1001]
     for c in containers:
         sc = c["securityContext"]
         assert sc["runAsNonRoot"] is True
@@ -83,7 +106,7 @@ def test_pod_level_settings_and_layout_b() -> None:
     assert spec["automountServiceAccountToken"] is False
     assert spec["restartPolicy"] == "Never"
     assert not (spec["hostNetwork"] or spec["hostPID"] or spec["hostIPC"])
-    assert spec["securityContext"]["fsGroup"] == 10001
+    assert spec["securityContext"]["fsGroup"] == 1001
     assert spec["securityContext"]["runAsNonRoot"] is True
     assert all("hostPath" not in v for v in spec["volumes"])
 
@@ -176,8 +199,8 @@ def test_grader_dir_is_an_owner_made_subpath_so_the_owner_can_chmod_it() -> None
     directory the owner UID created in an init container, with the grader group."""
     spec = _pod()["spec"]
     (init,) = spec["initContainers"]
-    assert init["securityContext"]["runAsUser"] == 10002
-    assert init["securityContext"]["runAsGroup"] == 10001
+    assert init["securityContext"]["runAsUser"] == 1002
+    assert init["securityContext"]["runAsGroup"] == 1001
     assert init["securityContext"]["capabilities"] == {"drop": ["ALL"]}
     assert init["command"] == ["/bin/mkdir", "-m", "2750", "/grader/bundle"]
     _learner, grader, owner = spec["containers"]
@@ -185,7 +208,7 @@ def test_grader_dir_is_an_owner_made_subpath_so_the_owner_can_chmod_it() -> None
         mount = next(m for m in container["volumeMounts"] if m["mountPath"] == "/grader")
         assert mount["subPath"] == "bundle"
         assert not mount.get("readOnly")
-    assert owner["securityContext"]["runAsGroup"] == 10001
+    assert owner["securityContext"]["runAsGroup"] == 1001
 
 
 # Claims: 5.6, 2.4

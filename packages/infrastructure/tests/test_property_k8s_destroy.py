@@ -50,7 +50,7 @@ def _settings() -> K8sSettings:
         node_selector={"edu-it/pool": "labs"},
         tolerations=(Toleration("edu-it/lab", "Equal", "true", "NoSchedule"),),
         node_loss_toleration_seconds=30,
-        grader_gid=10001,
+        grader_gid=1001,
     )
 
 

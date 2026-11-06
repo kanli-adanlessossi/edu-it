@@ -49,6 +49,11 @@ spec:
               value: {{ int .Values.web.port | quote }}
             - name: HOSTNAME
               value: "0.0.0.0"
+            {{- /* Server-side API calls (session checks, server actions) go to the in-cluster Api
+            Service, which the platform-web-egress policy allows. Browser calls stay same-origin
+            under /v1, which the ingress routes to the Api. Read at run time by apiBaseUrl(). */}}
+            - name: API_INTERNAL_BASE_URL
+              value: {{ printf "http://%s.%s.svc:%d/v1" (include "edu-it.componentName" (dict "root" . "component" "api")) (include "edu-it.platformNamespace" .) (int .Values.api.port) | quote }}
           {{- include "edu-it.probes" (dict "root" . "component" "web" "port" "http") | nindent 10 }}
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}

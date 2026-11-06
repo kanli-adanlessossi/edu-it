@@ -32,6 +32,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -55,11 +56,12 @@ DIGEST_ENV = {
 
 
 def _run(argv: list[str], *, timeout: int = 900, input_text: str | None = None) -> str:
-    done = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    done = subprocess.run(
         argv, input=input_text, capture_output=True, text=True, timeout=timeout, check=False
     )
     assert done.returncode == 0, (
-        f"{' '.join(argv)} failed ({done.returncode}):\n{done.stdout[-3000:]}\n{done.stderr[-3000:]}"
+        f"{' '.join(argv)} failed ({done.returncode}):\n"
+        f"{done.stdout[-3000:]}\n{done.stderr[-3000:]}"
     )
     return done.stdout
 
@@ -147,13 +149,13 @@ def installed_chart(kind_context: str) -> Iterator[str]:
             )
         yield kind_context
     finally:
-        subprocess.run(  # noqa: S603 - cleanup, failures must not mask the test result
+        subprocess.run(
             ["helm", "uninstall", RELEASE, "--kube-context", kind_context,
              "-n", PLATFORM_NAMESPACE, "--wait"],
             capture_output=True, timeout=300, check=False,
         )
         # Removes the hook-created ServiceAccount and Secret that `helm uninstall` leaves behind.
-        subprocess.run(  # noqa: S603
+        subprocess.run(
             ["kubectl", "--context", kind_context, "delete", "namespace", PLATFORM_NAMESPACE,
              "--ignore-not-found", "--wait=false"],
             capture_output=True, timeout=120, check=False,
@@ -173,7 +175,7 @@ def test_chart_installs_helm_test_passes_and_a_lab_pod_round_trips(
     context = installed_chart
 
     # Api and Worker readiness endpoints, checked by the Helm test hook pod.
-    helm_test = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    helm_test = subprocess.run(
         ["helm", "test", RELEASE, "--kube-context", context, "-n", PLATFORM_NAMESPACE,
          "--timeout", HELM_TEST_TIMEOUT],
         capture_output=True, text=True, timeout=400, check=False,
@@ -187,15 +189,32 @@ def test_chart_installs_helm_test_passes_and_a_lab_pod_round_trips(
             ["describe", "pod", "-n", PLATFORM_NAMESPACE, f"{RELEASE}-smoke-test"],
             ["get", "networkpolicy", "-n", PLATFORM_NAMESPACE],
         ):
-            got = subprocess.run(  # noqa: S603
+            got = subprocess.run(
                 ["kubectl", "--context", context, *argv],
                 capture_output=True, text=True, timeout=60, check=False,
             )
-            diagnostics.append(f"$ kubectl {' '.join(argv)}\n{got.stdout[-3000:]}{got.stderr[-1000:]}")
+            diagnostics.append(
+                f"$ kubectl {' '.join(argv)}\n{got.stdout[-3000:]}{got.stderr[-1000:]}"
+            )
         pytest.fail(
             f"helm test failed ({helm_test.returncode}):\n{helm_test.stdout[-2000:]}\n"
             f"{helm_test.stderr[-1000:]}\n" + "\n".join(diagnostics)
         )
+
+    # The Lab_Pod below has no session row, so the chart's Worker reaper (every
+    # LAB_REAPER_INTERVAL) deletes it as an orphan whenever a tick lands while it starts. Its
+    # readiness was checked by helm test above; stop it so the round trip is deterministic.
+    # The fixture uninstalls the release afterwards.
+    _kubectl(
+        context, "scale", f"deployment/{RELEASE}-worker", "-n", PLATFORM_NAMESPACE, "--replicas=0"
+    )
+    deadline = time.monotonic() + 180
+    while _kubectl(
+        context, "get", "pods", "-n", PLATFORM_NAMESPACE,
+        "-l", "app.kubernetes.io/component=worker", "-o", "name",
+    ).strip():
+        assert time.monotonic() < deadline, "the Worker pod did not stop within 180 s"
+        time.sleep(2)
 
     # One Lab_Pod through the real composition root, then none left.
     from edu_it_domain.labs.sandbox_spec import build_sandbox_spec

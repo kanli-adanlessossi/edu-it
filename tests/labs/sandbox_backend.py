@@ -41,11 +41,11 @@ BACKEND_ENV: Final[str] = "EDU_IT_LAB_SUITE_PROVIDER"
 K8S_API_ENV: Final[str] = "EDU_IT_LAB_SUITE_K8S_API"
 K8S_NAMESPACE_ENV: Final[str] = "EDU_IT_LAB_SUITE_K8S_NAMESPACE"
 
-#: UIDs of the identities per backend: Docker image users, and pod layout B (ADR 0009), where
-#: ``root`` of ``as_user`` is the non-root ``owner`` container.
-LEARNER_UID: Final[dict[str, int]] = {"docker": 1000, "kubernetes": 10000}
-GRADER_UID: Final[dict[str, int]] = {"docker": 1001, "kubernetes": 10001}
-OWNER_UID: Final[dict[str, int]] = {"docker": 0, "kubernetes": 10002}
+#: UIDs of the identities per backend. Both run learner and grader as the Lab_Image users; in pod
+#: layout B (ADR 0009) ``root`` of ``as_user`` is the non-root ``owner`` container (1002).
+LEARNER_UID: Final[dict[str, int]] = {"docker": 1000, "kubernetes": 1000}
+GRADER_UID: Final[dict[str, int]] = {"docker": 1001, "kubernetes": 1001}
+OWNER_UID: Final[dict[str, int]] = {"docker": 0, "kubernetes": 1002}
 
 _BACKENDS: Final[tuple[str, ...]] = ("docker", "kubernetes")
 

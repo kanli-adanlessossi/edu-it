@@ -59,6 +59,15 @@ and `tools/check_values_consistency.py` rejects it in the four Values_Files. Ima
 `digest` and composed as `repository@sha256:<64 hex>` (D8). Secrets are never in values: they are
 mounted as optional volume files read by a `SecretSource` (D6).
 
+**Lab_Image references (open).** The platform images above are digest-pinned; the Lab_Images are
+not yet. Content names a Lab_Image by its `lab-images/` directory (`linux-base`), and both
+providers resolve that name to `edu-it/lab-<name>:<LAB_IMAGE_TAG>` (`resolve_image`), the tag the
+bake file builds. That is enough for kind, where the harness preloads those images on every
+node, but a production cluster cannot pull it. The planned production registry is AWS ECR; its
+repository prefix, how Lab_Image digests are pinned and promoted, and the values and settings
+that carry them are decided when that work is done. Until then a full reference or digest in
+content passes through unchanged.
+
 **Secret catalog.** `edu-it.secretCatalog` in `_helpers.tpl` is the single list the optional secret
 volumes and the ExternalSecrets are both generated from, so a secret no workload reads has no
 ExternalSecret. Each entry gives the `externalSecrets.remoteKeys` field and the keys read as
@@ -79,9 +88,10 @@ Plain `Secret` objects render only when `devSecrets.enabled` (`secrets-dev.yaml`
 values; a failed hook stops Helm before it touches the Deployments. Resources the hook needs
 are rendered as `pre-install,pre-upgrade` hooks with weight `-10` and
 `hook-delete-policy: before-hook-creation`; the Job has weight `0`. Shipped as:
-`serviceaccounts.yaml` (the `migration` ServiceAccount only), `configmap-migration.yaml`,
-`externalsecret-database.yaml` and, when `devSecrets.enabled`, the `database` Secret in
-`secrets-dev.yaml`. The database ExternalSecret uses `creationPolicy: Orphan`, so removing the hook
+`priorityclass.yaml` (the Job's pod sets `priorityClassName`, and admission rejects a pod whose
+PriorityClass does not exist yet), `serviceaccounts.yaml` (the `migration` ServiceAccount only),
+`configmap-migration.yaml`, `externalsecret-database.yaml` and, when `devSecrets.enabled`, the
+`database` Secret in `secrets-dev.yaml`. The database ExternalSecret uses `creationPolicy: Orphan`, so removing the hook
 object never removes the synced Secret (risk R7); the other ExternalSecrets
 (`externalsecrets.yaml`) are normal release resources with `creationPolicy: Owner`. The Job is kept
 after failure so its log stays available. The `cni-check` Job is a `post-install` hook with weight
@@ -96,8 +106,11 @@ task 6.14) therefore works around it without changing the chart: it pre-creates 
 namespaces with the restricted Pod Security labels and installs with
 `namespaces.manage=operator-managed`, runs `helm install --no-hooks` so the dev PostgreSQL and
 Redis exist and become ready, then runs `helm upgrade --wait --timeout 600s`, whose pre-upgrade
-migration hook runs against a ready database. Production installs are unaffected: they use
-managed datastores and operator-managed namespaces.
+migration hook runs against a ready database. The E2E test (`tests/k8s/test_e2e_kind.py`, task
+14.3) and the failure-scenario tests use the same two-phase bootstrap on an empty cluster; the
+hook order is proved by the pre-upgrade hooks of phase 2 and by the E2E upgrade check, not by a
+single `helm install`. Production installs are unaffected: they use managed datastores and
+operator-managed namespaces.
 
 **Extension kinds.** Allowed upstream kinds: `Namespace`, `PriorityClass`, `StatefulSet` and
 `PersistentVolumeClaim` (dev bundled datastores only; the shipped dev datastores use `emptyDir`),
@@ -132,6 +145,18 @@ the same probes, HPA, priority class and security context as the Api. It needs n
 and no secrets, so it uses the namespace default ServiceAccount with `automountServiceAccountToken:
 false`. The shipped chart has a PDB for the Api and the Worker only. The
 `web` egress to the Api is the only extra rule beyond Req 11.
+
+**Web to Api addressing.** One web image serves every Target, so no Api URL is baked in at
+build time: the image leaves `NEXT_PUBLIC_API_BASE_URL` unset. The browser calls the Api on its
+own origin under `/v1`, which the Ingress (or HTTPRoute) routes to the Api Service; links and the
+terminal WebSocket are built from the same same-origin base. Every other path (prefix `/`) goes to
+the web Service: besides the `/fr` and `/en` trees the web app serves root-level assets
+(`/_next/static`, `/monaco`) and the `/` locale redirect, and a page whose `/_next` chunks 404 never
+hydrates (its forms then submit natively, putting field values in the URL). Server-side calls (session checks,
+server actions) cannot fetch a relative URL, so the web Deployment sets
+`API_INTERNAL_BASE_URL=http://<api Service>.<platform namespace>.svc:<api.port>/v1`, read at run
+time and reached through the `web` egress rule above. Local development keeps setting
+`NEXT_PUBLIC_API_BASE_URL` to an absolute URL, which both sides then use.
 
 **Other conventions.** The Api, Worker and Migration_Job have one ServiceAccount each with
 `automountServiceAccountToken: false`. The Migration_Job, cni-check Job, smoke test and web pod

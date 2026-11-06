@@ -832,6 +832,8 @@ def build_api_routers(
                 sessions=adapters.lab_sessions,
                 session_store=adapters.session_store,
                 clock=clock,
+                # The same allowlist as CORS: the Web_App origin of WEB_BASE_URL.
+                allowed_origins=adapters.settings.allowed_web_origins,
             ),
             terminal_gateway=gateway,
             session_cookie_name=resolver.cookie_name,

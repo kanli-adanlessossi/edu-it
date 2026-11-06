@@ -75,7 +75,7 @@ def _kubernetes_provider() -> SandboxProvider:
         node_selector={"edu-it/pool": "labs"},
         tolerations=(),
         node_loss_toleration_seconds=30,
-        grader_gid=10001,
+        grader_gid=1001,
     )
     return KubernetesSandboxProvider(
         api, settings, clock, sleep=lambda seconds: clock.advance(timedelta(seconds=seconds))

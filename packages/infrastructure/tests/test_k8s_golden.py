@@ -37,7 +37,7 @@ def _render() -> str:
         node_selector={"edu-it/pool": "labs"},
         tolerations=(Toleration("edu-it/lab", "Equal", "true", "NoSchedule"),),
         node_loss_toleration_seconds=30,
-        grader_gid=10001,
+        grader_gid=1001,
     )
     pod = build_lab_pod(build_sandbox_spec(_Lab(), "golden-session"), settings)
     return json.dumps(pod, indent=2, sort_keys=True) + "\n"

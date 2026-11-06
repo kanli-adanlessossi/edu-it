@@ -73,6 +73,12 @@ INGRESS_NGINX_URL = (
     "https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.2/"
     "deploy/static/provider/kind/deploy.yaml"
 )
+#: nginx worker processes of the kind ingress controller (default ``auto`` = one per CPU).
+#: The pod PID budget is the cluster-wide podPidsLimit (128), and PIDs include threads: each
+#: nginx worker has 33 (its 32-thread AIO pool plus the main thread), the controller about 13.
+#: A reload runs the old and new workers side by side, so 1 worker peaks near 85 PIDs while 2
+#: (or one per CPU, 4 on a CI runner) exceed 128 and the workers die with EAGAIN.
+INGRESS_NGINX_WORKER_PROCESSES = 1
 
 #: CRD sources per kind that the Chart may render (Req 16.9).
 _GATEWAY_API_RAW = (
@@ -119,7 +125,7 @@ def _kubectl(*args: str) -> tuple[str, ...]:
 #: Components that ``--skip`` may leave out (a network that cannot pull their images). Nothing the
 #: walking skeleton tests depends on ``ingress-nginx``; the skip is reported in the output.
 SKIPPABLE: Mapping[str, tuple[str, ...]] = {
-    "ingress-nginx": ("ingress-nginx", "ingress-nginx-ready")
+    "ingress-nginx": ("ingress-nginx", "ingress-nginx-workers", "ingress-nginx-ready")
 }
 
 
@@ -170,6 +176,23 @@ def build_plan(
             ),
         ),
         Step("ingress-nginx", _kubectl("apply", "-f", INGRESS_NGINX_URL)),
+        # nginx defaults to one worker per CPU of the node. Under the cluster-wide podPidsLimit
+        # (deploy/kind/kind-config.yaml) that exceeds the pod's PID budget, so fork() and
+        # pthread_create() fail with EAGAIN, the workers die and the ingress stops answering.
+        # See INGRESS_NGINX_WORKER_PROCESSES for the budget.
+        Step(
+            "ingress-nginx-workers",
+            _kubectl(
+                "patch",
+                "configmap",
+                "ingress-nginx-controller",
+                "-n",
+                "ingress-nginx",
+                "--type=merge",
+                "-p",
+                f'{{"data":{{"worker-processes":"{INGRESS_NGINX_WORKER_PROCESSES}"}}}}',
+            ),
+        ),
         Step(
             "ingress-nginx-ready",
             _kubectl(

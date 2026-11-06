@@ -60,7 +60,7 @@ def _setup() -> tuple[KubernetesSandboxProvider, FakeK8sApi]:
         node_selector={"edu-it/pool": "labs"},
         tolerations=(Toleration("edu-it/lab", "Equal", "true", "NoSchedule"),),
         node_loss_toleration_seconds=30,
-        grader_gid=10001,
+        grader_gid=1001,
     )
     provider = KubernetesSandboxProvider(
         api, k8s, clock, sleep=lambda s: clock.advance(timedelta(seconds=s))

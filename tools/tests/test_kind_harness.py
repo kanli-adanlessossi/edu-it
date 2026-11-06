@@ -106,9 +106,24 @@ def test_run_decodes_utf8_output_regardless_of_the_locale_codepage() -> None:
 def test_skip_removes_only_the_named_component() -> None:
     full = [s.name for s in harness.build_plan()]
     skipped = [s.name for s in harness.build_plan(skip=["ingress-nginx"])]
-    assert [n for n in full if n not in skipped] == ["ingress-nginx", "ingress-nginx-ready"]
+    assert [n for n in full if n not in skipped] == [
+        "ingress-nginx",
+        "ingress-nginx-workers",
+        "ingress-nginx-ready",
+    ]
     with pytest.raises(ValueError, match="cannot skip"):
         harness.build_plan(skip=["calico"])
+
+
+def test_ingress_nginx_worker_count_is_pinned_before_the_readiness_wait() -> None:
+    """A per-CPU worker count exceeds the cluster-wide podPidsLimit on many-core hosts."""
+
+    plan = harness.build_plan()
+    names = [s.name for s in plan]
+    assert names.index("ingress-nginx") < names.index("ingress-nginx-workers")
+    assert names.index("ingress-nginx-workers") < names.index("ingress-nginx-ready")
+    argv = next(s for s in plan if s.name == "ingress-nginx-workers").argv
+    assert argv[-1] == '{"data":{"worker-processes":"1"}}'
 
 
 # --- kind test values override (task 14.1, Req 16.4, 16.11) ---

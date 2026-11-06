@@ -642,7 +642,7 @@ def test_lab_pod_is_deleted_within_60s_of_ttl(
             Toleration(key="edu-it.io/labs", operator="Equal", value="true", effect="NoSchedule"),
         ),
         node_loss_toleration_seconds=300,
-        grader_gid=10001,
+        grader_gid=1001,
     )
     manifest = build_lab_pod(spec, settings)
     assert manifest["spec"]["activeDeadlineSeconds"] == int(cfg.LAB_SESSION_TTL.total_seconds())

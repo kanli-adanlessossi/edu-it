@@ -190,7 +190,8 @@ INPUTS = pr.Phase5Inputs(
     ),
     pod_layout=(
         "Layout B (chosen by the day-one spike, risk R1, recorded Accepted in ADR 0009): three "
-        "containers learner (UID 10000), grader (UID 10001), owner (UID 10002), "
+        "containers learner (UID 1000), grader (UID 1001), owner (UID 1002), the Lab_Image users "
+        "for learner and grader, "
         "shareProcessNamespace false, freeze through exec in the learner container, all helper "
         "identities kept with every capability dropped under restricted PSA."
     ),

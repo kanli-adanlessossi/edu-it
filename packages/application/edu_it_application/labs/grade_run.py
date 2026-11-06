@@ -505,8 +505,9 @@ def _parse_ps(stdout: bytes, in_learner_container: bool = False) -> list[PsRow]:
     A malformed row is reported as a running learner process, so verification fails closed.
 
     ``in_learner_container`` is the output of ``_PS_LIST_IN_LEARNER``. Every process of that
-    container is a learner process whatever name its UID resolves to (the lab image has no entry
-    for the pod UIDs, so ``ps`` prints a number), so the user column is replaced by the learner.
+    container is a learner process whatever name its UID resolves to (a process the learner
+    started under another UID, or a UID without an image entry, still counts), so the user column
+    is replaced by the learner.
     The listing must name its own PID and show that PID in the table; otherwise it did not run
     where it should, and it counts as a running learner process (fail closed).
     """

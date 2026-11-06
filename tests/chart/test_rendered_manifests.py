@@ -168,7 +168,8 @@ def test_service_accounts_and_api_rbac(values_file: str) -> None:
     rules = {
         (tuple(r["apiGroups"]), tuple(r["resources"])): set(r["verbs"]) for r in api_role["rules"]
     }
-    assert rules == {(("",), ("pods",)): {"get"}, (("",), ("pods/exec",)): {"create"}}
+    # `get` on pods/exec: the terminal exec is a WebSocket upgrade, authorized as `get`.
+    assert rules == {(("",), ("pods",)): {"get"}, (("",), ("pods/exec",)): {"create", "get"}}
     forbidden = {"create", "update", "patch", "delete", "deletecollection"}
     for role in _of_kind(docs, "Role"):
         for rule in role["rules"]:

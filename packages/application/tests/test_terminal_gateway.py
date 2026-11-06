@@ -134,6 +134,23 @@ def test_connect_checks_run_in_order_and_steps_3_4_are_uniform() -> None:
     assert _authorize(env) == unknown
 
 
+def test_explicit_origin_allowlist_replaces_the_config_default() -> None:
+    """The deployment passes its Web_App origin (derived from WEB_BASE_URL)."""
+
+    env = Env()
+    env.add()
+    deployed = "https://learn.example.org"
+    env.auth = AuthorizeTerminal(
+        sessions=env.sessions, session_store=env.store, allowed_origins=(deployed,)
+    )
+    assert _authorize(env, origin=deployed) == TerminalAuthorization("s1", "u1")
+    refused = _authorize(env, origin=ORIGIN)  # the localhost default no longer applies
+    assert isinstance(refused, TerminalRefusal)
+    assert refused == _authorize(env, origin="https://evil.test")
+    with pytest.raises(ValueError, match="must not be empty"):
+        AuthorizeTerminal(sessions=env.sessions, session_store=env.store, allowed_origins=())
+
+
 def test_bytes_flow_resize_and_activity_is_throttled() -> None:
     async def scenario() -> None:
         env = Env()

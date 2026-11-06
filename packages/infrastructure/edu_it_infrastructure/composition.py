@@ -44,7 +44,14 @@ from edu_it_domain.ports.repository import SessionRepository, UserRepository
 from edu_it_domain.ports.role_assignment import RoleAssignmentRepository
 from edu_it_domain.ports.sandbox import SandboxProvider
 from edu_it_domain.ports.session_store import SessionStore
-from pydantic import BaseModel, ConfigDict, SecretStr, ValidationInfo, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    SecretStr,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from edu_it_infrastructure.adapters.object_storage import FileSystem_ObjectStorage
 from edu_it_infrastructure.adapters.rate_limiter import Redis_SignInRateLimiter
@@ -239,6 +246,25 @@ def _parse_prices(value: object) -> object:
     return prices
 
 
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def web_origin(url: str) -> str | None:
+    """The browser ``Origin`` of an absolute http(s) URL (scheme, lower-case host, explicit
+    non-default port), or ``None`` when ``url`` is not one."""
+
+    parsed = urlsplit(url)
+    if parsed.scheme not in _DEFAULT_PORTS or not parsed.hostname:
+        return None
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+    host = parsed.hostname if ":" not in parsed.hostname else f"[{parsed.hostname}]"
+    suffix = f":{port}" if port is not None and port != _DEFAULT_PORTS[parsed.scheme] else ""
+    return f"{parsed.scheme}://{host}{suffix}"
+
+
 class CompositionSettings(BaseModel):
     """Environment-driven settings for the composition root.
 
@@ -255,7 +281,8 @@ class CompositionSettings(BaseModel):
     mailer_backend: MailerBackend = MailerBackend.CONSOLE
     sandbox_provider: SandboxBackend = SandboxBackend.FAKE
 
-    #: Tag of the locally built Lab_Images (``edu-it/lab-<image>:<tag>``), Docker provider only.
+    #: Tag of the Lab_Images (``edu-it/lab-<image>:<tag>``) a catalog image name resolves to,
+    #: for the Docker and Kubernetes providers.
     lab_image_tag: str = "dev"
 
     #: Kubernetes provider placement (``SANDBOX_PROVIDER=kubernetes``); the Chart sets them.
@@ -268,7 +295,8 @@ class CompositionSettings(BaseModel):
     #: ``key=value:Effect`` or ``key:Effect`` entries, comma-separated (``SANDBOX_TOLERATIONS``).
     sandbox_tolerations: tuple[Toleration, ...] = ()
     sandbox_node_loss_toleration_seconds: int = 30
-    sandbox_grader_gid: int = 10001
+    #: Pod ``fsGroup`` and the owner's group: the Lab_Image ``grader`` group (ADR 0009).
+    sandbox_grader_gid: int = 1001
     sandbox_priority_class: str | None = None
 
     smtp_host: str = "localhost"
@@ -292,7 +320,8 @@ class CompositionSettings(BaseModel):
     #: ``Domain`` attribute of the session and ``csrf_token`` cookies
     #: (``COOKIE_DOMAIN``). ``None`` (unset or empty) gives host-only cookies.
     cookie_domain: str | None = None
-    #: Origins allowed to call the API from a browser (CORS and terminal Origin check).
+    #: Origins allowed to call the API from a browser (CORS and terminal Origin check). When not
+    #: given it is the origin of ``web_base_url`` (``LAB_ALLOWED_WEB_ORIGINS`` for the default).
     allowed_web_origins: tuple[str, ...] = LAB_ALLOWED_WEB_ORIGINS
 
     #: GitHub OAuth application credentials and callback (``GITHUB_OAUTH_*``).
@@ -395,6 +424,20 @@ class CompositionSettings(BaseModel):
     @classmethod
     def _empty_object_storage_root_is_none(cls, value: str | None) -> str | None:
         return value or None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _allowed_origins_follow_web_base_url(cls, data: object) -> object:
+        """Default the browser-origin allowlist to the Web_App's own origin.
+
+        A deployed Web_App is not on ``localhost:3000``, so a fixed allowlist would refuse its
+        CORS calls and every terminal WebSocket (``Origin`` check). An explicit value wins.
+        """
+        if not isinstance(data, dict) or "allowed_web_origins" in data:
+            return data
+        base = data.get("web_base_url")
+        origin = web_origin(base) if isinstance(base, str) else None
+        return {**data, "allowed_web_origins": (origin,)} if origin else data
 
     @field_validator("web_base_url")
     @classmethod
@@ -594,6 +637,7 @@ def build_k8s_settings(settings: CompositionSettings) -> K8sSettings:
         node_loss_toleration_seconds=settings.sandbox_node_loss_toleration_seconds,
         grader_gid=settings.sandbox_grader_gid,
         priority_class_name=settings.sandbox_priority_class,
+        lab_image_tag=settings.lab_image_tag,
     )
 
 

@@ -40,7 +40,7 @@ from edu_it_domain.ports.sandbox import SandboxError
 from edu_it_application.labs.save_files import sandbox_handle
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Sequence
     from datetime import datetime
 
     from edu_it_domain.labs.models import LabSession, StableId
@@ -155,15 +155,25 @@ class AuthorizeTerminal:
         session_store: SessionStore,
         config: object = domain_config,
         clock: Clock | None = None,
+        allowed_origins: Sequence[str] | None = None,
     ) -> None:
         """Wire the cookie session store and the session repository.
 
         With a ``clock`` the session ``ttl_at`` is re-checked on every connect (Req 14.8).
+        ``allowed_origins`` is the deployment's Web_App origin allowlist (the composition
+        settings); without it the ``LAB_ALLOWED_WEB_ORIGINS`` default of ``config`` applies.
         """
         self._sessions = sessions
         self._store = session_store
         self._clock = clock
-        self._allowed = tuple(config.LAB_ALLOWED_WEB_ORIGINS)  # type: ignore[attr-defined]
+        origins = (
+            allowed_origins
+            if allowed_origins is not None
+            else config.LAB_ALLOWED_WEB_ORIGINS  # type: ignore[attr-defined]
+        )
+        self._allowed = tuple(origins)
+        if not self._allowed:
+            raise ValueError("the terminal Origin allowlist must not be empty")
 
     def _expired(self, session: LabSession) -> bool:
         return self._clock is not None and session.ttl_at <= self._clock.now()

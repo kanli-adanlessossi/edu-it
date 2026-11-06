@@ -20,7 +20,13 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
 import { closeOutcome, reconnectSchedule, type ReconnectKind } from '../reconnect-schedule.js';
-import { isExitChord, isMacPlatform, parseControlFrame, resizeFrame } from '../terminal-logic.js';
+import {
+  isExitChord,
+  isMacPlatform,
+  parseControlFrame,
+  resizeFrame,
+  resolveWebSocketUrl,
+} from '../terminal-logic.js';
 
 /** Connection state shown under the terminal. */
 type Connection =
@@ -30,7 +36,7 @@ type Connection =
   | { readonly status: 'reauth' };
 
 export interface TerminalPaneProps {
-  /** Full `ws(s)://` URL of the session's terminal endpoint (see `terminalUrl`). */
+  /** `ws(s)://` URL, or same-origin path, of the session's terminal endpoint (see `terminalUrl`). */
   readonly url: string;
   /** The "Check my work" control; receives focus when the exit chord is pressed. */
   readonly checkWorkRef: RefObject<HTMLElement | null>;
@@ -126,7 +132,7 @@ export function TerminalPane({ url, checkWorkRef, onSessionStatus }: TerminalPan
       };
 
       const connect = () => {
-        const ws = new WebSocket(url);
+        const ws = new WebSocket(resolveWebSocketUrl(url, window.location));
         ws.binaryType = 'arraybuffer';
         socket = ws;
         ws.onopen = () => {

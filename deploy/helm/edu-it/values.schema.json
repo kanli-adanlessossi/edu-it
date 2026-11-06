@@ -1249,6 +1249,10 @@
         "host": {
           "type": "string"
         },
+        "publicBaseUrl": {
+          "type": "string",
+          "pattern": "^(https?://[^\\s/]+(/\\S*)?)?$"
+        },
         "gateway": {
           "type": "object",
           "properties": {

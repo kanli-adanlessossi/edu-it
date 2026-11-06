@@ -33,7 +33,7 @@ NS = "labs-spike"
 IMAGE = "busybox:1.36.1"
 PID_LIMIT = 128  # SANDBOX_PID_LIMIT
 FREEZE_BOUND_S = 1.0  # LAB_GRADING_FREEZE_BOUND
-UIDS = {"learner": 10000, "grader": 10001, "owner": 10002}
+UIDS = {"learner": 1000, "grader": 1001, "owner": 1002}  # ADR 0009 identities (Lab_Image users)
 SECRET = "spike-secret-value"
 REPO = Path(__file__).resolve().parents[2]
 
@@ -111,7 +111,7 @@ def namespace_manifest() -> str:
         metadata: {{name: api, namespace: {NS}}}
         rules:
           - {{apiGroups: [""], resources: [pods], verbs: [get]}}
-          - {{apiGroups: [""], resources: [pods/exec], verbs: [create]}}
+          - {{apiGroups: [""], resources: [pods/exec], verbs: [create, get]}}
         ---
         apiVersion: rbac.authorization.k8s.io/v1
         kind: RoleBinding
