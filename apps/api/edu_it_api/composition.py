@@ -226,6 +226,7 @@ from edu_it_infrastructure.persistence.variants import (
     Postgres_VariantRepository,
 )
 from edu_it_infrastructure.project_reviewer import Pending_ProjectReviewer
+from edu_it_infrastructure.telemetry import RequestIdTaskQueue
 from fastapi import APIRouter
 
 from edu_it_api.accounts import AccountServices, build_account_router, export_key
@@ -279,6 +280,7 @@ def _session_to_json(s: LabSession) -> dict[str, object]:
         "provision_attempts": s.provision_attempts,
         "next_provision_at": _iso(s.next_provision_at),
         "terminal_epoch": s.terminal_epoch,
+        "capacity_attempts": s.capacity_attempts,
     }
 
 
@@ -299,6 +301,7 @@ def _session_from_json(d: dict[str, object]) -> LabSession:
         provision_attempts=int(d["provision_attempts"]),  # type: ignore[call-overload]
         next_provision_at=_parse(d["next_provision_at"]),  # type: ignore[arg-type]
         terminal_epoch=int(d["terminal_epoch"]),  # type: ignore[call-overload]
+        capacity_attempts=int(d.get("capacity_attempts", 0)),  # type: ignore[call-overload]
     )
 
 
@@ -487,7 +490,7 @@ def _fake_adapters(settings: CompositionSettings) -> ApiAdapters:
         project_reviewer=Fake_ProjectReviewer(pending=True),
         lab_sessions=In_Memory_LabSessionRepository(runs),
         grading_runs=runs,
-        task_queue=In_Memory_TaskQueue(),
+        task_queue=RequestIdTaskQueue(In_Memory_TaskQueue()),
         sandbox=build_sandbox_provider(
             settings.model_copy(update={"sandbox_provider": SandboxBackend.FAKE}), clock=clock
         ),
@@ -551,7 +554,7 @@ def _real_adapters(settings: CompositionSettings) -> ApiAdapters:
         project_reviewer=Pending_ProjectReviewer(),
         lab_sessions=Postgres_LabSessionRepository(url),
         grading_runs=Postgres_GradingRunRepository(url),
-        task_queue=Redis_TaskQueue(redis),
+        task_queue=RequestIdTaskQueue(Redis_TaskQueue(redis)),
         sandbox=_built("sandbox_provider", lambda: build_sandbox_provider(settings, clock=clock)),
         redis=redis,
         oauth_links=Postgres_OAuthLinkRepository(url),
@@ -826,7 +829,11 @@ def build_api_routers(
             runs=adapters.grading_runs,
             feedback_messages=feedback_messages_for(store),
             authorize_terminal=AuthorizeTerminal(
-                sessions=adapters.lab_sessions, session_store=adapters.session_store
+                sessions=adapters.lab_sessions,
+                session_store=adapters.session_store,
+                clock=clock,
+                # The same allowlist as CORS: the Web_App origin of WEB_BASE_URL.
+                allowed_origins=adapters.settings.allowed_web_origins,
             ),
             terminal_gateway=gateway,
             session_cookie_name=resolver.cookie_name,

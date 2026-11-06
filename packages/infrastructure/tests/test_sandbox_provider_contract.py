@@ -1,21 +1,27 @@
 """Shared ``SandboxProvider`` contract suite (hands-on-labs task 2.6; Req 1.2, 1.4, 10.1).
 
-One suite, run against ``Fake_SandboxProvider`` and (when a daemon and the local
-``edu-it/lab-linux-base:dev`` image are available) ``DockerSandboxProvider``.
+One suite, run against ``Fake_SandboxProvider``, ``KubernetesSandboxProvider`` over
+``FakeK8sApi`` (kubernetes-deployment task 5.4; Req 1.1, 1.9, 5.7; never skipped) and (when a
+daemon and the local ``edu-it/lab-linux-base:dev`` image are available)
+``DockerSandboxProvider``. The same scenarios run on a kind cluster in task 6.23.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
 from edu_it_domain.ports.sandbox import SandboxGone, SandboxHandle, SandboxProvider
 from edu_it_infrastructure.fakes import Fake_SandboxProvider, Test_Clock
+from edu_it_infrastructure.fakes.k8s_api import FakeK8sApi, FakeNode
+from edu_it_infrastructure.fakes.k8s_lab_world import FakeLabWorld
 from edu_it_infrastructure.sandbox.docker_provider import DockerSandboxProvider
+from edu_it_infrastructure.sandbox.k8s_pod_spec import K8sSettings
+from edu_it_infrastructure.sandbox.k8s_provider import KubernetesSandboxProvider
 
 IMAGE = "edu-it/lab-linux-base:dev"
 
@@ -41,6 +47,8 @@ _DOCKER_READY = _docker_ready()
 
 PROVIDERS = [
     pytest.param("fake", id="fake"),
+    # Kubernetes provider over FakeK8sApi + FakeLabWorld: runs everywhere, no skip (Req 1.9).
+    pytest.param("kubernetes", id="kubernetes"),
     pytest.param(
         "docker",
         id="docker",
@@ -52,6 +60,28 @@ PROVIDERS = [
 ]
 
 
+def _kubernetes_provider() -> SandboxProvider:
+    clock = Test_Clock(start=datetime(2024, 1, 1, tzinfo=UTC))
+    api = FakeK8sApi(
+        clock,
+        nodes=[FakeNode("lab-node", labels={"edu-it/pool": "labs"})],
+        runtime_classes=["gvisor"],
+    )
+    FakeLabWorld(api)
+    settings = K8sSettings(
+        namespace="labs",
+        runtime_class_name="gvisor",
+        runtime_kind="gvisor",
+        node_selector={"edu-it/pool": "labs"},
+        tolerations=(),
+        node_loss_toleration_seconds=30,
+        grader_gid=1001,
+    )
+    return KubernetesSandboxProvider(
+        api, settings, clock, sleep=lambda seconds: clock.advance(timedelta(seconds=seconds))
+    )
+
+
 @pytest.fixture(params=PROVIDERS)
 def kind(request: pytest.FixtureRequest) -> str:
     return str(request.param)
@@ -61,6 +91,8 @@ def kind(request: pytest.FixtureRequest) -> str:
 def provider(kind: str) -> SandboxProvider:
     if kind == "docker":
         return DockerSandboxProvider()
+    if kind == "kubernetes":
+        return _kubernetes_provider()
     return Fake_SandboxProvider(Test_Clock(start=datetime(2024, 1, 1, tzinfo=UTC)))
 
 

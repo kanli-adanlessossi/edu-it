@@ -1,0 +1,66 @@
+{{- /*
+cni-check Job: Helm post-install hook running `python -m edu_it_infrastructure.cni_check` (Req 11.9
+to 11.12). It creates two probe pods and their NetworkPolicies in the platform namespace and reports
+whether the CNI enforces NetworkPolicy. activeDeadlineSeconds is 120: a Job that does not finish in
+that time fails, and the command's own 100 s budget treats an unfinished check as "enforcement absent"
+before the deadline. With networkPolicy.enforcementRequired true the Job exits non-zero when
+enforcement is absent, so `helm install --wait` fails with "NetworkPolicy enforcement is absent"; with
+false it logs a warning and exits zero. backoffLimit 0: a re-run would only repeat the answer. The
+Job is kept after a failure (before-hook-creation only) so its log stays available.
+Probes use the api image (its interpreter, no shell). The Job pod carries the client label that the
+probe-allowed NetworkPolicy admits.
+*/ -}}
+{{- $ctx := dict "root" . "component" "cni-check" }}
+{{- $image := include "edu-it.image" (dict "root" . "name" "api") }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ include "edu-it.platformNamespace" . }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 120
+  template:
+    metadata:
+      labels:
+        {{- include "edu-it.labels" $ctx | nindent 8 }}
+        edu-it.io/cni-check-client: "true"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "edu-it.serviceAccountName" $ctx }}
+      automountServiceAccountToken: false
+      priorityClassName: {{ .Values.priorityClass.name }}
+      securityContext:
+        {{- include "edu-it.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: cni-check
+          image: {{ $image | quote }}
+          imagePullPolicy: IfNotPresent
+          command: ["/opt/venv/bin/python", "-m", "edu_it_infrastructure.cni_check"]
+          args:
+            - --namespace={{ include "edu-it.platformNamespace" . }}
+            - --image={{ $image }}
+            - --required={{ ternary "true" "false" (.Values.networkPolicy.enforcementRequired | default false) }}
+          securityContext:
+            {{- include "edu-it.containerSecurityContext" . | nindent 12 }}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- include "edu-it.kubeApiAccess.volumeMount" . | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- include "edu-it.kubeApiAccess.volume" . | nindent 8 }}

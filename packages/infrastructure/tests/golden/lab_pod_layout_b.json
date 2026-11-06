@@ -1,0 +1,267 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "annotations": {
+      "edu-it.io/pid-limit": "128"
+    },
+    "labels": {
+      "edu-it.managed": "1",
+      "edu-it.session": "golden-session"
+    },
+    "name": "lab-1e591f4cbe50d9d30081",
+    "namespace": "labs"
+  },
+  "spec": {
+    "activeDeadlineSeconds": 3600,
+    "automountServiceAccountToken": false,
+    "containers": [
+      {
+        "command": [
+          "/bin/bash",
+          "-c",
+          "exec 3<>/dev/ptmx; trap 'exit 0' TERM; while :; do read -t 1 -u 3 _; done"
+        ],
+        "image": "registry.example/lab@sha256:abc",
+        "name": "learner",
+        "resources": {
+          "limits": {
+            "cpu": "1",
+            "ephemeral-storage": "268435456",
+            "memory": "536870912"
+          },
+          "requests": {
+            "cpu": "1",
+            "ephemeral-storage": "268435456",
+            "memory": "536870912"
+          }
+        },
+        "securityContext": {
+          "allowPrivilegeEscalation": false,
+          "capabilities": {
+            "drop": [
+              "ALL"
+            ]
+          },
+          "readOnlyRootFilesystem": true,
+          "runAsGroup": 1000,
+          "runAsNonRoot": true,
+          "runAsUser": 1000,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "volumeMounts": [
+          {
+            "mountPath": "/workspace",
+            "name": "v-workspace"
+          },
+          {
+            "mountPath": "/home/learner",
+            "name": "v-home-learner"
+          },
+          {
+            "mountPath": "/tmp",
+            "name": "v-tmp"
+          }
+        ]
+      },
+      {
+        "command": [
+          "/bin/bash",
+          "-c",
+          "exec 3<>/dev/ptmx; trap 'exit 0' TERM; while :; do read -t 1 -u 3 _; done"
+        ],
+        "image": "registry.example/lab@sha256:abc",
+        "name": "grader",
+        "resources": {
+          "limits": {
+            "cpu": "500m",
+            "memory": "268435456"
+          },
+          "requests": {
+            "cpu": "500m",
+            "memory": "268435456"
+          }
+        },
+        "securityContext": {
+          "allowPrivilegeEscalation": false,
+          "capabilities": {
+            "drop": [
+              "ALL"
+            ]
+          },
+          "readOnlyRootFilesystem": true,
+          "runAsGroup": 1001,
+          "runAsNonRoot": true,
+          "runAsUser": 1001,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "volumeMounts": [
+          {
+            "mountPath": "/workspace",
+            "name": "v-workspace",
+            "readOnly": true
+          },
+          {
+            "mountPath": "/grader",
+            "name": "v-grader",
+            "subPath": "bundle"
+          }
+        ]
+      },
+      {
+        "command": [
+          "/bin/bash",
+          "-c",
+          "exec 3<>/dev/ptmx; trap 'exit 0' TERM; while :; do read -t 1 -u 3 _; done"
+        ],
+        "image": "registry.example/lab@sha256:abc",
+        "name": "owner",
+        "resources": {
+          "limits": {
+            "cpu": "50m",
+            "memory": "16777216"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "16777216"
+          }
+        },
+        "securityContext": {
+          "allowPrivilegeEscalation": false,
+          "capabilities": {
+            "drop": [
+              "ALL"
+            ]
+          },
+          "readOnlyRootFilesystem": true,
+          "runAsGroup": 1001,
+          "runAsNonRoot": true,
+          "runAsUser": 1002,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "volumeMounts": [
+          {
+            "mountPath": "/grader",
+            "name": "v-grader",
+            "subPath": "bundle"
+          }
+        ]
+      }
+    ],
+    "hostIPC": false,
+    "hostNetwork": false,
+    "hostPID": false,
+    "initContainers": [
+      {
+        "command": [
+          "/bin/mkdir",
+          "-m",
+          "2750",
+          "/grader/bundle"
+        ],
+        "image": "registry.example/lab@sha256:abc",
+        "name": "init-grader",
+        "resources": {
+          "limits": {
+            "cpu": "50m",
+            "memory": "16777216"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "16777216"
+          }
+        },
+        "securityContext": {
+          "allowPrivilegeEscalation": false,
+          "capabilities": {
+            "drop": [
+              "ALL"
+            ]
+          },
+          "readOnlyRootFilesystem": true,
+          "runAsGroup": 1001,
+          "runAsNonRoot": true,
+          "runAsUser": 1002,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "volumeMounts": [
+          {
+            "mountPath": "/grader",
+            "name": "v-grader"
+          }
+        ]
+      }
+    ],
+    "nodeSelector": {
+      "edu-it/pool": "labs"
+    },
+    "restartPolicy": "Never",
+    "runtimeClassName": "gvisor",
+    "securityContext": {
+      "fsGroup": 1001,
+      "runAsNonRoot": true,
+      "seccompProfile": {
+        "type": "RuntimeDefault"
+      }
+    },
+    "shareProcessNamespace": false,
+    "tolerations": [
+      {
+        "effect": "NoSchedule",
+        "key": "edu-it/lab",
+        "operator": "Equal",
+        "value": "true"
+      },
+      {
+        "effect": "NoExecute",
+        "key": "node.kubernetes.io/unreachable",
+        "operator": "Exists",
+        "tolerationSeconds": 30
+      },
+      {
+        "effect": "NoExecute",
+        "key": "node.kubernetes.io/not-ready",
+        "operator": "Exists",
+        "tolerationSeconds": 30
+      }
+    ],
+    "volumes": [
+      {
+        "emptyDir": {
+          "medium": "Memory",
+          "sizeLimit": "167772160"
+        },
+        "name": "v-workspace"
+      },
+      {
+        "emptyDir": {
+          "medium": "Memory",
+          "sizeLimit": "33554432"
+        },
+        "name": "v-home-learner"
+      },
+      {
+        "emptyDir": {
+          "medium": "Memory",
+          "sizeLimit": "33554432"
+        },
+        "name": "v-tmp"
+      },
+      {
+        "emptyDir": {
+          "medium": "Memory",
+          "sizeLimit": "33554432"
+        },
+        "name": "v-grader"
+      }
+    ]
+  }
+}

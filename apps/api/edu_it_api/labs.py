@@ -47,7 +47,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.responses import StreamingResponse
 
 from edu_it_api.errors.handlers import request_locale
-from edu_it_api.errors.labs import LAB_PROVISION_FAILED
+from edu_it_api.errors.labs import LAB_CAPACITY, LAB_PROVISION_FAILED
 from edu_it_api.labs_schemas import (
     CheckResultResponse,
     GradingRunEventResponse,
@@ -126,7 +126,13 @@ def build_labs_router(services: LabServices) -> APIRouter:
         accepted = session.last_grading_accepted_at
         error: SessionErrorResponse | None = None
         if session.status is SessionStatus.FAILED:
-            problem = LAB_PROVISION_FAILED
+            # A capacity failure does not use up the retry allowance, so it is the one
+            # failure that ends with attempts left (kubernetes-deployment Req 22.2, 22.4).
+            max_attempts = services.config.LAB_PROVISION_MAX_RETRIES + 1  # type: ignore[attr-defined]
+            at_capacity = (
+                session.capacity_attempts > 0 and session.provision_attempts < max_attempts
+            )
+            problem = LAB_CAPACITY if at_capacity else LAB_PROVISION_FAILED
             error = SessionErrorResponse(
                 type=problem.type_uri,
                 title=_localized(problem.title, locale),

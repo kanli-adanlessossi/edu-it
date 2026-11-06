@@ -43,13 +43,20 @@ the probes are fetched per request, so a changed set — or a datastore that com
 back up — is reflected on the next readiness check (Req 27.3)."""
 
 
-def build_health_router(probes_provider: ProbesProvider) -> APIRouter:
+def build_health_router(
+    probes_provider: ProbesProvider,
+    *,
+    is_draining: Callable[[], bool] | None = None,
+) -> APIRouter:
     """Build the router exposing the liveness and readiness endpoints.
 
     ``probes_provider`` supplies the readiness probes for the service's required
     dependencies; it is called on each readiness request so readiness always
     reflects current reachability. The liveness route ignores it entirely,
     keeping liveness independent of dependencies (Req 18.1).
+
+    ``is_draining`` reports whether the drain has started. While it is true, readiness
+    answers ``503`` before any probe runs (Req 14.1); liveness is unaffected.
     """
     router = APIRouter(tags=["health"])
 
@@ -71,6 +78,11 @@ def build_health_router(probes_provider: ProbesProvider) -> APIRouter:
         Probes are fetched and run per request, so readiness recovers on its own
         once dependencies are reachable again (Req 27.3).
         """
+        if is_draining is not None and is_draining():
+            return JSONResponse(
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+                content={"status": "not_ready", "unreachable": [], "draining": True},
+            )
         report = check_readiness(probes_provider())
         if report.ready:
             return JSONResponse(

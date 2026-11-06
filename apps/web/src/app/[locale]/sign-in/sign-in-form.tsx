@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { createAuthApi } from '../../../api-client.js';
-import { apiBaseUrl } from '../../../create-api-client.js';
+import { publicApiBaseUrl } from '../../../create-api-client.js';
 import { AuthForm, type AuthFormField } from '../../../components/auth-form.js';
 import { Link } from '../../../i18n/navigation.js';
 import { type Locale } from '../../../locale.js';
@@ -57,7 +57,7 @@ export function SignInForm({ locale }: SignInFormProps) {
       />
       {githubSignInEnabled() ? (
         <p>
-          <a href={`${apiBaseUrl()}/auth/github/authorize`}>{t('signIn.githubLink')}</a>
+          <a href={`${publicApiBaseUrl()}/auth/github/authorize`}>{t('signIn.githubLink')}</a>
         </p>
       ) : null}
       <p>

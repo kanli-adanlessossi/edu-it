@@ -1,0 +1,14 @@
+# Build context filter for deploy/images/web/Dockerfile (BuildKit reads
+# <Dockerfile>.dockerignore in place of the root .dockerignore).
+# Allowlist: only the web app sources and the single Config source.
+*
+!apps/web
+!packages/domain/edu_it_domain/config.py
+apps/web/node_modules
+apps/web/.next
+apps/web/test-results
+apps/web/playwright-report
+apps/web/*.tsbuildinfo
+apps/web/src/generated
+apps/web/public/monaco
+apps/web/.env*

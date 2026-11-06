@@ -35,6 +35,10 @@ LABS_STEERING = REPO / ".kiro" / "steering" / "labs.md"
 DOMAIN_RULES = REPO / ".kiro" / "steering" / "domain-rules.md"
 LABS_DESIGN = REPO / "docs" / "LABS-DESIGN.md"
 REQUIREMENTS = REPO / ".kiro" / "specs" / "hands-on-labs" / "requirements.md"
+K8S_REQUIREMENTS = REPO / ".kiro" / "specs" / "kubernetes-deployment" / "requirements.md"
+#: Prefix of a kubernetes-deployment requirement id in ``RULE_MAP``; ids without it are
+#: hands-on-labs ids. Both id spaces use ``N`` and ``N.k``, so the prefix keeps them apart.
+K8S_PREFIX = "kubernetes-deployment:"
 THIS_FILE = Path(__file__).resolve()
 
 #: Statement of the evidence classes; the documentation test checks it is present.
@@ -75,6 +79,13 @@ _D_TAMPER_2 = (f"{_LABS}/test_seed_lab_2_tamper.py", _T)
 _D_UNSAFE = (f"{_LABS}/test_unsafe_learner_files_property.py", _p(36))
 _D_CANARY = (f"{_LABS}/test_static_analysis_canary.py", _T)
 
+# Day-one pod layout spike on kind (kubernetes-deployment task 1.2); a script, not a pytest
+# module, so it is the evidence for the RBAC and admission checks until the chart tests exist.
+_K_SPIKE_FILE = "tests/k8s/spike_pod_layout_kind.py"
+_K8S = "tests/k8s"
+_K_EXEC_TT = f"{_INFRA}/test_k8s_exec_timeout_and_terminal.py"
+_K_SPIKE_RBAC = (_K_SPIKE_FILE, "def check_rbac")
+
 #: Keys of ``security:`` entries that are pure logic and need no Docker-marked test.
 DOCKER_EVIDENCE_EXEMPT = frozenset(
     {
@@ -92,6 +103,11 @@ DOCKER_EVIDENCE_EXEMPT = frozenset(
 # The Kubernetes provider is out of scope for this spec (requirements.md); the runtime and
 # topology rules of labs.md are mapped to the in-scope counterparts: the port stays
 # implementable, the dev-only guard, and the Sandbox lockdown the Docker_Provider enforces.
+# The "Kubernetes Sandbox Provider (ADR 0009)" rules of labs.md are mapped to criteria of the
+# kubernetes-deployment spec (ids prefixed with ``K8S_PREFIX``) and to the tests that carry
+# the matching ``# Claims:`` tags. Those tests run over ``FakeK8sApi`` (call logic, not
+# security evidence) or are the day-one kind spike script; the real-cluster runs are tasks
+# 6.22 and 6.23.
 RULE_MAP: list[tuple[str, list[str] | str, list[tuple[str, str]]]] = [
     # --- .kiro/steering/labs.md ---------------------------------------------------------
     (
@@ -380,6 +396,160 @@ RULE_MAP: list[tuple[str, list[str] | str, list[tuple[str, str]]]] = [
             (f"{_INFRA}/test_docker_spec.py", _T),
         ],
     ),
+    # --- .kiro/steering/labs.md, Kubernetes Sandbox Provider (ADR 0009) -------------------
+    (
+        "Exec, copy and terminal use the Kubernetes `pods/exec`",
+        [f"{K8S_PREFIX}1.8", f"{K8S_PREFIX}4.7", f"{K8S_PREFIX}5.1"],
+        [(f"{_INFRA}/test_k8s_exec.py", _T), _K_SPIKE_RBAC],
+    ),
+    (
+        "Worker RBAC: one `Role` in `labs`",
+        [f"{K8S_PREFIX}4.1", f"{K8S_PREFIX}4.7"],
+        [_K_SPIKE_RBAC],
+    ),
+    (
+        "Api exec admission policy",
+        [f"{K8S_PREFIX}4.7"],
+        [(_K_SPIKE_FILE, "ValidatingAdmissionPolicy"), _K_SPIKE_RBAC],
+    ),
+    (
+        "Pod layout B is chosen",
+        [f"{K8S_PREFIX}2.2", f"{K8S_PREFIX}2.6", f"{K8S_PREFIX}5.1", f"{K8S_PREFIX}5.4"],
+        [
+            (f"{_INFRA}/test_k8s_pod_spec.py", "runAsUser"),
+            (f"{_INFRA}/test_k8s_golden.py", _T),
+            (f"{_INFRA}/test_k8s_pod_spec_properties.py", "kubernetes-deployment, Property 2:"),
+            (_K_SPIKE_FILE, "def check_isolation"),
+        ],
+    ),
+    (
+        "Reaping init requirement",
+        [f"{K8S_PREFIX}5.4", f"{K8S_PREFIX}5.6"],
+        [
+            (f"{_INFRA}/test_k8s_pod_spec.py", "test_every_container_init_reaps_and_never_forks"),
+            (_K_SPIKE_FILE, "def check_freeze"),
+            (f"{_K8S}/test_provider_suites_kind.py", "test_lab_suite_passes_with_the_kubernetes"),
+        ],
+    ),
+    (
+        "The `grader` container, where every Check runs",
+        [f"{K8S_PREFIX}2.3", f"{K8S_PREFIX}5.7"],
+        [
+            (f"{_INFRA}/test_k8s_pod_spec_properties.py", "K8S_GRADER_CPU_MILLI"),
+            (f"{_LABS}/test_docker_check_abuse.py", "def test_abusive_check_is_contained"),
+        ],
+    ),
+    (
+        "The exec wrapper clears the environment",
+        [f"{K8S_PREFIX}5.6", f"{K8S_PREFIX}1.11"],
+        [
+            (_K_EXEC_TT, "def test_timeout_runs_the_command_under"),
+            (_K_EXEC_TT, "def test_exec_start_failure_is_retried"),
+            (f"{_LABS}/fixtures/grading_isolation_bundle/sandbox/checks/c_env.sh", "EDU_IT_EXEC"),
+        ],
+    ),
+    (
+        "The freeze of learner processes runs inside",
+        [f"{K8S_PREFIX}5.4"],
+        [
+            (_K_SPIKE_FILE, "def check_freeze"),
+            (f"{_INFRA}/test_k8s_exec.py", "test_exec_runs_in_the_container_of_as_user"),
+            (f"{_APP}/test_grade_run_freeze_property.py", _p(35)),
+            (f"{_APP}/test_grade_run_freeze_namespaces.py", "test_unstoppable_learner_process"),
+            (f"{_K8S}/test_provider_suites_kind.py", "test_freeze_verification_sees_real"),
+        ],
+    ),
+    (
+        "Memory containment on Kubernetes needs the kubelet setting",
+        [f"{K8S_PREFIX}2.4", f"{K8S_PREFIX}16.10"],
+        [
+            (f"{_K8S}/test_provider_suites_kind.py", "single_process_oom_kill"),
+            (f"{_LABS}/test_docker_isolation.py", "test_memory_loop_is_contained"),
+        ],
+    ),
+    (
+        "Network containment on Kubernetes is the default-deny NetworkPolicy",
+        [f"{K8S_PREFIX}3.1", f"{K8S_PREFIX}16.10"],
+        [
+            (f"{_K8S}/conftest.py", "def labs_default_deny_policy"),
+            (f"{_LABS}/test_docker_isolation.py", "test_outbound_connect_fails"),
+        ],
+    ),
+    (
+        "Exec timeout: every `exec`",
+        [f"{K8S_PREFIX}5.6", f"{K8S_PREFIX}1.12"],
+        [
+            (f"{_INFRA}/test_k8s_exec_timeout_and_terminal.py", _T),
+            (f"{_INFRA}/test_k8s_exec.py", "test_timeout_kills_the_marked_processes"),
+        ],
+    ),
+    (
+        "Copy is a tar stream over `exec`",
+        [f"{K8S_PREFIX}5.1", f"{K8S_PREFIX}5.2"],
+        [(f"{_INFRA}/test_k8s_exec.py", "# Claims: 5.2")],
+    ),
+    (
+        "The terminal is `/bin/bash -l`",
+        [f"{K8S_PREFIX}1.10", f"{K8S_PREFIX}1.11", f"{K8S_PREFIX}1.12"],
+        [
+            (f"{_INFRA}/test_k8s_exec.py", "test_terminal_operations_raise_gone_after_pod_loss"),
+            (f"{_INFRA}/test_k8s_exec_timeout_and_terminal.py", _T),
+        ],
+    ),
+    (
+        "The pod name is deterministic",
+        [f"{K8S_PREFIX}1.4", f"{K8S_PREFIX}1.6", f"{K8S_PREFIX}20.5"],
+        [
+            (f"{_INFRA}/test_k8s_pod_identity_properties.py", "kubernetes-deployment, Property 3:"),
+            (f"{_INFRA}/test_k8s_provider_lifecycle.py", "test_409_with_same_session_label"),
+            (f"{_INFRA}/test_property_k8s_provision_idempotent.py", _T),
+        ],
+    ),
+    (
+        "The provider waits `min(LAB_PROVISION_TIMEOUT",
+        [f"{K8S_PREFIX}1.5", f"{K8S_PREFIX}6.2"],
+        [
+            (f"{_INFRA}/test_k8s_provider_lifecycle.py", "test_wait_uses_min_of_provision"),
+            (f"{_INFRA}/test_property_k8s_provision_failure.py", _T),
+        ],
+    ),
+    (
+        "Destroy deletes the pod and waits",
+        [f"{K8S_PREFIX}6.3", f"{K8S_PREFIX}6.4", f"{K8S_PREFIX}6.5"],
+        [(f"{_INFRA}/test_property_k8s_destroy.py", _T)],
+    ),
+    (
+        "The PID limit is the pod annotation",
+        [f"{K8S_PREFIX}2.6"],
+        [
+            (f"{_INFRA}/test_k8s_pod_spec_properties.py", "ANNOTATION_PID_LIMIT"),
+            (f"{_INFRA}/test_k8s_golden.py", _T),
+        ],
+    ),
+    (
+        "Quota rejection is the distinct domain error",
+        [f"{K8S_PREFIX}2.11", f"{K8S_PREFIX}22.1"],
+        [
+            (f"{_INFRA}/test_k8s_errors.py", "test_capacity_error_is_a_provision_error"),
+            (f"{_INFRA}/test_k8s_create_rejection_properties.py", _T),
+        ],
+    ),
+    (
+        "Backend selection: `SANDBOX_PROVIDER=kubernetes`",
+        [f"{K8S_PREFIX}1.2", f"{K8S_PREFIX}1.3"],
+        [
+            (f"{_INFRA}/test_sandbox_provider_selection.py", "test_kubernetes_without_a_client"),
+            (f"{_INFRA}/test_property_sandbox_backend_parsing.py", "Property 1:"),
+        ],
+    ),
+    (
+        "Evidence status: the Sandbox_Port contract suite",
+        [f"{K8S_PREFIX}1.9", f"{K8S_PREFIX}5.7"],
+        [
+            (f"{_INFRA}/test_sandbox_provider_contract.py", '"kubernetes"'),
+            (f"{_LABS}/test_sandbox_backend.py", "# Claims: 1.9, 5.7"),
+        ],
+    ),
 ]
 
 SECURITY_PREFIX = "security: "
@@ -423,7 +593,18 @@ def labs_rule_bullets() -> list[str]:
 
 
 def criteria_ids(path: Path = REQUIREMENTS) -> set[str]:
-    """Requirement numbers ``N`` and criterion ids ``N.k`` declared in requirements.md."""
+    """Requirement numbers ``N`` and criterion ids ``N.k`` declared in requirements.md.
+
+    With the default path the ids of the kubernetes-deployment spec are added too, each prefixed
+    with ``K8S_PREFIX``; an unprefixed id is always a hands-on-labs id.
+    """
+    ids = _criteria_ids(path)
+    if path == REQUIREMENTS:
+        ids |= {K8S_PREFIX + i for i in _criteria_ids(K8S_REQUIREMENTS)}
+    return ids
+
+
+def _criteria_ids(path: Path) -> set[str]:
     ids: set[str] = set()
     current: str | None = None
     for line in path.read_text(encoding="utf-8").splitlines():

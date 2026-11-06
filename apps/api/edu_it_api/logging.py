@@ -19,12 +19,11 @@ consumers can rely on it.
 
 from __future__ import annotations
 
-import json
 import logging
-import uuid
-from contextvars import ContextVar
-from datetime import UTC, datetime
 from typing import Any
+
+from edu_it_infrastructure import telemetry
+from edu_it_infrastructure.telemetry import JsonLogFormatter
 
 __all__ = [
     "REQUEST_ID_HEADER",
@@ -45,24 +44,14 @@ REQUEST_ID_HEADER = "x-request-id"
 #: cannot bloat every log record. Longer values are replaced by a generated id.
 _MAX_REQUEST_ID_LENGTH = 128
 
-#: Request-scoped Request_ID. ``None`` outside of a request (e.g. at startup), in
-#: which case the formatter simply omits the field.
-_request_id_var: ContextVar[str | None] = ContextVar("edu_it_request_id", default=None)
-
-#: Reserved ``LogRecord`` attribute names. Anything a caller attaches via
-#: ``logger.info(..., extra={...})`` that is *not* one of these is merged into
-#: the JSON record as a structured field.
-_RESERVED_RECORD_KEYS = frozenset(
-    logging.makeLogRecord({}).__dict__.keys() | {"message", "asctime", "taskName"}
-)
-
 
 def generate_request_id() -> str:
-    """Return a fresh, unique Request_ID.
+    """Return a fresh, unique Request_ID (a UUID4 string).
 
-    Used when an inbound request carries no usable Request_ID (Req 18.5).
+    Used when an inbound request carries no usable Request_ID (Req 18.5;
+    kubernetes-deployment Req 13.9).
     """
-    return uuid.uuid4().hex
+    return telemetry.generate_request_id()
 
 
 def resolve_request_id(inbound: str | None) -> str:
@@ -85,66 +74,28 @@ def bind_request_id(request_id: str) -> object:
 
     Returns the :class:`~contextvars.Token` from the underlying ``ContextVar`` so
     the caller can restore the previous value with :func:`reset_request_id`.
+
+    The variable is the shared telemetry one, so the task-queue decorator that
+    writes the id into job envelopes (kubernetes-deployment Req 13.10) and the
+    Worker's log records read the same value.
     """
-    return _request_id_var.set(request_id)
+    return telemetry.bind_request_id(request_id)
 
 
 def reset_request_id(token: Any) -> None:
     """Restore the Request_ID context to the state captured by ``token``."""
-    _request_id_var.reset(token)
+    telemetry.reset_request_id(token)
 
 
 def current_request_id() -> str | None:
     """Return the Request_ID bound to the current request, or ``None``."""
-    return _request_id_var.get()
+    return telemetry.current_request_id()
 
 
-class JsonLogFormatter(logging.Formatter):
-    """Format a :class:`logging.LogRecord` as a single-line JSON object.
-
-    Every formatted record is valid JSON (Req 18.4) carrying the timestamp,
-    level, logger name, and message. While a request is in flight the record also
-    carries its ``request_id`` (Req 18.4); outside a request the field is omitted.
-    Exception and stack information is rendered into the JSON (so internal
-    diagnostics live in the logs, Req 18.6) rather than being dropped.
-    """
-
-    def format(self, record: logging.LogRecord) -> str:
-        payload: dict[str, Any] = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-        }
-
-        request_id = current_request_id()
-        if request_id is not None:
-            payload["request_id"] = request_id
-
-        if record.exc_info:
-            payload["exception"] = self.formatException(record.exc_info)
-        if record.stack_info:
-            payload["stack"] = self.formatStack(record.stack_info)
-
-        # Merge any structured fields passed via ``extra=`` without letting them
-        # overwrite the core fields above.
-        for key, value in record.__dict__.items():
-            if key not in _RESERVED_RECORD_KEYS and key not in payload:
-                payload[key] = value
-
-        return json.dumps(payload, default=str, ensure_ascii=False)
+# The shared telemetry formatter: single-line JSON with `request_id` / `lab_session_id`
+# and redaction of secrets and personal data (kubernetes-deployment Req 13.8, 13.11).
 
 
 def configure_logging(*, level: int = logging.INFO) -> None:
-    """Install the JSON formatter on the root logger's stream handler.
-
-    Idempotent: repeated calls replace the root handlers with a single
-    stream handler using :class:`JsonLogFormatter`, so every emitted record is
-    structured JSON (Req 18.4) regardless of how many times the app is built.
-    """
-    handler = logging.StreamHandler()
-    handler.setFormatter(JsonLogFormatter())
-
-    root = logging.getLogger()
-    root.handlers = [handler]
-    root.setLevel(level)
+    """Install the shared redacting JSON handler on the root logger (idempotent)."""
+    telemetry.configure_logging(level=level)

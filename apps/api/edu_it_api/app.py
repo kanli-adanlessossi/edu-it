@@ -16,7 +16,7 @@ tasks.
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from edu_it_domain import config as _domain_config
 from edu_it_domain.config import LAB_ALLOWED_WEB_ORIGINS
@@ -48,6 +48,7 @@ def create_app(
     v1_routers: Sequence[APIRouter] | None = None,
     web_base_url: str | None = None,
     allowed_web_origins: Sequence[str] = LAB_ALLOWED_WEB_ORIGINS,
+    is_draining: Callable[[], bool] | None = None,
 ) -> FastAPI:
     """Build and return the configured FastAPI application.
 
@@ -63,6 +64,7 @@ def create_app(
     ``lab_router`` stay accepted as aliases and are appended after them. When
     ``web_base_url`` is given it must be an absolute http(s) URL, otherwise startup is
     refused (api-route-wiring Req 8.6). ``allowed_web_origins`` feeds the CORS layer.
+    ``is_draining`` makes readiness answer ``503`` once the drain has started (Req 14.1).
     """
     configure_logging()
     # Validate the lab Config before composing anything that could reach a
@@ -82,7 +84,9 @@ def create_app(
     app.add_middleware(RequestLoggingMiddleware)
     install_cors(app, allowed_web_origins, ROUTE_TABLE)
     install_error_handlers(app)
-    app.include_router(build_health_router(probes_provider or _default_probes_provider))
+    app.include_router(
+        build_health_router(probes_provider or _default_probes_provider, is_draining=is_draining)
+    )
     # Mount one versioned sub-app per supported major version so the service
     # publishes exactly one OpenAPI_Document per major version at
     # /v{major}/openapi.json (Req 16.1). Feature routers are registered on their

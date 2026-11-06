@@ -1,0 +1,76 @@
+{{- /*
+Helm test hook (task 6.14, Req 15.4, 16.1): `helm test <release>` runs this pod once. It uses the
+api image with a Python entrypoint and no shell (the distroless image has none; Req 12.3) and
+checks the Api and Worker readiness endpoints through their ClusterIP Services. The pod exits
+non-zero when either endpoint is not ready within the deadline, which fails `helm test`.
+The pod runs under the restricted Pod Security profile of the platform namespace. Rendered only when
+smokeTest.enabled is true: it needs the smoke-test NetworkPolicies (networkpolicy-smoke-test.yaml) to
+reach the Api and Worker under default-deny, so without them it could only fail.
+*/ -}}
+{{- if .Values.smokeTest.enabled }}
+{{- $ctx := dict "root" . "component" "smoke-test" }}
+{{- $ns := include "edu-it.platformNamespace" . }}
+{{- $apiHost := printf "%s.%s.svc" (include "edu-it.componentName" (dict "root" . "component" "api")) $ns }}
+{{- $workerHost := printf "%s.%s.svc" (include "edu-it.componentName" (dict "root" . "component" "worker")) $ns }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "edu-it.componentName" $ctx }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  priorityClassName: {{ .Values.priorityClass.name }}
+  securityContext:
+    {{- include "edu-it.podSecurityContext" . | nindent 4 }}
+  containers:
+    - name: smoke
+      image: {{ include "edu-it.image" (dict "root" . "name" "api") | quote }}
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        {{- include "edu-it.containerSecurityContext" . | nindent 8 }}
+      command: ["/opt/venv/bin/python", "-c"]
+      args:
+        - |
+          import sys
+          import time
+          import urllib.request
+
+          TARGETS = {
+              "api": {{ printf "http://%s:%d/ready" $apiHost (int .Values.api.port) | quote }},
+              "worker": {{ printf "http://%s:%d/ready" $workerHost (int .Values.worker.adminPort) | quote }},
+          }
+          DEADLINE_S = 120
+
+          def ready(url):
+              try:
+                  with urllib.request.urlopen(url, timeout=3) as response:
+                      return response.status == 200
+              except Exception:
+                  return False
+
+          pending = dict(TARGETS)
+          end = time.monotonic() + DEADLINE_S
+          while pending and time.monotonic() < end:
+              for name, url in list(pending.items()):
+                  if ready(url):
+                      print("ready:", name, url, flush=True)
+                      del pending[name]
+              if pending:
+                  time.sleep(2)
+          for name, url in pending.items():
+              print("NOT READY:", name, url, file=sys.stderr, flush=True)
+          sys.exit(1 if pending else 0)
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi
+{{- end }}

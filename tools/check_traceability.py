@@ -45,14 +45,19 @@ from pathlib import Path
 __all__ = [
     "MILESTONES",
     "check",
+    "check_spec",
     "claimed_ids",
+    "compute_traceability_gaps",
     "main",
     "milestone_ids",
     "parse_requirements",
+    "tagged_claims",
 ]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REQUIREMENTS = REPO_ROOT / ".kiro" / "specs" / "ai-content" / "requirements.md"
+K8S_REQUIREMENTS = REPO_ROOT / ".kiro" / "specs" / "kubernetes-deployment" / "requirements.md"
+K8S_REQUIREMENT_NUMBERS = tuple(range(1, 26))
 DEFAULT_EXCEPTIONS = Path(__file__).resolve().parent / "traceability_exceptions.toml"
 
 # Milestone -> (whole requirement numbers, individual criterion ids).
@@ -190,6 +195,72 @@ def claimed_ids(root: Path) -> dict[str, list[Path]]:
     return claims
 
 
+_CLAIMS_TAG_RE = re.compile(r"^\s*(?:#|//|\*|/\*)\s*Claims:\s*(?P<ids>[^\n]*)", re.IGNORECASE)
+
+
+def tagged_claims(root: Path) -> dict[str, list[Path]]:
+    """Map each id named in a ``# Claims: <ids>`` tag (``//`` in TypeScript) to its files."""
+    claims: dict[str, list[Path]] = {}
+    for path in _iter_test_files(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for line in text.splitlines():
+            match = _CLAIMS_TAG_RE.match(line)
+            if not match:
+                continue
+            for req_id in _ID_RE.findall(match.group("ids")):
+                claims.setdefault(req_id, []).append(path)
+    return claims
+
+
+def compute_traceability_gaps(
+    criterion_ids: Iterable[str], claims: Iterable[str]
+) -> tuple[list[str], list[str]]:
+    """Return ``(unclaimed, unknown)`` ids, each sorted numerically.
+
+    ``unclaimed`` is the set difference criteria minus claims; ``unknown`` is the reverse
+    difference, claimed ids that are not criteria.
+    """
+    criteria = set(criterion_ids)
+    claimed = set(claims)
+    return (
+        sorted(criteria - claimed, key=_id_key),
+        sorted(claimed - criteria, key=_id_key),
+    )
+
+
+def check_spec(
+    *,
+    requirements_path: Path | None = None,
+    exceptions_path: Path | None = None,
+    tests_root: Path | None = None,
+) -> tuple[list[str], list[str]]:
+    """Gaps of the kubernetes-deployment spec for Requirements 1 to 25.
+
+    Claims come from ``Validates:`` lines and ``Claims:`` tags in test files and from the
+    exceptions file. Only ``Claims:`` tags and exceptions can yield unknown ids, because
+    ``Validates:`` lines may belong to other specs that reuse the same numbers.
+    """
+    requirements = parse_requirements(
+        (requirements_path or K8S_REQUIREMENTS).read_text(encoding="utf-8")
+    )
+    criteria: list[str] = []
+    for number in K8S_REQUIREMENT_NUMBERS:
+        if not requirements.get(number):
+            raise ValueError(f"Requirement {number} has no criteria in the requirements file")
+        criteria.extend(requirements[number])
+    root = tests_root or REPO_ROOT
+    tagged = set(tagged_claims(root))
+    # The exceptions file belongs to the ai-content spec, whose ids collide numerically with
+    # this spec's; it must neither excuse a criterion here nor make an id "unknown".
+    validates = set(claimed_ids(root)) & set(criteria)
+    unclaimed, _ = compute_traceability_gaps(criteria, tagged | validates)
+    _, unknown = compute_traceability_gaps(criteria, tagged)
+    return unclaimed, unknown
+
+
 def load_exceptions(path: Path) -> dict[str, str]:
     """Read ``[[exception]]`` entries (``id`` and non-empty ``reason``)."""
     if not path.exists():
@@ -226,8 +297,16 @@ def check(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--milestone", required=True, choices=sorted(MILESTONES))
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--milestone", choices=sorted(MILESTONES))
+    group.add_argument(
+        "--spec",
+        choices=["kubernetes-deployment"],
+        help="check Requirements 1 to 25 of the kubernetes-deployment spec",
+    )
     args = parser.parse_args(argv)
+    if args.spec:
+        return _main_spec()
     try:
         missing = check(args.milestone)
     except (ValueError, OSError, tomllib.TOMLDecodeError) as error:
@@ -248,6 +327,23 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
     print(f"Traceability OK for milestone {args.milestone}.")
+    return 0
+
+
+def _main_spec() -> int:
+    try:
+        unclaimed, unknown = check_spec()
+    except (ValueError, OSError, tomllib.TOMLDecodeError) as error:
+        print(f"check_traceability: {error}", file=sys.stderr)
+        return 2
+    if unclaimed or unknown:
+        print("Traceability FAILED for kubernetes-deployment:", file=sys.stderr)
+        for req_id in unclaimed:
+            print(f"  Unclaimed: {req_id}", file=sys.stderr)
+        for req_id in unknown:
+            print(f"  Unknown: {req_id}", file=sys.stderr)
+        return 1
+    print("Traceability OK for kubernetes-deployment.")
     return 0
 
 

@@ -70,6 +70,21 @@ _FREEZE: Final = [_KILL, "-s", "STOP", "-1"]
 _THAW: Final = [_KILL, "-s", "CONT", "-1"]
 _KILL_ALL: Final = [_KILL, "-s", "KILL", "-1"]
 _PS_LIST: Final = [_PS, "-e", "-o", "user=", "-o", "stat=", "-o", "pid=", "-o", "comm="]
+#: Listing for providers whose containers have separate process namespaces (Kubernetes layout B):
+#: it runs in the learner's own container, because the grader container sees none of the learner
+#: processes. The first line names the PID of the listing process itself (``exec`` keeps the PID),
+#: which is running by definition and is not a learner process to wait for. Nothing here comes
+#: from the sandbox.
+_SELF_MARK: Final = "SELF"
+_PS_LIST_IN_LEARNER: Final = [
+    _BASH,
+    "-c",
+    f'echo "{_SELF_MARK} $$"; exec {_PS} -e -o user= -o stat= -o pid= -o comm=',
+]
+#: Providers that verify the freeze from inside the learner container. With separate process
+#: namespaces a listing as the grader would be vacuously "all stopped". Any other provider lists
+#: as the grader in the one shared namespace.
+_VERIFY_IN_LEARNER_CONTAINER: Final = frozenset({"kubernetes"})
 
 #: Fixed environment of every Check: built from constants only, never from the sandbox.
 _CLEAN_ENV: Final[Mapping[str, str]] = {
@@ -310,16 +325,30 @@ class GradeRun:
             if self._clock.now() - started >= bound:
                 break
             stop = self._try_exec(st, _FREEZE, LEARNER_USER, _ROOT_CWD, bounded=False)
-            listing = self._try_exec(st, _PS_LIST, GRADER_USER, _ROOT_CWD)
+            in_learner = self._provider in _VERIFY_IN_LEARNER_CONTAINER
+            # In the learner container the listing is unbounded like the freeze: a provider's
+            # learner-owned ``timeout`` wrapper would be one more (sleeping) learner process in
+            # the very listing that must show only stopped ones.
+            listing = self._try_exec(
+                st,
+                _PS_LIST_IN_LEARNER if in_learner else _PS_LIST,
+                LEARNER_USER if in_learner else GRADER_USER,
+                _ROOT_CWD,
+                bounded=not in_learner,
+            )
             if self._clock.now() - started > bound:
                 break
+            # In the learner's own container ``kill -s STOP -1`` exits 1 (ESRCH) when the learner
+            # has no process besides the init, which is a frozen learner, not a failure (Docker
+            # always has its learner-owned keep-alive to signal). There the verified listing is
+            # the proof; the stop exec must still have run.
             if (
                 stop is not None
-                and stop.exit_code == 0
+                and (stop.exit_code == 0 or in_learner)
                 and listing is not None
                 and listing.exit_code == 0
                 and not listing.timed_out
-                and learner_all_stopped(_parse_ps(listing.stdout), LEARNER_USER)
+                and learner_all_stopped(_parse_ps(listing.stdout, in_learner), LEARNER_USER)
             ):
                 return
         raise _Abort
@@ -470,20 +499,40 @@ class GradeRun:
             return None
 
 
-def _parse_ps(stdout: bytes) -> list[PsRow]:
+def _parse_ps(stdout: bytes, in_learner_container: bool = False) -> list[PsRow]:
     """Parse ``user stat pid comm`` rows; PID 1 (the init) never stops and is ignored.
 
     A malformed row is reported as a running learner process, so verification fails closed.
+
+    ``in_learner_container`` is the output of ``_PS_LIST_IN_LEARNER``. Every process of that
+    container is a learner process whatever name its UID resolves to (a process the learner
+    started under another UID, or a UID without an image entry, still counts), so the user column
+    is replaced by the learner.
+    The listing must name its own PID and show that PID in the table; otherwise it did not run
+    where it should, and it counts as a running learner process (fail closed).
     """
     rows: list[PsRow] = []
+    own_pid: str | None = None
+    own_seen = False
     for line in stdout.decode("utf-8", errors="replace").splitlines():
         parts = line.split()
         if not parts:
+            continue
+        if in_learner_container and parts[0] == _SELF_MARK and len(parts) == 2:
+            own_pid = parts[1]
             continue
         if len(parts) < 3:
             rows.append(PsRow(LEARNER_USER, ""))
             continue
         if parts[2] == "1":
             continue
+        if in_learner_container:
+            if parts[2] == own_pid:
+                own_seen = True
+            else:
+                rows.append(PsRow(LEARNER_USER, parts[1]))
+            continue
         rows.append(PsRow(parts[0], parts[1]))
+    if in_learner_container and not own_seen:
+        rows.append(PsRow(LEARNER_USER, ""))
     return rows

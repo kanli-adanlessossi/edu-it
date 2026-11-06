@@ -1,7 +1,6 @@
 // Pure rules for the TerminalPane (hands-on-labs Req 13.3, 13.4, 15.10, 16.4).
 //
-// No DOM, no clock, no business numbers: the reconnect schedule comes from
-// `reconnectDelays` (lab-state.ts), which derives it from the Config values.
+// No DOM, no clock, no business numbers: the reconnect schedules are in reconnect-schedule.ts.
 
 /** The parts of a keyboard event the exit chord depends on. */
 export interface ChordKeyEvent {
@@ -40,10 +39,24 @@ export function isReplaced(code: number): boolean {
   return code === 4409;
 }
 
-/** `http(s)://host/v1` to the `ws(s)://host/v1/lab-sessions/{id}/terminal` URL. */
+/**
+ * `http(s)://host/v1` to the `ws(s)://host/v1/lab-sessions/{id}/terminal` URL. A same-origin
+ * base such as `/v1` stays relative (`/v1/lab-sessions/{id}/terminal`); the pane resolves it
+ * against the page with {@link resolveWebSocketUrl} when it opens the socket.
+ */
 export function terminalUrl(apiBaseUrl: string, sessionId: string): string {
   const base = apiBaseUrl.replace(/\/+$/, '').replace(/^http/i, 'ws');
   return `${base}/lab-sessions/${encodeURIComponent(sessionId)}/terminal`;
+}
+
+/** An absolute `ws(s)://` URL for `url`; a path is resolved against the page's origin. */
+export function resolveWebSocketUrl(
+  url: string,
+  page: { readonly protocol: string; readonly host: string },
+): string {
+  if (!url.startsWith('/')) return url;
+  const scheme = page.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${scheme}//${page.host}${url}`;
 }
 
 /** Control frame sent for a terminal size change. */

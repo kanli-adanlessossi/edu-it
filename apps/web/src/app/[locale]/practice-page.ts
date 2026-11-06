@@ -9,7 +9,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { resolveDashboardAccess } from '../../dashboard-access.js';
 import { isLocale, type Locale } from '../../locale.js';
-import { SESSION_COOKIE, resolveSessionState } from '../../session.js';
+import { resolveSessionState } from '../../session.js';
+import { SESSION_COOKIE } from '../../session-shared.js';
 
 export type PracticeTitleKey = 'quiz' | 'review' | 'project';
 

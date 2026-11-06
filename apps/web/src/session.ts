@@ -7,25 +7,18 @@
 // call goes through the generated client (Req 16.3); this module adapts the
 // raw outcome to the `SessionState` the pure `resolveDashboardAccess` gate
 // consumes.
+//
+// This module depends on `next/headers` and is therefore server-only. The
+// server-agnostic `SESSION_COOKIE` constant and `sessionStateFromResponse`
+// helper live in `./session-shared.js` so client-reachable modules never pull
+// `next/headers` into the client bundle.
 
 import { cookies } from 'next/headers';
 
 import { createApiClient } from './create-api-client.js';
 import type { GeneratedClient } from './generated/api-client.js';
 import { type SessionState } from './dashboard-access.js';
-
-/** Cookie name holding the opaque session reference (enumerated in .env.example). */
-export const SESSION_COOKIE = 'edu_it_session';
-
-/**
- * Map the API's session-resolution response to a {@link SessionState}. A 2xx
- * means the reference resolves to a valid active Session; a 401 means no active
- * Session (absent, expired, or revoked), which the dashboard gate treats
- * uniformly as "no active session" and redirects to sign-in (Req 17.4).
- */
-export function sessionStateFromResponse(status: number): SessionState {
-  return status >= 200 && status < 300 ? 'active' : 'none';
-}
+import { SESSION_COOKIE, sessionStateFromResponse } from './session-shared.js';
 
 /**
  * Resolve the current request's session state server-side (Req 17.4).

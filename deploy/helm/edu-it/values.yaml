@@ -1,0 +1,259 @@
+# EDU-IT chart defaults. No secret values. Images carry no digest here: every Values_File must pin one (Req 7.11, 7.12).
+environment: production
+devSecrets:
+  enabled: false
+devDatastores:
+  enabled: false
+namespaces:
+  manage: create
+  platform: platform
+  labs: labs
+images:
+  web:
+    repository: ghcr.io/edu-it/edu-it-web
+    digest: ''
+  api:
+    repository: ghcr.io/edu-it/edu-it-api
+    digest: ''
+  worker:
+    repository: ghcr.io/edu-it/edu-it-worker
+    digest: ''
+  migrations:
+    repository: ghcr.io/edu-it/edu-it-migrations
+    digest: ''
+labs:
+  sessionTtlSeconds: 3600
+  podPriorityValue: 0
+  runtimeClass:
+    name: gvisor
+    kind: gvisor
+    create: true
+    handler: runsc
+  nodePool:
+    nodeSelector:
+      edu-it.io/pool: lab
+    tolerations:
+    - key: edu-it.io/lab
+      operator: Equal
+      value: 'true'
+      effect: NoSchedule
+  nodeLossTolerationSeconds: 30
+  quota:
+    pods: 50
+    requestsCpu: '25'
+    requestsMemory: 50Gi
+    limitsCpu: '50'
+    limitsMemory: 100Gi
+    requestsEphemeralStorage: 100Gi
+    limitsEphemeralStorage: 200Gi
+  limitRange:
+    defaultCpu: 500m
+    defaultMemory: 512Mi
+    defaultRequestCpu: 250m
+    defaultRequestMemory: 256Mi
+    maxCpu: '2'
+    maxMemory: 2Gi
+    defaultEphemeralStorage: 1Gi
+    defaultRequestEphemeralStorage: 512Mi
+    maxEphemeralStorage: 4Gi
+  dnsEgress: false
+  drainProtection:
+    enabled: true
+    waitLimitSeconds: 300
+api:
+  port: 8000
+  adminPort: 8001
+  metricsPort: 9090
+  drainPeriodSeconds: 30
+  preStopDelaySeconds: 5
+  terminationGracePeriodSeconds: 60
+  replicas: 2
+  probes:
+    liveness:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      path: /health
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 30
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCpuUtilizationPercentage: 70
+  pdb:
+    enabled: true
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: '1'
+      memory: 512Mi
+worker:
+  adminPort: 8081
+  metricsPort: 9090
+  terminationGracePeriodSeconds: 60
+  replicas: 2
+  probes:
+    liveness:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      path: /ready
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      path: /health
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 30
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    metric: cpu
+    targetCpuUtilizationPercentage: 70
+    queueDepthTarget: 10
+  pdb:
+    enabled: true
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: '1'
+      memory: 768Mi
+web:
+  port: 3000
+  replicas: 2
+  probes:
+    liveness:
+      path: /api/healthz
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      path: /api/healthz
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      path: /api/healthz
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 30
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCpuUtilizationPercentage: 70
+  pdb:
+    enabled: true
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+metricsAdapter:
+  enabled: false
+priorityClass:
+  name: edu-it-platform
+  value: 1000000
+networkPolicy:
+  enforcementRequired: true
+  kubernetesApi:
+    # Required, non-empty. API server addresses used as ipBlock egress for Api and Worker.
+    # Find the real value: kubectl get endpoints kubernetes -n default
+    # Placeholder below; replace it per Target.
+    cidrs:
+    - 10.96.0.1/32
+  # Optional (OQ-4): admit the monitoring namespace to the Api and Worker metrics port only. Off by default (Req 11.4).
+  monitoringIngress:
+    enabled: false
+  monitoringNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: monitoring
+  ingressControllerNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+migration:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+ingress:
+  mode: ingress-nginx
+  className: nginx
+  host: edu-it.example.com
+  # Public Web_App URL the Api builds email and OAuth links from and whose origin it allows for
+  # CORS and the terminal WebSocket (WEB_BASE_URL). Empty means https://<host>; set it when the
+  # edge serves the host on a non-default port (for example a port-forward in a kind test).
+  publicBaseUrl: ""
+  gateway:
+    name: edu-it-gateway
+    namespace: gateway-system
+  tls:
+    secretName: edu-it-tls
+  websocket:
+    readTimeoutSeconds: 3600
+    sendTimeoutSeconds: 3600
+externalSecrets:
+  storeName: edu-it-store
+  storeKind: ClusterSecretStore
+  refreshInterval: 1h
+  remoteKeys:
+    database: edu-it/database
+    redis: edu-it/redis
+    session: edu-it/session
+    llm: edu-it/llm
+    objectStorage: edu-it/object-storage
+llm:
+  provider: bedrock
+  model: eu.anthropic.claude-sonnet-4-6
+  region: eu-central-1
+  endpoint: https://bedrock-runtime.eu-central-1.amazonaws.com
+objectStorage:
+  type: s3
+  bucket: edu-it-artifacts
+  endpoint: ''
+workloadIdentity:
+  type: none
+  annotations: {}
+observability:
+  collectorEndpoint: http://otel-collector.monitoring.svc:4318
+  scrapeMode: serviceMonitor
+imagePolicy:
+  enabled: false
+prometheusRules:
+  enabled: true
+  quotaRejection:
+    threshold: 5
+    windowMinutes: 10
+  externalSecret:
+    staleMinutes: 30
+smokeTest:
+  enabled: false

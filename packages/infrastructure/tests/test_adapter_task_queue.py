@@ -32,6 +32,36 @@ def _collect_once(queue: Redis_TaskQueue, job_name: str, sink: list[JobPayload])
     queue.consume(job_name, handler)
 
 
+def test_requeue_in_flight_moves_unfinished_jobs_back_untouched_and_in_order(
+    client: fakeredis.FakeRedis,
+) -> None:
+    """Shutdown re-queue (kubernetes-deployment Req 14.11): payload and order are kept."""
+    queue = Redis_TaskQueue(client, block_timeout_seconds=0.05)
+    queue.enqueue("job", {"n": 1}, dedupe_key="a")
+    queue.enqueue("job", {"n": 2})
+    # A handler that never returns would block; emulate the two in-flight jobs directly.
+    queue.consume("job", lambda _p: queue.stop())  # first job done, loop stops
+    processing = queue._processing_key("job")
+    client.rpush(processing, Redis_TaskQueue._encode("job", {"n": 3}, "c"))
+    client.rpush(processing, Redis_TaskQueue._encode("job", {"n": 4}, None))
+
+    assert queue.requeue_in_flight() == 2
+
+    assert client.llen(processing) == 0
+    assert client.sismember("edu_it:taskqueue:dedupe:job", "job\x00c")
+    received: list[JobPayload] = []
+
+    def handler(payload: JobPayload) -> None:
+        received.append(payload)
+        if len(received) == 3:
+            queue.stop()
+
+    queue.consume("job", handler)
+    # In-flight jobs go back to the front, oldest first, ahead of the job still waiting.
+    assert received == [{"n": 3}, {"n": 4}, {"n": 2}]
+    assert queue.requeue_in_flight() == 0
+
+
 def test_adapter_satisfies_the_domain_port(client: fakeredis.FakeRedis) -> None:
     # Substitutable for the in-memory fake without changing domain code (Req 5.2).
     assert isinstance(Redis_TaskQueue(client), TaskQueue)

@@ -481,6 +481,113 @@ LAB_RECONNECT_BACKOFF: Final[tuple[timedelta, ...]] = (
 #: Total time the client keeps reconnecting before giving up.
 LAB_RECONNECT_WINDOW: Final[timedelta] = timedelta(seconds=60)
 
+# --- Kubernetes deployment ---------------------------------------------------
+
+#: Bound on destroying a sandbox and waiting until it is gone (kubernetes Req 6.3).
+LAB_DESTROY_TIMEOUT: Final[timedelta] = timedelta(seconds=30)
+
+#: Delay before a capacity-rejected provisioning request is retried (Req 22.6).
+#: Must be at least :data:`LAB_PROVISION_MIN_INTERVAL`.
+LAB_PROVISION_CAPACITY_BACKOFF: Final[timedelta] = timedelta(seconds=10)
+
+#: Hard ceiling on waiting for a Lab_Pod to become Ready (Req 1.5); the provider
+#: waits ``min(LAB_PROVISION_TIMEOUT, K8S_READY_CEILING)``.
+K8S_READY_CEILING: Final[timedelta] = timedelta(seconds=60)
+
+#: CPU (millicores) of the ``owner`` helper container of a Lab_Pod (tar and chmod only);
+#: requests equal limits (ADR 0009, layout B).
+K8S_HELPER_CPU_MILLI: Final[int] = 50
+
+#: Memory (bytes) of the ``owner`` helper container of a Lab_Pod (16 MiB); requests equal limits.
+K8S_HELPER_MEMORY_BYTES: Final[int] = 16 * _MIB
+
+#: CPU (millicores) of the ``grader`` container, where every Check runs; requests equal limits.
+#: In Docker a Check gets the whole Sandbox (1 CPU, 512 MiB, the learner being frozen). At the
+#: helper size (50 m, 16 MiB) an abusive Check livelocks its cgroup in memory reclaim under CPU
+#: throttling, so not even ``timeout`` or SIGKILL can end it (ADR 0009, checkpoint 7).
+K8S_GRADER_CPU_MILLI: Final[int] = 500
+
+#: Memory (bytes) of the ``grader`` container (256 MiB): the PID limit, not memory, stops a fork
+#: bomb, and the code-lab harness fits with its 128 MiB per-case address-space limit.
+K8S_GRADER_MEMORY_BYTES: Final[int] = 256 * _MIB
+
+#: Bound on closing terminals after a lab node drain or failure (Req 19.1).
+LAB_NODE_LOSS_TERMINAL_CLOSE_BOUND: Final[timedelta] = timedelta(seconds=10)
+
+#: Bound on marking a session ended-by-infrastructure after detecting the loss
+#: (Req 19.2, 19.3).
+LAB_INFRA_LOSS_MARK_BOUND: Final[timedelta] = timedelta(seconds=30)
+
+#: Bound on removing an evicted pod object after detecting the eviction (Req 19.5).
+LAB_EVICTED_POD_REMOVAL_BOUND: Final[timedelta] = timedelta(seconds=60)
+
+# Reconnect schedules (Req 14.5, 14.6, 20.1, 20.2).
+
+#: ``drain`` schedule, used after a reconnect message: delays between attempts.
+TERMINAL_DRAIN_RECONNECT_DELAYS: Final[tuple[timedelta, ...]] = (
+    timedelta(seconds=1),
+    timedelta(seconds=2),
+    timedelta(seconds=4),
+    timedelta(seconds=8),
+    timedelta(seconds=16),
+    timedelta(seconds=30),
+    timedelta(seconds=30),
+    timedelta(seconds=30),
+    timedelta(seconds=30),
+    timedelta(seconds=30),
+)
+
+#: Most attempts of the ``drain`` schedule.
+TERMINAL_DRAIN_RECONNECT_MAX_ATTEMPTS: Final[int] = 10
+
+#: No ``drain`` delay exceeds this cap.
+TERMINAL_DRAIN_RECONNECT_CAP: Final[timedelta] = timedelta(seconds=30)
+
+#: The first ``drain`` attempt starts within this time.
+TERMINAL_DRAIN_RECONNECT_FIRST_WITHIN: Final[timedelta] = timedelta(seconds=2)
+
+#: ``restart`` schedule, used after an abrupt close: delays between attempts;
+#: the last delay repeats until :data:`TERMINAL_RESTART_RECONNECT_TOTAL` has passed.
+TERMINAL_RESTART_RECONNECT_DELAYS: Final[tuple[timedelta, ...]] = (
+    timedelta(seconds=1),
+    timedelta(seconds=2),
+    timedelta(seconds=4),
+    timedelta(seconds=5),
+)
+
+#: Largest gap between two ``restart`` attempts.
+TERMINAL_RESTART_RECONNECT_MAX_INTERVAL: Final[timedelta] = timedelta(seconds=5)
+
+#: The ``restart`` schedule stops after this total time.
+TERMINAL_RESTART_RECONNECT_TOTAL: Final[timedelta] = timedelta(seconds=60)
+
+# Api drain (Req 14.2, 14.12).
+
+#: Default drain period of the Api, in seconds.
+API_DRAIN_PERIOD_DEFAULT_SECONDS: Final[int] = 30
+
+#: Allowed range of the drain period, in seconds (inclusive).
+API_DRAIN_PERIOD_BOUNDS_SECONDS: Final[tuple[int, int]] = (5, 300)
+
+#: Default preStop delay before the drain starts, in seconds.
+API_PRESTOP_DELAY_DEFAULT_SECONDS: Final[int] = 5
+
+#: Allowed range of the preStop delay, in seconds (inclusive).
+API_PRESTOP_DELAY_BOUNDS_SECONDS: Final[tuple[int, int]] = (0, 60)
+
+#: Margin added on top of drain plus preStop delay for the pod's
+#: terminationGracePeriodSeconds, in seconds (Requirement 14.4).
+API_TERMINATION_GRACE_MARGIN_SECONDS: Final[int] = 10
+
+# Worker shutdown (Req 14.10, 14.11).
+
+#: Seconds before ``terminationGracePeriodSeconds`` elapses at which the Worker re-queues
+#: every job that is still in flight and exits.
+WORKER_SHUTDOWN_MARGIN_SECONDS: Final[int] = 5
+
+#: ``terminationGracePeriodSeconds`` assumed when the Chart does not pass one to the Worker.
+WORKER_TERMINATION_GRACE_DEFAULT_SECONDS: Final[int] = 60
+
 # --- Learner files, warnings, progression ------------------------------------
 
 #: Maximum number of learner files per save.
@@ -728,6 +835,30 @@ def validate_ai_config(config: object) -> None:
         raise AiConfigError(keys, "invalid AI Config: " + ", ".join(keys))
 
 
+# --- Trace export (kubernetes-deployment Req 13.1, 13.2) ---------------------
+
+#: Most times one batch of spans is handed to the collector exporter; after the last failed
+#: attempt the batch is dropped (Req 13.2). Fixed at 3 by the requirements.
+TRACE_EXPORT_MAX_ATTEMPTS: Final[int] = 3
+
+#: Time one export attempt may take before it counts as failed. Together with
+#: :data:`TRACE_EXPORT_RETRY_BACKOFF` it bounds the work spent on one batch, off the request path.
+TRACE_EXPORT_ATTEMPT_TIMEOUT: Final[timedelta] = timedelta(seconds=2)
+
+#: Pause between two export attempts of the same batch (background thread only).
+TRACE_EXPORT_RETRY_BACKOFF: Final[timedelta] = timedelta(milliseconds=200)
+
+#: Spans buffered for export. When the queue is full new spans are dropped, so a slow or
+#: unreachable collector can never grow memory or block a request or a job (Req 13.2).
+TRACE_QUEUE_MAX_SPANS: Final[int] = 2048
+
+#: Most spans sent in one export call.
+TRACE_EXPORT_BATCH_MAX_SPANS: Final[int] = 512
+
+#: Delay between two background export runs.
+TRACE_EXPORT_SCHEDULE_DELAY: Final[timedelta] = timedelta(seconds=5)
+
+
 __all__ = [
     "ADVISOR_CYCLE_INTERVAL",
     "AI_BUDGET_DAILY_CENTS",
@@ -739,6 +870,11 @@ __all__ = [
     "AI_RETENTION_PROBLEM_REPORT",
     "AI_RETENTION_RECOMMENDATION",
     "ANTI_FARMING_WINDOW",
+    "API_DRAIN_PERIOD_BOUNDS_SECONDS",
+    "API_DRAIN_PERIOD_DEFAULT_SECONDS",
+    "API_PRESTOP_DELAY_BOUNDS_SECONDS",
+    "API_PRESTOP_DELAY_DEFAULT_SECONDS",
+    "API_TERMINATION_GRACE_MARGIN_SECONDS",
     "COOLDOWN_INTERVAL",
     "CURSOR_TTL",
     "DECAY_FLOOR_ONCE_PRACTICED",
@@ -752,9 +888,16 @@ __all__ = [
     "ITEM_CORRECT_RATE_BOUNDS",
     "ITEM_ELAPSED_MS_MAX",
     "ITEM_STAT_MIN_SAMPLES",
+    "K8S_GRADER_CPU_MILLI",
+    "K8S_GRADER_MEMORY_BYTES",
+    "K8S_HELPER_CPU_MILLI",
+    "K8S_HELPER_MEMORY_BYTES",
+    "K8S_READY_CEILING",
     "LAB_ACTIVITY_WRITE_INTERVAL",
     "LAB_ALLOWED_WEB_ORIGINS",
     "LAB_CHECK_TIMEOUT_DEFAULT",
+    "LAB_DESTROY_TIMEOUT",
+    "LAB_EVICTED_POD_REMOVAL_BOUND",
     "LAB_FILE_MAX_BYTES",
     "LAB_FILE_MAX_COUNT",
     "LAB_GRADING_FREEZE_ATTEMPTS",
@@ -763,8 +906,11 @@ __all__ = [
     "LAB_GRADING_RUN_DEADLINE",
     "LAB_GRADING_TEARDOWN_RESERVE",
     "LAB_IDLE_TIMEOUT",
+    "LAB_INFRA_LOSS_MARK_BOUND",
+    "LAB_NODE_LOSS_TERMINAL_CLOSE_BOUND",
     "LAB_PROGRAM_MEMORY_LIMIT",
     "LAB_PROGRAM_PROC_LIMIT",
+    "LAB_PROVISION_CAPACITY_BACKOFF",
     "LAB_PROVISION_MAX_RETRIES",
     "LAB_PROVISION_MIN_INTERVAL",
     "LAB_PROVISION_RATE_LIMIT",
@@ -826,15 +972,30 @@ __all__ = [
     "SIGN_IN_RATE_LIMIT_THRESHOLD",
     "SIGN_IN_RATE_LIMIT_WINDOW",
     "SIMILARITY_LIMIT",
+    "TERMINAL_DRAIN_RECONNECT_CAP",
+    "TERMINAL_DRAIN_RECONNECT_DELAYS",
+    "TERMINAL_DRAIN_RECONNECT_FIRST_WITHIN",
+    "TERMINAL_DRAIN_RECONNECT_MAX_ATTEMPTS",
     "TERMINAL_MAX_MESSAGES_PER_SECOND",
     "TERMINAL_MAX_MESSAGE_BYTES",
     "TERMINAL_MAX_MISSED_PONGS",
     "TERMINAL_PING_INTERVAL",
+    "TERMINAL_RESTART_RECONNECT_DELAYS",
+    "TERMINAL_RESTART_RECONNECT_MAX_INTERVAL",
+    "TERMINAL_RESTART_RECONNECT_TOTAL",
     "TERMINAL_STATUS_POLL_INTERVAL",
+    "TRACE_EXPORT_ATTEMPT_TIMEOUT",
+    "TRACE_EXPORT_BATCH_MAX_SPANS",
+    "TRACE_EXPORT_MAX_ATTEMPTS",
+    "TRACE_EXPORT_RETRY_BACKOFF",
+    "TRACE_EXPORT_SCHEDULE_DELAY",
+    "TRACE_QUEUE_MAX_SPANS",
     "USABLE_RUN_BUDGET",
     "VARIANTS_PER_REFILL_MAX",
     "VARIANT_POOL_THRESHOLD",
     "VERIFICATION_LINK_TTL",
+    "WORKER_SHUTDOWN_MARGIN_SECONDS",
+    "WORKER_TERMINATION_GRACE_DEFAULT_SECONDS",
     "AiConfigError",
     "MasteryThresholds",
     "PasswordPolicy",

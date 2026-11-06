@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 from edu_it_domain import config as domain_config
+from edu_it_domain.labs.k8s_rules import capacity_decision
+from edu_it_domain.labs.k8s_types import Requeue
 from edu_it_domain.labs.models import SessionStatus
 from edu_it_domain.labs.sandbox_spec import (
     LEARNER_USER,
@@ -28,6 +30,7 @@ from edu_it_domain.labs.sandbox_spec import (
     build_sandbox_spec,
 )
 from edu_it_domain.ports.sandbox import (
+    ProvisionCapacityError,
     ProvisionError,
     ProvisionTimeout,
     SandboxError,
@@ -37,9 +40,10 @@ from edu_it_domain.ports.sandbox import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from edu_it_domain.labs.models import StableId
+    from edu_it_domain.labs.models import LabSession, StableId
     from edu_it_domain.ports.clock import Clock
     from edu_it_domain.ports.lab_catalog import LabCatalog, LabDefinition
+    from edu_it_domain.ports.lab_metrics import LabMetrics
     from edu_it_domain.ports.lab_sessions import LabSessionRepository
     from edu_it_domain.ports.sandbox import SandboxProvider
 
@@ -89,8 +93,10 @@ class ProvisionSandbox:
         clock: Clock,
         setup_scripts: SetupScriptResolver | None = None,
         config: object = domain_config,
+        metrics: LabMetrics | None = None,
     ) -> None:
         """Wire the ports the job orchestrates."""
+        self._metrics = metrics
         self._sessions = sessions
         self._catalog = catalog
         self._sandbox = sandbox
@@ -127,6 +133,8 @@ class ProvisionSandbox:
             timeout: timedelta = self._config.LAB_PROVISION_TIMEOUT  # type: ignore[attr-defined]
             handle = self._sandbox.provision(build_sandbox_spec(lab, session_id))
             self._run_setup(handle, lab, started, timeout)
+        except ProvisionCapacityError as exc:  # before ProvisionError: no retry penalty
+            return self._on_capacity(session, handle, exc)
         except SandboxError as exc:
             if isinstance(exc, ProvisionError) and exc.partial_handle is not None:
                 handle = exc.partial_handle
@@ -212,6 +220,58 @@ class ProvisionSandbox:
             next_provision_at=now + interval,
         )
         return ProvisionOutcome.RETRY_SCHEDULED
+
+    def _on_capacity(
+        self, session: LabSession, handle: SandboxHandle | None, exc: ProvisionCapacityError
+    ) -> ProvisionOutcome:
+        """Requeue or fail a capacity rejection without using up the retry allowance.
+
+        The claimed attempt is given back (``provision_attempts`` restored) and the
+        rejection is recorded in ``capacity_attempts`` (Req 22.4). The quota rejection
+        counter moves by exactly one per rejection (Req 22.5). The exception text, which
+        may quote Kubernetes output, is never logged or shown to the learner.
+        """
+        session_id = session.stable_id
+        _LOG.warning(
+            "lab provisioning for session %s rejected for capacity: %s",
+            session_id,
+            type(exc).__name__,
+        )
+        if self._metrics is not None:
+            self._metrics.inc_quota_rejection()
+        if exc.partial_handle is not None:
+            handle = exc.partial_handle
+        if handle is not None:
+            self._destroy(handle)  # Req 22.3
+        now = self._clock.now()
+        decision = capacity_decision(
+            now - session.created_at,
+            self._config.LAB_PROVISION_TIMEOUT,  # type: ignore[attr-defined]
+            self._config.LAB_PROVISION_CAPACITY_BACKOFF,  # type: ignore[attr-defined]
+        )
+        bookkeeping = {
+            "provision_attempts": session.provision_attempts,
+            "capacity_attempts": session.capacity_attempts + 1,
+        }
+        if isinstance(decision, Requeue):
+            self._sessions.transition(
+                session_id,
+                expected={SessionStatus.PROVISIONING},
+                to=SessionStatus.PROVISIONING,
+                next_provision_at=now + decision.delay,
+                **bookkeeping,
+            )
+            return ProvisionOutcome.RETRY_SCHEDULED
+        self._sessions.transition(
+            session_id,
+            expected={SessionStatus.PROVISIONING},
+            to=SessionStatus.FAILED,
+            ended_at=now,
+            **bookkeeping,
+        )
+        if self._metrics is not None:
+            self._metrics.inc_provision_failure(reason=decision.reason)
+        return ProvisionOutcome.FAILED
 
     def _fail(self, session_id: StableId, now: datetime) -> None:
         self._sessions.transition(

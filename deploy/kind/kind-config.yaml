@@ -1,0 +1,57 @@
+# kind cluster for the Chart walking skeleton and the kind CI job (kubernetes-deployment task 6.1,
+# Req 16.1, 16.3, 16.6, 16.9). Create it through tools/kind_harness.py, which also installs the
+# prerequisites in order. Manual use:
+#   kind create cluster --config deploy/kind/kind-config.yaml
+#   kind delete cluster --name edu-it
+#
+# - One control-plane and two workers. One worker is the lab node pool: label
+#   edu-it.io/pool=labs and taint edu-it.io/labs=true:NoSchedule (Req 2.8).
+# - The default CNI is disabled. Calico is installed by the harness because it enforces
+#   NetworkPolicy (Req 16.3).
+# - podPidsLimit enforces the per-pod PID limit. It must equal SANDBOX_PID_LIMIT in
+#   packages/domain/edu_it_domain/config.py (128); tools/kind_harness.py and its unit test check this.
+# - singleProcessOOMKill makes a container memory OOM kill only the offending process (as the Docker
+#   provider's cgroup does), not every process of the container; without it a memory loop would
+#   kill the learner container and, with restartPolicy Never, end the pod. Production node pools
+#   set the same kubelet option (Go_Live_Checklist item).
+# - containerd reads registry hosts from /etc/containerd/certs.d, which the harness fills in for the
+#   local registry at localhost:5001.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: edu-it
+networking:
+  disableDefaultCNI: true
+  podSubnet: 192.168.0.0/16 # Calico default pool
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = "/etc/containerd/certs.d"
+kubeadmConfigPatches:
+  - |
+    kind: KubeletConfiguration
+    podPidsLimit: 128
+    singleProcessOOMKill: true
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+  - role: worker
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "edu-it.io/pool=labs"
+            register-with-taints: "edu-it.io/labs=true:NoSchedule"

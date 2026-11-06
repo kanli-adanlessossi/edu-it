@@ -1,0 +1,65 @@
+{{- /*
+Web Deployment (task 12.1, OQ-8). Next.js standalone server on `web.port` (the image sets PORT=3000
+and HOSTNAME=0.0.0.0). The Web needs no Kubernetes API access and no secrets, so its pod spec sets
+automountServiceAccountToken to false and it uses the namespace default ServiceAccount.
+Requirements: 8.1, 8.5, 8.6, 8.12. `replicas` is omitted when `web.hpa.enabled` is true.
+*/ -}}
+{{- $ctx := dict "root" . "component" "web" }}
+{{- $name := include "edu-it.componentName" $ctx }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ include "edu-it.platformNamespace" . }}
+  labels:
+    {{- include "edu-it.labels" $ctx | nindent 4 }}
+spec:
+  {{- if not .Values.web.hpa.enabled }}
+  replicas: {{ .Values.web.replicas }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "edu-it.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "edu-it.labels" $ctx | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      priorityClassName: {{ .Values.priorityClass.name }}
+      securityContext:
+        {{- include "edu-it.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: web
+          image: {{ include "edu-it.image" (dict "root" . "name" "web") | quote }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "edu-it.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ int .Values.web.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ int .Values.web.port | quote }}
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            {{- /* Server-side API calls (session checks, server actions) go to the in-cluster Api
+            Service, which the platform-web-egress policy allows. Browser calls stay same-origin
+            under /v1, which the ingress routes to the Api. Read at run time by apiBaseUrl(). */}}
+            - name: API_INTERNAL_BASE_URL
+              value: {{ printf "http://%s.%s.svc:%d/v1" (include "edu-it.componentName" (dict "root" . "component" "api")) (include "edu-it.platformNamespace" .) (int .Values.api.port) | quote }}
+          {{- include "edu-it.probes" (dict "root" . "component" "web" "port" "http") | nindent 10 }}
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

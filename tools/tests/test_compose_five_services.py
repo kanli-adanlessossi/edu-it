@@ -94,16 +94,30 @@ def test_deploy_contains_no_kubernetes_artifact() -> None:
     """deploy/ holds only the local Compose definition, no Kubernetes artifact (Req 20.4)."""
     deploy_dir = REPO_ROOT / "deploy"
 
+    # Narrowed by the kubernetes-deployment spec (supersedes the pre-Kubernetes
+    # phase guard): only that spec's own trees are permitted; anything else
+    # Kubernetes-shaped under deploy/ is still rejected.
+    allowed_roots = (
+        deploy_dir / "helm" / "edu-it",
+        deploy_dir / "kind",
+        deploy_dir / "images",
+    )
+
+    def _allowed(path: Path) -> bool:
+        if path == deploy_dir / "helm":  # parent dir of the allowed chart
+            return True
+        return any(path == root or root in path.parents for root in allowed_roots)
+
     offending_dirs = [
         path
         for path in deploy_dir.rglob("*")
-        if path.is_dir() and path.name.lower() in _K8S_DIR_NAMES
+        if path.is_dir() and path.name.lower() in _K8S_DIR_NAMES and not _allowed(path)
     ]
     assert not offending_dirs, f"unexpected Kubernetes directories under deploy/: {offending_dirs}"
 
     offending_files = [
         path
         for path in deploy_dir.rglob("*")
-        if path.is_file() and path.name.lower() in _K8S_FILE_NAMES
+        if path.is_file() and path.name.lower() in _K8S_FILE_NAMES and not _allowed(path)
     ]
     assert not offending_files, f"unexpected Kubernetes manifests under deploy/: {offending_files}"

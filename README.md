@@ -1,7 +1,59 @@
-# EDU-IT
+﻿# EDU-IT
 
-Bilingual (French/English) re-learning platform. This repository is a monorepo.
+## Purpose
 
+EDU-IT is a bilingual (French/English) re-learning platform for IT professionals who are losing hands-on skills as AI agents take over technical work. Learners rebuild skills step by step and advance only by proving mastery through quizzes, labs and projects. The platform runs on Kubernetes (EKS, AKS or on-premise).
+
+## Quick start
+
+Prerequisites: Docker with Compose, Python 3 and Node.js with npm.
+
+```sh
+# 1. Start the five-service local stack (web, api, worker, postgres, redis)
+docker compose -f deploy/compose/docker-compose.yml up -d
+
+# 2. Wait until web, api and worker all report ready (within 120 s)
+python deploy/compose/wait_for_ready.py
+
+# 3. Run the checks
+make lint
+make test
+```
+
+The UI is served at http://localhost:3000 (`/fr` and `/en`) and the API at http://localhost:8000. Copy `.env.example` to `.env` to run the apps outside Compose; see [deploy/compose/README.md](deploy/compose/README.md) for details. Stop the stack with `docker compose -f deploy/compose/docker-compose.yml down`.
+
+## Français
+
+EDU-IT est une plateforme bilingue (français/anglais) de remise à niveau pour les professionnels de l'informatique qui perdent leurs compétences pratiques à mesure que les agents d'IA prennent en charge le travail technique. Les apprenants reconstruisent leurs compétences pas à pas et ne progressent qu'en prouvant leur maîtrise par des quiz, des labs et des projets. La plateforme fonctionne sur Kubernetes (EKS, AKS ou sur site).
+
+Démarrage rapide :
+
+- Lancer la pile locale : `docker compose -f deploy/compose/docker-compose.yml up -d`
+- Attendre que web, api et worker soient prêts : `python deploy/compose/wait_for_ready.py`
+- Lancer les vérifications : `make lint` puis `make test`
+- Ouvrir l'interface sur http://localhost:3000
+
+Pour déployer sur Kubernetes, consultez le [guide de déploiement](docs/DEPLOYMENT.md).
+
+## Documentation
+
+- [Deployment guide](docs/DEPLOYMENT.md)
+- [Architecture](docs/ARCHITECTURE.md)
+
+Steering files:
+
+- [ai-content](.kiro/steering/ai-content.md)
+- [api-conventions](.kiro/steering/api-conventions.md)
+- [auth-privacy](.kiro/steering/auth-privacy.md)
+- [content](.kiro/steering/content.md)
+- [deployment](.kiro/steering/deployment.md)
+- [domain-rules](.kiro/steering/domain-rules.md)
+- [labs](.kiro/steering/labs.md)
+- [product](.kiro/steering/product.md)
+- [quality](.kiro/steering/quality.md)
+- [structure](.kiro/steering/structure.md)
+- [tech](.kiro/steering/tech.md)
+- [working-agreements](.kiro/steering/working-agreements.md)
 ## Layout
 
 ```
@@ -15,7 +67,8 @@ edu-it/
     application/    # use cases orchestrating domain + ports
     infrastructure/ # concrete port implementations (PG, Redis, SMTP, ...) + fakes
   deploy/
-    compose/        # local-development docker-compose only (no K8s this phase)
+    compose/        # local-development docker-compose stack
+    helm/           # Helm chart for Kubernetes (see docs/DEPLOYMENT.md)
   docs/             # design documents, ADRs, reports
   .kiro/            # specs and steering
 ```

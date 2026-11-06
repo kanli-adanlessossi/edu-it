@@ -647,6 +647,178 @@ def write_phase4_report(
     return Phase4Result(not blockers, blockers, path)
 
 
+# --------------------------------------------------------------------------------------------
+# Phase 5 report (kubernetes-deployment task 6.19; Requirements 26.3 to 26.7)
+# --------------------------------------------------------------------------------------------
+
+PHASE5_REPORT = REPO / "docs" / "reports" / "phase-5.md"
+PASSED = "passed"
+FAILED = "failed"
+NOT_RUN = "not run"
+MILESTONES = ("A", "B", "C")
+PHASE5_PASSING = "passing"
+PHASE5_NOT_PASSING = "not passing"
+LOAD_TEST_NAME = "Load_Test"
+READY_TIME_NAME = "Sandbox_Ready_Time p95"
+
+# Priority order required by Requirement 26.7: placement assessment, project reviewers, warm pool.
+DEFAULT_NEXT_STEPS: tuple[tuple[int, str], ...] = (
+    (1, "Placement assessment"),
+    (2, "Project reviewers"),
+    (3, "Warm pool"),
+)
+
+
+@dataclass
+class Phase5Check:
+    """One check run for a milestone: its command and outcome (Requirement 26.3)."""
+
+    milestone: str  # "A" | "B" | "C"
+    check_id: str
+    command: str
+    outcome: str  # passed | failed | not run
+    reason: str = ""  # why it failed or was not run
+    required: bool = True
+
+
+@dataclass
+class Phase5Inputs:
+    """Measurements and notes supplied for the Phase_5_Report (Requirements 26.4, 26.6, 26.7)."""
+
+    load_test_result: str | None = None  # None means the Load_Test was not run
+    load_test_reason: str = "not run"
+    ready_time_p95_seconds: float | None = None  # None means the measurement was not run
+    ready_time_reason: str = "not run"
+    gvisor_fallback: str = ""  # e.g. "kind ran runc instead of gVisor"
+    pod_layout: str = ""
+    extra_not_verified: list[tuple[str, str]] = field(default_factory=list)
+    next_steps: list[tuple[int, str]] = field(default_factory=lambda: list(DEFAULT_NEXT_STEPS))
+
+
+def normalize_outcome(outcome: str) -> str:
+    """Map ``not-run``/``not_run``/case variants to the canonical three outcomes."""
+    text = str(outcome).strip().lower().replace("-", " ").replace("_", " ")
+    return text if text in (PASSED, FAILED, NOT_RUN) else NOT_RUN
+
+
+def report_status(checks: Sequence[Phase5Check | CheckRecord]) -> str:
+    """Passing iff every required check passed; otherwise not passing (Requirement 26.5).
+
+    An unknown outcome counts as not run, so it can never produce a passing status.
+    """
+    for check in checks:
+        if getattr(check, "required", True) and normalize_outcome(_outcome_of(check)) != PASSED:
+            return PHASE5_NOT_PASSING
+    return PHASE5_PASSING
+
+
+def _outcome_of(check: Phase5Check | CheckRecord) -> str:
+    return check.outcome if isinstance(check, Phase5Check) else check.status
+
+
+def _reason_of(check: Phase5Check | CheckRecord) -> str:
+    return check.reason if isinstance(check, Phase5Check) else check.detail
+
+
+def not_verified_entries(
+    checks: Sequence[Phase5Check | CheckRecord], inputs: Phase5Inputs | None = None
+) -> list[tuple[str, str]]:
+    """Every required check that was not run, with its reason (Requirements 26.4, 26.6).
+
+    Adds the Load_Test and the Sandbox_Ready_Time when they were not run, the gVisor fallback
+    when recorded, and any extra entries (for example the real-target RuntimeClass check).
+    """
+    inputs = inputs or Phase5Inputs()
+    entries: list[tuple[str, str]] = []
+    for check in checks:
+        if getattr(check, "required", True) and normalize_outcome(_outcome_of(check)) == NOT_RUN:
+            entries.append((check.check_id, _reason_of(check) or "no reason recorded"))
+    if inputs.load_test_result is None:
+        entries.append((LOAD_TEST_NAME, inputs.load_test_reason or "not run"))
+    if inputs.ready_time_p95_seconds is None:
+        entries.append((READY_TIME_NAME, inputs.ready_time_reason or "not run"))
+    if inputs.gvisor_fallback:
+        entries.append(("gVisor fallback to runc", inputs.gvisor_fallback))
+    entries.extend(inputs.extra_not_verified)
+    return entries
+
+
+def rank_next_steps(items: Sequence[tuple[int, str]]) -> list[tuple[int, str]]:
+    """Order next steps by ascending rank (1 is the highest priority); ties keep input order."""
+    return sorted(items, key=lambda item: item[0])
+
+
+def render_phase5_report(
+    checks: Sequence[Phase5Check],
+    inputs: Phase5Inputs,
+    *,
+    generated_at: datetime | None = None,
+) -> str:
+    """Render the Phase_5_Report. The status line follows ``report_status`` (Requirement 26.5)."""
+    stamp = (generated_at or datetime.now(UTC)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    status = report_status(checks)
+    out: list[str] = [
+        "# Phase 5 Report: Kubernetes deployment",
+        "",
+        f"Status: {status.upper()}",
+        "",
+        f"Generated {stamp} by `tools/phase_report.py`. The status is passing only when every "
+        "required check ran and passed (Requirement 26.5).",
+        "",
+        "## 1. Milestones: commands and outcomes (Requirement 26.3)",
+        "",
+    ]
+    for milestone in MILESTONES:
+        rows = [c for c in checks if c.milestone == milestone]
+        out += [f"### Milestone {milestone}", ""]
+        if not rows:
+            out += ["No check recorded.", ""]
+            continue
+        out += ["| Check | Command | Outcome |", "|-------|---------|---------|"]
+        for check in rows:
+            outcome = normalize_outcome(check.outcome)
+            text = outcome + (f": {check.reason}" if check.reason else "")
+            out.append(f"| `{_cell(check.check_id)}` | `{_cell(check.command)}` | {_cell(text)} |")
+        out.append("")
+    out += ["## 2. Measurements (Requirement 26.6)", ""]
+    if inputs.load_test_result is None:
+        out.append(f"- {LOAD_TEST_NAME}: not run (see Not verified)")
+    else:
+        out.append(f"- {LOAD_TEST_NAME}: {_cell(inputs.load_test_result)}")
+    if inputs.ready_time_p95_seconds is None:
+        out.append(f"- {READY_TIME_NAME}: not run (see Not verified)")
+    else:
+        out.append(f"- {READY_TIME_NAME}: {inputs.ready_time_p95_seconds:.3f} s")
+    out.append(
+        "- gVisor fallback to runc on kind: "
+        + (_cell(inputs.gvisor_fallback) if inputs.gvisor_fallback else "none recorded")
+    )
+    out += ["- Pod layout: " + (_cell(inputs.pod_layout) if inputs.pod_layout else "not recorded")]
+    out += ["", "## 3. Not verified (Requirement 26.4)", ""]
+    entries = not_verified_entries(checks, inputs)
+    out += [f"- {_cell(name)}: {_cell(reason)}" for name, reason in entries] or [
+        "- Nothing declared."
+    ]
+    out += ["", "## 4. Next steps (Requirement 26.7)", ""]
+    out += [f"{rank}. {_cell(text)}" for rank, text in rank_next_steps(inputs.next_steps)]
+    out.append("")
+    return "\n".join(out)
+
+
+def write_phase5_report(
+    path: Path,
+    checks: Sequence[Phase5Check],
+    inputs: Phase5Inputs,
+    *,
+    generated_at: datetime | None = None,
+) -> str:
+    """Write ``path`` and return the computed status; a not-passing report is still written."""
+    text = render_phase5_report(checks, inputs, generated_at=generated_at)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return report_status(checks)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """CLI: ``phase_report.py --input phase4.json [--out docs/reports/phase-4.md]``.
 

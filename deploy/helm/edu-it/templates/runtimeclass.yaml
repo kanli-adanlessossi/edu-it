@@ -1,0 +1,16 @@
+{{- /* Optional Lab_RuntimeClass (Req 2.7). Rendered only when labs.runtimeClass.create is true and a name is set. */ -}}
+{{- $rc := .Values.labs.runtimeClass }}
+{{- if and $rc.create $rc.name }}
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: {{ $rc.name }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "labs-runtime") | nindent 4 }}
+handler: {{ required "labs.runtimeClass.handler is required when labs.runtimeClass.create is true" $rc.handler }}
+scheduling:
+  nodeSelector:
+    {{- toYaml .Values.labs.nodePool.nodeSelector | nindent 4 }}
+  tolerations:
+    {{- toYaml .Values.labs.nodePool.tolerations | nindent 4 }}
+{{- end }}

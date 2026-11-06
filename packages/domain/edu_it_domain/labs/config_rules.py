@@ -31,6 +31,14 @@ LAB_CONFIG_KEYS: Final[tuple[str, ...]] = (
     "LAB_ALLOWED_WEB_ORIGINS",
     "LAB_PROVISION_MAX_RETRIES",
     "LAB_PROVISION_MIN_INTERVAL",
+    "LAB_PROVISION_CAPACITY_BACKOFF",
+    "K8S_READY_CEILING",
+    "K8S_HELPER_CPU_MILLI",
+    "K8S_HELPER_MEMORY_BYTES",
+    "LAB_DESTROY_TIMEOUT",
+    "LAB_NODE_LOSS_TERMINAL_CLOSE_BOUND",
+    "LAB_INFRA_LOSS_MARK_BOUND",
+    "LAB_EVICTED_POD_REMOVAL_BOUND",
     "LAB_PROVISION_TIMEOUT",
     "LAB_PROVISION_READY_TARGET",
     "LAB_PROVISION_RATE_LIMIT",
@@ -66,6 +74,12 @@ LAB_CONFIG_KEYS: Final[tuple[str, ...]] = (
 _RUN_DEADLINE: Final[str] = "LAB_GRADING_RUN_DEADLINE"
 _FREEZE_BOUND: Final[str] = "LAB_GRADING_FREEZE_BOUND"
 _TEARDOWN_RESERVE: Final[str] = "LAB_GRADING_TEARDOWN_RESERVE"
+
+#: ``(smaller, larger)``: ``larger`` must be at least ``smaller`` (kubernetes Req 1.5, 22.6).
+_AT_LEAST_RULES: Final[tuple[tuple[str, str], ...]] = (
+    ("LAB_PROVISION_MIN_INTERVAL", "LAB_PROVISION_CAPACITY_BACKOFF"),
+    ("LAB_PROVISION_TIMEOUT", "K8S_READY_CEILING"),
+)
 
 _MISSING: Final[object] = object()
 
@@ -115,8 +129,11 @@ def validate_lab_config(config: object) -> None:
 
     Offending keys are: every missing or non-positive lab key (an empty
     ``LAB_ALLOWED_WEB_ORIGINS`` or a ``LAB_RECONNECT_BACKOFF`` with any
-    non-positive element included); and, when the freeze bound plus the
-    teardown reserve is not strictly below the run deadline, those three keys.
+    non-positive element included); when the freeze bound plus the
+    teardown reserve is not strictly below the run deadline, those three keys;
+    when the capacity backoff is below the provisioning minimum interval, the
+    backoff key; and when the ready ceiling is below the provisioning timeout,
+    the ceiling key.
     """
     offending: list[str] = [
         key for key in LAB_CONFIG_KEYS if not _key_is_valid(key, _get(config, key))
@@ -134,6 +151,17 @@ def validate_lab_config(config: object) -> None:
         for key in (_FREEZE_BOUND, _TEARDOWN_RESERVE, _RUN_DEADLINE):
             if key not in offending:
                 offending.append(key)
+
+    for smaller, larger in _AT_LEAST_RULES:
+        low = _get(config, smaller)
+        high = _get(config, larger)
+        if (
+            isinstance(low, timedelta)
+            and isinstance(high, timedelta)
+            and high < low
+            and larger not in offending
+        ):
+            offending.append(larger)
 
     if offending:
         keys = tuple(offending)

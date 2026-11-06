@@ -23,3 +23,7 @@ htmlcov/
 # Live_Run env (ai-content 28.1): real file ignored, secret-free template committed.
 .env.live
 !.env.live.example
+
+# Agent workflow run artifacts (task metadata, review reports). Produced by
+# workflow runs under .agents/tasks/<run>/; internal bookkeeping, never committed.
+.agents/

@@ -84,6 +84,7 @@ class Redis_TaskQueue(TaskQueue):
         self._consumer_name = consumer_name
         self._block_timeout = block_timeout_seconds
         self._stopped = False
+        self._consumed: set[str] = set()
 
     # -- Key helpers ----------------------------------------------------------
 
@@ -158,6 +159,7 @@ class Redis_TaskQueue(TaskQueue):
         queue_key = self._queue_key(job_name)
         processing_key = self._processing_key(job_name)
         self._stopped = False
+        self._consumed.add(job_name)
 
         # Recover any job left in-flight by a previous crashed run.
         pending = self._redis.lindex(processing_key, -1)
@@ -181,6 +183,30 @@ class Redis_TaskQueue(TaskQueue):
     def stop(self) -> None:
         """Request the :meth:`consume` loop to exit after its current wait."""
         self._stopped = True
+
+    def requeue_in_flight(self) -> int:
+        """Move every job still on this consumer's processing lists back to its queue.
+
+        Used at shutdown for jobs whose handler has not returned (kubernetes-deployment
+        Req 14.11). The payload is moved untouched, so the job's attempt count is unchanged;
+        queue order is kept and the dedupe marker is restored. Returns the number moved.
+        """
+        moved = 0
+        for job_name in sorted(self._consumed):
+            queue_key = self._queue_key(job_name)
+            processing_key = self._processing_key(job_name)
+            # Pop the newest first and push on the left, so the oldest ends up first.
+            while True:
+                encoded = self._redis.lmove(processing_key, queue_key, "RIGHT", "LEFT")
+                if encoded is None:
+                    break
+                moved += 1
+                _payload, dedupe_key = self._decode(self._as_str(encoded))
+                if dedupe_key is not None:
+                    self._redis.sadd(
+                        self._dedupe_key(job_name), self._dedupe_member(job_name, dedupe_key)
+                    )
+        return moved
 
     def _dispatch(
         self,

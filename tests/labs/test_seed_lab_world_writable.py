@@ -64,6 +64,8 @@ from edu_it_infrastructure.fakes import (
     In_Memory_MasteryRepository,
 )
 
+from tests.labs.sandbox_backend import make_provider, provider_ready, skip_reason
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TRACK = REPO_ROOT / "content" / "linux-fundamentals"
 BUNDLES = TRACK / "lab-bundles"
@@ -223,15 +225,7 @@ def test_the_four_wrong_solutions_have_pairwise_distinct_failure_signatures() ->
 
 
 def _daemon_ready() -> bool:
-    try:
-        import docker
-
-        client = docker.from_env(timeout=3)
-        client.ping()
-        client.images.get(IMAGE)
-    except Exception:
-        return False
-    return True
+    return provider_ready(IMAGE)
 
 
 def _catalog_image() -> str:
@@ -248,10 +242,8 @@ class _Img:
 @pytest.fixture
 def sandbox() -> Iterator[tuple[Any, SandboxHandle]]:
     if not _daemon_ready():
-        pytest.skip("no Docker daemon or lab image")
-    from edu_it_infrastructure.sandbox.docker_provider import DockerSandboxProvider
-
-    provider = DockerSandboxProvider()
+        pytest.skip(skip_reason())
+    provider = make_provider()
     handle = provider.provision(build_sandbox_spec(_Img(), "pytest-seed-lab-2"))
     try:
         yield provider, handle

@@ -22,13 +22,17 @@ from edu_it_application.labs import (
     TerminalGatewayCore,
     TerminalRefusal,
 )
+from edu_it_application.labs.terminal import CLOSE_DRAIN
 from fastapi import APIRouter, WebSocket
 from starlette.concurrency import run_in_threadpool
 
-__all__ = ["SESSION_COOKIE_NAME", "StarletteSocket", "add_terminal_route"]
+__all__ = ["DRAIN_REFUSAL_REASON", "SESSION_COOKIE_NAME", "StarletteSocket", "add_terminal_route"]
 
 #: Cookie holding the opaque session reference (same name the web app uses).
 SESSION_COOKIE_NAME = "edu_it_session"
+
+#: Close reason for an upgrade refused while the Api drains (matches the open-socket drain).
+DRAIN_REFUSAL_REASON = "server-restarting"
 
 
 class StarletteSocket:
@@ -82,6 +86,10 @@ def add_terminal_route(
 
     @router.websocket("/lab-sessions/{session_id}/terminal")
     async def terminal(websocket: WebSocket, session_id: str) -> None:
+        if not gateway.registry.accepting:
+            # Draining: refuse the upgrade with the reconnect close code (Req 14.2).
+            await websocket.close(code=CLOSE_DRAIN, reason=DRAIN_REFUSAL_REASON)
+            return
         outcome = await run_in_threadpool(
             authorize.execute,
             session_ref=websocket.cookies.get(cookie_name),
@@ -90,6 +98,10 @@ def add_terminal_route(
         )
         if isinstance(outcome, TerminalRefusal):
             await websocket.close(code=outcome.code, reason=outcome.reason)
+            return
+        if not gateway.registry.accepting:
+            # The drain started while the checks ran.
+            await websocket.close(code=CLOSE_DRAIN, reason=DRAIN_REFUSAL_REASON)
             return
         await websocket.accept()
         await gateway.run(outcome, StarletteSocket(websocket))

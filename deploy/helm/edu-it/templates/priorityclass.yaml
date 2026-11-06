@@ -1,0 +1,18 @@
+{{- /* Platform_Priority_Class: assigned to Api, Worker and Web; value is above labs.podPriorityValue (validated in validate-priorityclass.yaml). */ -}}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.priorityClass.name }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "priority") | nindent 4 }}
+  {{- /* The Migration_Job is a pre-install/pre-upgrade hook that uses this class; ordinary
+  resources are created after pre-install hooks, so the class must be a weight -10 hook too (like
+  the migration ServiceAccount and database Secret) or the Job's pod is rejected at admission. */}}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+value: {{ int64 .Values.priorityClass.value }}
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: "EDU-IT platform workloads (api, worker, web). Higher than lab pods so learner labs never starve the platform."

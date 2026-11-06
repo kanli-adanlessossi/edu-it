@@ -6,6 +6,7 @@ import {
   isMacPlatform,
   parseControlFrame,
   resizeFrame,
+  resolveWebSocketUrl,
   shouldReconnect,
   terminalUrl,
   type ChordKeyEvent,
@@ -57,6 +58,19 @@ describe('connection helpers', () => {
   it('does not retry refusals or normal closes but retries drops', () => {
     for (const code of [1000, 4401, 4403, 4404]) expect(shouldReconnect(code)).toBe(false);
     for (const code of [1001, 1006, 1012, 4408]) expect(shouldReconnect(code)).toBe(true);
+  });
+
+  it('keeps a same-origin terminal URL relative and resolves it against the page', () => {
+    const url = terminalUrl('/v1', 's1');
+    expect(url).toBe('/v1/lab-sessions/s1/terminal');
+    expect(resolveWebSocketUrl(url, { protocol: 'https:', host: 'edu-it.example:8443' })).toBe(
+      'wss://edu-it.example:8443/v1/lab-sessions/s1/terminal',
+    );
+    expect(resolveWebSocketUrl(url, { protocol: 'http:', host: 'localhost:3000' })).toBe(
+      'ws://localhost:3000/v1/lab-sessions/s1/terminal',
+    );
+    const absolute = 'wss://api.example.test/v1/lab-sessions/s1/terminal';
+    expect(resolveWebSocketUrl(absolute, { protocol: 'http:', host: 'x' })).toBe(absolute);
   });
 
   it('builds the websocket URL and frames', () => {

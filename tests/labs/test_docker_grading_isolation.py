@@ -1,7 +1,7 @@
 """Docker grading-isolation tests (hands-on-labs task 8.3).
 
 Requirements 10.1 to 10.7, 10.9 and 10.10, evidenced against a real kernel: the real ``GradeRun``
-(task 6.10) drives ``DockerSandboxProvider`` over a minimal Check_Bundle loaded from repository
+(task 6.10) drives ``SandboxProvider`` over a minimal Check_Bundle loaded from repository
 files (``tests/labs/fixtures/grading_isolation_bundle``). Check scripts report only through their
 exit status, so each isolation property is asserted by a dedicated Check that must be recorded as
 passed, plus call-level assertions from a recording wrapper around the real provider.
@@ -36,7 +36,7 @@ from edu_it_domain.ports.lab_catalog import (
     LabDefinition,
     LabTaskDefinition,
 )
-from edu_it_domain.ports.sandbox import SandboxHandle
+from edu_it_domain.ports.sandbox import SandboxHandle, SandboxProvider
 from edu_it_infrastructure.fakes import (
     Fake_LabCatalog,
     In_Memory_GradingRunRepository,
@@ -44,7 +44,15 @@ from edu_it_infrastructure.fakes import (
     In_Memory_MasteryRepository,
     Test_Clock,
 )
-from edu_it_infrastructure.sandbox.docker_provider import DockerSandboxProvider
+
+from tests.labs.sandbox_backend import (
+    OWNER_UID,
+    backend_name,
+    is_kubernetes,
+    make_provider,
+    provider_ready,
+    skip_reason,
+)
 
 IMAGE = "edu-it/lab-linux-base:dev"
 BUNDLE_ROOT = Path(__file__).parent / "fixtures"
@@ -70,20 +78,12 @@ PASSING = tuple(c for c in CHECK_IDS if c != "c_planted_fail")
 
 
 def _daemon_ready() -> bool:
-    try:
-        import docker
-
-        client = docker.from_env(timeout=3)
-        client.ping()
-        client.images.get(IMAGE)
-    except Exception:
-        return False
-    return True
+    return provider_ready(IMAGE)
 
 
 pytestmark = [
     pytest.mark.docker,
-    pytest.mark.skipif(not _daemon_ready(), reason="no Docker daemon or lab image"),
+    pytest.mark.skipif(not _daemon_ready(), reason=skip_reason()),
 ]
 
 
@@ -111,7 +111,7 @@ class _Call:
 class _Recorder:
     """Delegates to the real provider; records calls; samples the learner counter per Check."""
 
-    def __init__(self, inner: DockerSandboxProvider) -> None:
+    def __init__(self, inner: SandboxProvider) -> None:
         self._inner = inner
         self.calls: list[_Call] = []
 
@@ -163,7 +163,7 @@ def _lab() -> LabDefinition:
 
 
 def _sh(
-    provider: DockerSandboxProvider,
+    provider: SandboxProvider,
     handle: SandboxHandle,
     script: str,
     *,
@@ -180,6 +180,28 @@ def _sh(
     )
 
 
+def _learner_states(provider: SandboxProvider, handle: SandboxHandle) -> list[str]:
+    """States of the learner's processes, PID 1 excepted.
+
+    Docker: one process namespace, listed as the grader and filtered by user. Kubernetes (layout
+    B): the grader container cannot see the learner container at all, so the listing runs in the
+    learner container exactly as GradeRun's freeze verification does (its own PID excluded).
+    """
+    if is_kubernetes():
+        from edu_it_application.labs.grade_run import _PS_LIST_IN_LEARNER, _parse_ps
+
+        out = provider.exec(
+            handle, _PS_LIST_IN_LEARNER, as_user="learner", env={"PATH": "/usr/bin:/bin"}, cwd="/"
+        ).stdout
+        return [row.state for row in _parse_ps(out, True)]
+    ps = _sh(provider, handle, "/bin/ps -e -o user= -o stat= -o pid=", user="grader").stdout
+    return [
+        p[1]
+        for p in (line.split() for line in ps.decode().splitlines())
+        if len(p) == 3 and p[0] == "learner" and p[2] != "1"
+    ]
+
+
 @dataclass
 class _Graded:
     status: RunStatus | None
@@ -193,12 +215,12 @@ class _Graded:
 
 
 @pytest.fixture(scope="module")
-def provider() -> DockerSandboxProvider:
-    return DockerSandboxProvider()
+def provider() -> SandboxProvider:
+    return make_provider()
 
 
 @pytest.fixture(scope="module")
-def graded(provider: DockerSandboxProvider) -> Iterator[_Graded]:
+def graded(provider: SandboxProvider) -> Iterator[_Graded]:
     """Run one real GradeRun over the fixture bundle with a hostile, busy learner."""
     lab = _lab()
     handle = provider.provision(build_sandbox_spec(lab, "pytest-grading-iso"))
@@ -245,6 +267,7 @@ def graded(provider: DockerSandboxProvider) -> Iterator[_Graded]:
             record=RecordCheckResult(runs=runs, mastery=mastery, clock=clock),
             clock=clock,
             bundle_root=BUNDLE_ROOT,
+            provider_name=backend_name(),  # as the Worker composition passes it
         )
         status = job.execute("r1")
 
@@ -252,12 +275,7 @@ def graded(provider: DockerSandboxProvider) -> Iterator[_Graded]:
         session = sessions.get("s1")
         assert run is not None and session is not None
         listing = _sh(provider, handle, "/bin/ls -A /grader", user="root").stdout
-        ps = _sh(provider, handle, "/bin/ps -e -o user= -o stat= -o pid=", user="grader").stdout
-        states = [
-            p[1]
-            for p in (line.split() for line in ps.decode().splitlines())
-            if len(p) == 3 and p[0] == "learner" and p[2] != "1"
-        ]
+        states = _learner_states(provider, handle)
         before = _sh(provider, handle, "cat /workspace/ctr").stdout.strip()
         time.sleep(0.6)
         after = _sh(provider, handle, "cat /workspace/ctr").stdout.strip()
@@ -289,12 +307,15 @@ def test_isolation_check_passes_inside_the_sandbox(graded: _Graded, check_id: st
 
 @pytest.mark.parametrize("target", ["/grader/checks/c_identity.sh", "/grader/checks", "/grader"])
 def test_copied_bundle_is_root_owned_and_not_learner_writable(
-    provider: DockerSandboxProvider, target: str
+    provider: SandboxProvider, target: str
 ) -> None:
     handle = provider.provision(build_sandbox_spec(_ImageOnly(), "pytest-grading-copy"))
     try:
         provider.copy_in(handle, BUNDLE_ROOT / BUNDLE_NAME / "sandbox", "/grader", as_user="root")
-        assert _sh(provider, handle, f"stat -c %u {target}", user="root").stdout.strip() == b"0"
+        assert (
+            _sh(provider, handle, f"stat -c %u {target}", user="root").stdout.strip()
+            == str(OWNER_UID[backend_name()]).encode()
+        )
         # The learner can neither modify, replace, delete nor add anything in the bundle.
         for script in (
             f"echo 'exit 0' >> {target}",

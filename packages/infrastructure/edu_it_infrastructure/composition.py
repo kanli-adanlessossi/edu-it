@@ -24,12 +24,13 @@ environment-variable names match ``.env.example``.
 
 from __future__ import annotations
 
+import importlib
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Literal
 from urllib.parse import urlsplit
 
 from edu_it_domain.config import LAB_ALLOWED_WEB_ORIGINS
@@ -43,7 +44,14 @@ from edu_it_domain.ports.repository import SessionRepository, UserRepository
 from edu_it_domain.ports.role_assignment import RoleAssignmentRepository
 from edu_it_domain.ports.sandbox import SandboxProvider
 from edu_it_domain.ports.session_store import SessionStore
-from pydantic import BaseModel, ConfigDict, SecretStr, ValidationInfo, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    SecretStr,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from edu_it_infrastructure.adapters.object_storage import FileSystem_ObjectStorage
 from edu_it_infrastructure.adapters.rate_limiter import Redis_SignInRateLimiter
@@ -77,6 +85,8 @@ from edu_it_infrastructure.persistence.repositories import (
     Postgres_SessionRepository,
     Postgres_UserRepository,
 )
+from edu_it_infrastructure.sandbox.k8s_api import K8sApiPort
+from edu_it_infrastructure.sandbox.k8s_pod_spec import K8sSettings, Toleration
 
 __all__ = [
     "CompositionSettings",
@@ -89,11 +99,14 @@ __all__ = [
     "SandboxBackend",
     "build_fake_clock",
     "build_generation_ledger",
+    "build_k8s_api_port",
+    "build_k8s_settings",
     "build_llm_provider",
     "build_mailer",
     "build_object_storage",
     "build_ports",
     "build_sandbox_provider",
+    "parse_sandbox_backend",
 ]
 
 
@@ -126,6 +139,7 @@ class SandboxBackend(StrEnum):
     """The ``SandboxProvider`` selection (``SANDBOX_PROVIDER``). Docker is dev only."""
 
     DOCKER = "docker"
+    KUBERNETES = "kubernetes"
     FAKE = "fake"
 
 
@@ -148,10 +162,67 @@ class ProviderSelectionError(ValueError):
     """Raised at composition when the configured sandbox or LLM provider is not allowed."""
 
 
+def parse_sandbox_backend(value: str) -> SandboxBackend:
+    """Parse the ``SANDBOX_PROVIDER`` setting (kubernetes-deployment Req 1.2, 1.3).
+
+    Pure. Raises :class:`ProviderSelectionError` for any value other than ``docker``,
+    ``kubernetes`` or ``fake``; the message names the invalid value and lists the
+    supported ones.
+    """
+    try:
+        return SandboxBackend(value)
+    except ValueError:
+        supported = ", ".join(backend.value for backend in SandboxBackend)
+        raise ProviderSelectionError(
+            f"refusing to start: SANDBOX_PROVIDER={value!r} is not supported; "
+            f"supported values: {supported}"
+        ) from None
+
+
 def _parse_csv(value: object) -> object:
     if isinstance(value, str):
         return tuple(part.strip() for part in value.split(",") if part.strip())
     return value
+
+
+def _parse_node_selector(value: object) -> object:
+    """Parse ``key=value,key=value`` into a mapping (``SANDBOX_NODE_SELECTOR``)."""
+    if not isinstance(value, str):
+        return value
+    selector: dict[str, str] = {}
+    for part in (p.strip() for p in value.split(",")):
+        if not part:
+            continue
+        key, sep, val = part.partition("=")
+        if not sep or not key.strip():
+            raise ValueError("SANDBOX_NODE_SELECTOR entries must look like key=value")
+        selector[key.strip()] = val.strip()
+    return selector
+
+
+def _parse_tolerations(value: object) -> object:
+    """Parse ``key=value:Effect`` / ``key:Effect`` entries (``SANDBOX_TOLERATIONS``)."""
+    if not isinstance(value, str):
+        return value
+    out: list[Toleration] = []
+    for part in (p.strip() for p in value.split(",")):
+        if not part:
+            continue
+        spec, _, effect = part.rpartition(":")
+        if not spec or effect not in ("NoSchedule", "PreferNoSchedule", "NoExecute"):
+            raise ValueError(
+                "SANDBOX_TOLERATIONS entries must look like key=value:Effect or key:Effect"
+            )
+        key, sep, val = spec.partition("=")
+        out.append(
+            Toleration(
+                key=key,
+                operator="Equal" if sep else "Exists",
+                value=val if sep else None,
+                effect=effect,  # type: ignore[arg-type]
+            )
+        )
+    return tuple(out)
 
 
 def _parse_prices(value: object) -> object:
@@ -175,6 +246,25 @@ def _parse_prices(value: object) -> object:
     return prices
 
 
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def web_origin(url: str) -> str | None:
+    """The browser ``Origin`` of an absolute http(s) URL (scheme, lower-case host, explicit
+    non-default port), or ``None`` when ``url`` is not one."""
+
+    parsed = urlsplit(url)
+    if parsed.scheme not in _DEFAULT_PORTS or not parsed.hostname:
+        return None
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+    host = parsed.hostname if ":" not in parsed.hostname else f"[{parsed.hostname}]"
+    suffix = f":{port}" if port is not None and port != _DEFAULT_PORTS[parsed.scheme] else ""
+    return f"{parsed.scheme}://{host}{suffix}"
+
+
 class CompositionSettings(BaseModel):
     """Environment-driven settings for the composition root.
 
@@ -191,8 +281,24 @@ class CompositionSettings(BaseModel):
     mailer_backend: MailerBackend = MailerBackend.CONSOLE
     sandbox_provider: SandboxBackend = SandboxBackend.FAKE
 
-    #: Tag of the locally built Lab_Images (``edu-it/lab-<image>:<tag>``), Docker provider only.
+    #: Tag of the Lab_Images (``edu-it/lab-<image>:<tag>``) a catalog image name resolves to,
+    #: for the Docker and Kubernetes providers.
     lab_image_tag: str = "dev"
+
+    #: Kubernetes provider placement (``SANDBOX_PROVIDER=kubernetes``); the Chart sets them.
+    k8s_namespace: str = "labs"
+    sandbox_runtime_kind: Literal["gvisor", "kata", "runc"] = "gvisor"
+    #: RuntimeClass name; ``None`` (unset or empty) is allowed only for ``runc``.
+    sandbox_runtime_class: str | None = "gvisor"
+    #: ``key=value`` pairs, comma-separated (``SANDBOX_NODE_SELECTOR``).
+    sandbox_node_selector: dict[str, str] = {}
+    #: ``key=value:Effect`` or ``key:Effect`` entries, comma-separated (``SANDBOX_TOLERATIONS``).
+    sandbox_tolerations: tuple[Toleration, ...] = ()
+    sandbox_node_loss_toleration_seconds: int = 30
+    #: Pod ``fsGroup`` and the owner's group: the Lab_Image ``grader`` group (ADR 0009).
+    sandbox_grader_gid: int = 1001
+    sandbox_priority_class: str | None = None
+
     smtp_host: str = "localhost"
     smtp_port: int = 25
     smtp_username: str | None = None
@@ -214,7 +320,8 @@ class CompositionSettings(BaseModel):
     #: ``Domain`` attribute of the session and ``csrf_token`` cookies
     #: (``COOKIE_DOMAIN``). ``None`` (unset or empty) gives host-only cookies.
     cookie_domain: str | None = None
-    #: Origins allowed to call the API from a browser (CORS and terminal Origin check).
+    #: Origins allowed to call the API from a browser (CORS and terminal Origin check). When not
+    #: given it is the origin of ``web_base_url`` (``LAB_ALLOWED_WEB_ORIGINS`` for the default).
     allowed_web_origins: tuple[str, ...] = LAB_ALLOWED_WEB_ORIGINS
 
     #: GitHub OAuth application credentials and callback (``GITHUB_OAUTH_*``).
@@ -253,6 +360,21 @@ class CompositionSettings(BaseModel):
     llm_record: bool = False
     #: Secret key of the pseudonymous advisor handles (``ADVISOR_HANDLE_KEY``).
     advisor_handle_key: SecretStr | None = None
+
+    @field_validator("sandbox_node_selector", mode="before")
+    @classmethod
+    def _split_node_selector(cls, value: object) -> object:
+        return _parse_node_selector(value)
+
+    @field_validator("sandbox_tolerations", mode="before")
+    @classmethod
+    def _split_tolerations(cls, value: object) -> object:
+        return _parse_tolerations(value)
+
+    @field_validator("sandbox_runtime_class", "sandbox_priority_class")
+    @classmethod
+    def _empty_k8s_setting_is_none(cls, value: str | None) -> str | None:
+        return value or None
 
     @field_validator("llm_provider_allowed_hosts", mode="before")
     @classmethod
@@ -303,6 +425,20 @@ class CompositionSettings(BaseModel):
     def _empty_object_storage_root_is_none(cls, value: str | None) -> str | None:
         return value or None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _allowed_origins_follow_web_base_url(cls, data: object) -> object:
+        """Default the browser-origin allowlist to the Web_App's own origin.
+
+        A deployed Web_App is not on ``localhost:3000``, so a fixed allowlist would refuse its
+        CORS calls and every terminal WebSocket (``Origin`` check). An explicit value wins.
+        """
+        if not isinstance(data, dict) or "allowed_web_origins" in data:
+            return data
+        base = data.get("web_base_url")
+        origin = web_origin(base) if isinstance(base, str) else None
+        return {**data, "allowed_web_origins": (origin,)} if origin else data
+
     @field_validator("web_base_url")
     @classmethod
     def _web_base_url_is_absolute_http(cls, value: str) -> str:
@@ -322,6 +458,14 @@ class CompositionSettings(BaseModel):
         "mailer_backend": "MAILER_BACKEND",
         "sandbox_provider": "SANDBOX_PROVIDER",
         "lab_image_tag": "LAB_IMAGE_TAG",
+        "k8s_namespace": "K8S_LABS_NAMESPACE",
+        "sandbox_runtime_kind": "SANDBOX_RUNTIME_KIND",
+        "sandbox_runtime_class": "SANDBOX_RUNTIME_CLASS",
+        "sandbox_node_selector": "SANDBOX_NODE_SELECTOR",
+        "sandbox_tolerations": "SANDBOX_TOLERATIONS",
+        "sandbox_node_loss_toleration_seconds": "SANDBOX_NODE_LOSS_TOLERATION_SECONDS",
+        "sandbox_grader_gid": "SANDBOX_GRADER_GID",
+        "sandbox_priority_class": "SANDBOX_PRIORITY_CLASS",
         "smtp_host": "SMTP_HOST",
         "smtp_port": "SMTP_PORT",
         "smtp_username": "SMTP_USERNAME",
@@ -359,14 +503,18 @@ class CompositionSettings(BaseModel):
         Only the variables that are present are read; any absent variable falls
         back to the field default, so an empty environment yields the dev
         defaults. Invalid values (e.g. an unknown ``EDU_IT_ENV``) raise a
-        Pydantic validation error.
+        Pydantic validation error. An unsupported ``SANDBOX_PROVIDER`` raises
+        :class:`ProviderSelectionError` (via :func:`parse_sandbox_backend`); api and
+        worker build their settings here at startup, before serving or consuming.
         """
         source = os.environ if env is None else env
-        values = {
+        values: dict[str, object] = {
             field: source[var_name]
             for field, var_name in cls._ENV_ALIASES.items()
             if var_name in source
         }
+        if "sandbox_provider" in values:
+            values["sandbox_provider"] = parse_sandbox_backend(str(values["sandbox_provider"]))
         return cls.model_validate(values)
 
 
@@ -440,8 +588,12 @@ def build_sandbox_provider(
     settings: CompositionSettings | None = None,
     *,
     clock: Clock | None = None,
+    k8s_api: K8sApiPort | None = None,
 ) -> SandboxProvider:
     """Select the ``SandboxProvider`` from configuration (Req 2.1, 2.2).
+
+    ``kubernetes`` builds :class:`KubernetesSandboxProvider` over ``k8s_api`` (or the client
+    adapter module) with the real ``clock`` (``System_Clock`` when none is given).
 
     Shared by api and worker composition. Raises :class:`ProviderSelectionError`
     when ``docker`` is selected with ``EDU_IT_ENV=production`` (the Docker
@@ -450,9 +602,14 @@ def build_sandbox_provider(
     ``Clock`` here keeps production app modules from importing ``Test_Clock``
     (Req 6.3).
     """
+    provider_clock = clock
     if not isinstance(clock, Test_Clock):
         clock = None
     settings = settings if settings is not None else CompositionSettings.from_env()
+    if settings.sandbox_provider is SandboxBackend.KUBERNETES:
+        return _build_kubernetes_provider(
+            settings, provider_clock if provider_clock is not None else System_Clock(), k8s_api
+        )
     if settings.sandbox_provider is SandboxBackend.DOCKER:
         if settings.environment.is_production:
             raise ProviderSelectionError(
@@ -463,6 +620,61 @@ def build_sandbox_provider(
 
         return DockerSandboxProvider(image_tag=settings.lab_image_tag)
     return Fake_SandboxProvider(clock if clock is not None else Test_Clock())
+
+
+def build_k8s_settings(settings: CompositionSettings) -> K8sSettings:
+    """Build the pod-placement settings of the Kubernetes provider from ``settings``.
+
+    Pure. The values come from the ``SANDBOX_*`` / ``K8S_*`` variables, which the Chart sets
+    from its values (kubernetes-deployment Req 1.1, 1.2).
+    """
+    return K8sSettings(
+        namespace=settings.k8s_namespace,
+        runtime_class_name=settings.sandbox_runtime_class,
+        runtime_kind=settings.sandbox_runtime_kind,
+        node_selector=dict(settings.sandbox_node_selector),
+        tolerations=settings.sandbox_tolerations,
+        node_loss_toleration_seconds=settings.sandbox_node_loss_toleration_seconds,
+        grader_gid=settings.sandbox_grader_gid,
+        priority_class_name=settings.sandbox_priority_class,
+        lab_image_tag=settings.lab_image_tag,
+    )
+
+
+#: Module that supplies the production ``K8sApiPort`` (a thin client adapter). It is looked up
+#: lazily so that nothing imports a Kubernetes client unless the kubernetes backend is selected.
+K8S_API_MODULE = "edu_it_infrastructure.sandbox.k8s_client"
+
+
+def _build_kubernetes_provider(
+    settings: CompositionSettings, clock: Clock, k8s_api: K8sApiPort | None
+) -> SandboxProvider:
+    """Wire :class:`KubernetesSandboxProvider`; never falls back to the fake.
+
+    ``k8s_api`` is the injection point for tests and for the real-cluster suites. Without it
+    the client adapter module is loaded; if it is not installed the start is refused.
+    """
+    from edu_it_infrastructure.sandbox.k8s_provider import KubernetesSandboxProvider
+
+    k8s_settings = build_k8s_settings(settings)
+    if k8s_api is None:
+        k8s_api = build_k8s_api_port(settings)
+    return KubernetesSandboxProvider(k8s_api, k8s_settings, clock)
+
+
+def build_k8s_api_port(settings: CompositionSettings) -> K8sApiPort:
+    """Load the production ``K8sApiPort`` (in-cluster credentials); refuse if it is absent.
+
+    Shared by the sandbox provider and the Worker's pod watcher so both use one client.
+    """
+    try:
+        module = importlib.import_module(K8S_API_MODULE)
+        return module.build_k8s_api(settings)  # type: ignore[no-any-return]
+    except ImportError:
+        raise ProviderSelectionError(
+            "refusing to start: SANDBOX_PROVIDER=kubernetes needs a Kubernetes API client "
+            f"adapter ({K8S_API_MODULE}), which is not installed"
+        ) from None
 
 
 def build_generation_ledger(

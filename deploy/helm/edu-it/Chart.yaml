@@ -1,0 +1,10 @@
+apiVersion: v2
+name: edu-it
+description: EDU-IT platform (web, api, worker, lab sandbox policies) for EKS, AKS and on-premise Kubernetes
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.28.0-0"
+keywords:
+  - edu-it
+  - learning-platform

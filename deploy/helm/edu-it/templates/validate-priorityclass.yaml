@@ -1,0 +1,4 @@
+{{- /* Renders no manifest. Fails rendering unless priorityClass.value is above labs.podPriorityValue (Req 8.12). */ -}}
+{{- if not (gt (int64 .Values.priorityClass.value) (int64 .Values.labs.podPriorityValue)) -}}
+{{- fail (printf "priorityClass.value (%v) must be greater than labs.podPriorityValue (%v)" .Values.priorityClass.value .Values.labs.podPriorityValue) -}}
+{{- end -}}

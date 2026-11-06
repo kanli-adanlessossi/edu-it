@@ -449,6 +449,10 @@ lab_session = Table(
     Column("provision_attempts", Integer, nullable=False, server_default="0"),
     Column("next_provision_at", DateTime(timezone=True)),
     Column("terminal_epoch", Integer, nullable=False, server_default="0"),
+    # Revision 0006_k8s_status_capacity: provisioning attempts of kind ``capacity``
+    # (quota or unschedulable). They are counted apart from ``provision_attempts`` so
+    # they never consume the retry allowance (kubernetes-deployment Req 22.4, 22.5).
+    Column("capacity_attempts", Integer, nullable=False, server_default="0"),
     # At most one active session per learner (revision 0002_labs_runtime).
     Index(
         "uq_lab_session_active_user",

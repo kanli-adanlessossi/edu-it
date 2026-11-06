@@ -498,3 +498,20 @@ def test_personal_lab_tables_are_registered_and_none_is_unregistered() -> None:
     # Every registered table exists in the schema, and the lab content tables are not personal.
     assert set(PERSONAL_DATA_TABLES) <= set(metadata.tables)
     assert not {"lab", "lab_task", "lab_check"} & set(PERSONAL_DATA_TABLES)
+
+
+# Claims: 21.6
+def test_unknown_stored_status_reads_as_inactive_terminal(engine: Engine) -> None:
+    sessions, _ = _postgres(engine)
+    sessions.add_if_no_active(_session("s1"))
+    with engine.begin() as c:
+        c.execute(
+            _T["lab_session"]
+            .update()
+            .where(_T["lab_session"].c.stable_id == "s1")
+            .values(status="status-from-a-newer-release")
+        )
+    read = sessions.get("s1")
+    assert read is not None
+    assert not read.status.is_active
+    assert sessions.get_active_for_user("u1") is None

@@ -1,0 +1,96 @@
+{{- /*
+Labs_Namespace network policies (Req 3.1, 3.2, 3.7).
+Default-deny selects every pod and denies all ingress and egress. The Labs_Allowlist adds ingress only:
+Api pods for terminal attach, Worker pods for exec, copy and health. Defense in depth: exec and attach
+go through the Kubernetes API server (design OQ-1). The DNS egress rule renders only when labs.dnsEgress is true.
+*/ -}}
+{{- $ns := include "edu-it.labsNamespace" . }}
+{{- $platformNs := include "edu-it.platformNamespace" . }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "labs-default-deny") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "labs-default-deny") | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "labs-allow-api") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "labs-allow-api") | nindent 4 }}
+spec:
+  # Terminal attach from Api pods only.
+  podSelector:
+    matchLabels:
+      edu-it.managed: '1'
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $platformNs }}
+          podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" (dict "root" . "component" "api") | nindent 14 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "labs-allow-worker") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "labs-allow-worker") | nindent 4 }}
+spec:
+  # Exec, copy and health from Worker pods only.
+  podSelector:
+    matchLabels:
+      edu-it.managed: '1'
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $platformNs }}
+          podSelector:
+            matchLabels:
+              {{- include "edu-it.selectorLabels" (dict "root" . "component" "worker") | nindent 14 }}
+{{- if .Values.labs.dnsEgress }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "labs-allow-dns") }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "labs-allow-dns") | nindent 4 }}
+spec:
+  # Cluster DNS only, port 53 over UDP and TCP.
+  podSelector:
+    matchLabels:
+      edu-it.managed: '1'
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+{{- end }}

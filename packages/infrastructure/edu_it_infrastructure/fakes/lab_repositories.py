@@ -35,6 +35,7 @@ _TERMINAL = frozenset(
         SessionStatus.EXPIRED,
         SessionStatus.IDLE_EXPIRED,
         SessionStatus.FAILED,
+        SessionStatus.ENDED_BY_INFRASTRUCTURE,
     }
 )
 

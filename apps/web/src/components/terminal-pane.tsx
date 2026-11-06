@@ -1,54 +1,59 @@
 'use client';
 
 // Interactive terminal for the Lab_View (hands-on-labs Req 13.3, 13.4, 15.2, 15.10,
-// 16.4, 26.1).
+// 16.4, 26.1; kubernetes-deployment Req 14.5, 14.6, 14.8, 20.1, 20.2).
 //
 // xterm.js and its fit addon are loaded with a client-only dynamic import, so
 // nothing from them runs during server rendering. The pane forwards size changes
-// to the gateway, reconnects with the bounded backoff derived from Config
-// (`reconnectDelays`) while showing a live indication, and swallows the exit
-// chord (Ctrl+M, Ctrl+Shift+M on macOS) so the learner can leave the terminal by
-// keyboard. Enter is a different key and always reaches the shell.
+// to the gateway and reconnects with the named schedules of `reconnect-schedule.ts`:
+// `drain` after a reconnect message, `restart` after an abrupt close. The indication
+// is set in the same tick as the message or close. When a schedule ends the pane
+// shows a translated error with a manual "Try again" action (the lab session is not
+// touched); an ownership or expiry refusal shows a "sign in again" error instead.
+// The exit chord (Ctrl+M, Ctrl+Shift+M on macOS) is swallowed so the learner can
+// leave the terminal by keyboard. Enter is a different key and always reaches the shell.
 
 import '@xterm/xterm/css/xterm.css';
 
-import { useTranslations } from 'next-intl';
-import { useEffect, useReducer, useRef, useState, type RefObject } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 
-import {
-  initialLabViewState,
-  labViewReducer,
-  reconnectDelays,
-  type LabClientConfig,
-} from '../lab-state.js';
+import { closeOutcome, reconnectSchedule, type ReconnectKind } from '../reconnect-schedule.js';
 import {
   isExitChord,
   isMacPlatform,
-  isReplaced,
   parseControlFrame,
   resizeFrame,
-  shouldReconnect,
+  resolveWebSocketUrl,
 } from '../terminal-logic.js';
 
+/** Connection state shown under the terminal. */
+type Connection =
+  | { readonly status: 'connected' }
+  | { readonly status: 'reconnecting'; readonly attempt: number }
+  | { readonly status: 'exhausted' }
+  | { readonly status: 'reauth' };
+
 export interface TerminalPaneProps {
-  /** Full `ws(s)://` URL of the session's terminal endpoint (see `terminalUrl`). */
+  /** `ws(s)://` URL, or same-origin path, of the session's terminal endpoint (see `terminalUrl`). */
   readonly url: string;
-  /** Durations from the Config source; the retry schedule is derived from them. */
-  readonly config: LabClientConfig;
   /** The "Check my work" control; receives focus when the exit chord is pressed. */
   readonly checkWorkRef: RefObject<HTMLElement | null>;
   /** Called with the gateway's `status` value (expired, ended, ...) before it closes. */
   readonly onSessionStatus?: (status: string) => void;
 }
 
-export function TerminalPane({ url, config, checkWorkRef, onSessionStatus }: TerminalPaneProps) {
+export function TerminalPane({ url, checkWorkRef, onSessionStatus }: TerminalPaneProps) {
   const t = useTranslations('Labs');
+  const locale = useLocale();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [view, dispatch] = useReducer(labViewReducer, initialLabViewState);
+  const [conn, setConn] = useState<Connection>({ status: 'connected' });
   const [mac, setMac] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [justRestored, setJustRestored] = useState(false);
   const macRef = useRef(false);
+  const retryRef = useRef<(() => void) | null>(null);
   const onStatusRef = useRef(onSessionStatus);
 
   useEffect(() => {
@@ -88,13 +93,14 @@ export function TerminalPane({ url, config, checkWorkRef, onSessionStatus }: Ter
         return true;
       });
 
-      const delays = reconnectDelays(config);
       const encoder = new TextEncoder();
       let socket: WebSocket | null = null;
       let timer: ReturnType<typeof setTimeout> | undefined;
       let attempts = 0;
       let everLost = false;
       let finished = false;
+      // `drain` once the server announced a restart (message or close 1012), else `restart`.
+      let kind: ReconnectKind = 'restart';
 
       const send = (data: string | Uint8Array<ArrayBuffer>) => {
         if (socket?.readyState === WebSocket.OPEN) socket.send(data);
@@ -110,31 +116,31 @@ export function TerminalPane({ url, config, checkWorkRef, onSessionStatus }: Ter
       const lose = () => {
         if (finished || disposed) return;
         everLost = true;
-        dispatch({ type: 'connection-lost' });
+        const delays = reconnectSchedule(kind);
         if (attempts >= delays.length) {
           finished = true;
-          dispatch({ type: 'reconnect-gave-up' });
+          setConn({ status: 'exhausted' });
           return;
         }
         const delay = delays[attempts] as number;
+        setConn({ status: 'reconnecting', attempt: attempts });
         attempts += 1;
         timer = setTimeout(() => {
-          dispatch({ type: 'reconnect-attempted' });
+          setConn({ status: 'reconnecting', attempt: attempts });
           connect();
         }, delay);
       };
 
       const connect = () => {
-        const ws = new WebSocket(url);
+        const ws = new WebSocket(resolveWebSocketUrl(url, window.location));
         ws.binaryType = 'arraybuffer';
         socket = ws;
         ws.onopen = () => {
           attempts = 0;
+          kind = 'restart';
           setRestarting(false);
-          if (everLost) {
-            dispatch({ type: 'connection-restored' });
-            setJustRestored(true);
-          }
+          setConn({ status: 'connected' });
+          if (everLost) setJustRestored(true);
           refit();
           send(resizeFrame(term.rows, term.cols));
         };
@@ -142,21 +148,49 @@ export function TerminalPane({ url, config, checkWorkRef, onSessionStatus }: Ter
           if (typeof message.data === 'string') {
             const frame = parseControlFrame(message.data);
             if (frame.type === 'ping') send('{"type":"pong"}');
-            else if (frame.type === 'reconnect') setRestarting(true);
-            else if (frame.type === 'status') onStatusRef.current?.(frame.status);
+            else if (frame.type === 'reconnect') {
+              // Show the indication now (Req 14.5, within 1 s); the close follows.
+              kind = 'drain';
+              everLost = true;
+              setRestarting(true);
+              setConn((current) =>
+                current.status === 'reconnecting'
+                  ? current
+                  : { status: 'reconnecting', attempt: 0 },
+              );
+            } else if (frame.type === 'status') onStatusRef.current?.(frame.status);
             return;
           }
           term.write(new Uint8Array(message.data as ArrayBuffer));
         };
         ws.onclose = (event: CloseEvent) => {
           if (socket !== ws) return;
-          if (event.code === 1012) setRestarting(true);
-          if (isReplaced(event.code) || !shouldReconnect(event.code)) {
-            finished = true;
-            return;
+          if (event.code === 1012) {
+            kind = 'drain';
+            setRestarting(true);
           }
-          lose();
+          const outcome = closeOutcome(event.code);
+          if (outcome === 'reauth') {
+            finished = true;
+            setConn({ status: 'reauth' });
+          } else if (outcome === 'stop') {
+            finished = true;
+          } else {
+            lose();
+          }
         };
+      };
+
+      // Manual retry: a fresh `restart` schedule; the lab session is not touched.
+      retryRef.current = () => {
+        if (disposed) return;
+        clearTimeout(timer);
+        finished = false;
+        attempts = 0;
+        kind = 'restart';
+        setRestarting(false);
+        setConn({ status: 'reconnecting', attempt: 0 });
+        connect();
       };
 
       const dataSub = term.onData((data) => {
@@ -174,6 +208,7 @@ export function TerminalPane({ url, config, checkWorkRef, onSessionStatus }: Ter
 
       cleanup = () => {
         clearTimeout(timer);
+        retryRef.current = null;
         observer.disconnect();
         dataSub.dispose();
         binarySub.dispose();
@@ -189,15 +224,17 @@ export function TerminalPane({ url, config, checkWorkRef, onSessionStatus }: Ter
       disposed = true;
       cleanup?.();
     };
-  }, [url, config, checkWorkRef, t]);
+  }, [url, checkWorkRef, t]);
 
   const shortcut = t(mac ? 'shortcut.mac' : 'shortcut.default');
   const hintId = 'terminal-pane-hint';
   let indication = '';
-  if (view.phase === 'reconnecting') {
+  if (conn.status === 'reconnecting') {
     indication = restarting ? t('reconnect.serverRestart') : t('reconnect.indicator');
-  } else if (view.phase === 'error') {
-    indication = t('reconnect.failed');
+  } else if (conn.status === 'exhausted') {
+    indication = t('reconnect.terminalFailed');
+  } else if (conn.status === 'reauth') {
+    indication = t('reconnect.reauthRequired');
   } else if (justRestored) {
     indication = t('reconnect.restored');
   }
@@ -208,14 +245,17 @@ export function TerminalPane({ url, config, checkWorkRef, onSessionStatus }: Ter
       <p id={hintId}>{t('shortcut.leaveTerminal', { shortcut })}</p>
       <div role="status" aria-live="polite" data-testid="terminal-connection">
         {indication}
-        {view.phase === 'reconnecting' && view.attempt > 0 ? (
-          <span>{t('reconnect.attempt', { attempt: view.attempt })}</span>
+        {conn.status === 'reconnecting' && conn.attempt > 0 ? (
+          <span>{t('reconnect.attempt', { attempt: conn.attempt })}</span>
         ) : null}
       </div>
-      {view.phase === 'error' ? (
-        <button type="button" onClick={() => window.location.reload()}>
-          {t('reconnect.reload')}
+      {conn.status === 'exhausted' ? (
+        <button type="button" onClick={() => retryRef.current?.()}>
+          {t('reconnect.retry')}
         </button>
+      ) : null}
+      {conn.status === 'reauth' ? (
+        <Link href={`/${locale}/sign-in`}>{t('reconnect.signIn')}</Link>
       ) : null}
     </section>
   );

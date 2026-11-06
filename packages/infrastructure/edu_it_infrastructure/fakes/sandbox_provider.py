@@ -27,6 +27,7 @@ from edu_it_domain.ports.sandbox import (
     ExecResult,
     HealthStatus,
     ProviderUnavailable,
+    ProvisionCapacityError,
     ProvisionError,
     ProvisionTimeout,
     SandboxGone,
@@ -64,6 +65,10 @@ class ProvisionMode(Enum):
     HANG = "hang"
     PARTIAL = "partial"
     UNAVAILABLE = "unavailable"
+    CAPACITY = "capacity"
+    """Raise ``ProvisionCapacityError`` (quota rejection); nothing is created."""
+    CAPACITY_PARTIAL = "capacity-partial"
+    """Raise ``ProvisionCapacityError`` carrying a ``partial_handle`` to clean up."""
 
 
 @dataclass(slots=True)
@@ -210,7 +215,11 @@ class Fake_SandboxProvider:
                 raise ProviderUnavailable("provider unavailable")
             if mode is ProvisionMode.FAIL:
                 raise ProvisionError("provision failed")
+            if mode is ProvisionMode.CAPACITY:
+                raise ProvisionCapacityError("exceeded quota: pods=10, used=10")
             sb = self._new_sandbox(spec)
+            if mode is ProvisionMode.CAPACITY_PARTIAL:
+                raise ProvisionCapacityError("exceeded quota: pods=10", partial_handle=sb.handle)
             if mode is ProvisionMode.PARTIAL:
                 raise ProvisionError("partially created", partial_handle=sb.handle)
             return sb.handle

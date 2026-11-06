@@ -21,6 +21,8 @@ from edu_it_domain.labs.grading import UNSAFE_PATH_EXIT_CODE
 from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
 from edu_it_domain.ports.sandbox import ExecResult, SandboxHandle
 
+from tests.labs.sandbox_backend import make_provider, provider_ready, skip_reason
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TRACK = REPO_ROOT / "content" / "linux-fundamentals"
 LAB_ID = "lab.fix-the-shared-folder"
@@ -105,15 +107,7 @@ def test_checks_follow_the_design_exit_codes_with_distinct_keys() -> None:
 
 
 def _daemon_ready() -> bool:
-    try:
-        import docker
-
-        client = docker.from_env(timeout=3)
-        client.ping()
-        client.images.get(IMAGE)
-    except Exception:
-        return False
-    return True
+    return provider_ready(IMAGE)
 
 
 @dataclass(frozen=True)
@@ -131,10 +125,8 @@ def _exec(provider: Any, handle: SandboxHandle, argv: list[str], user: str, cwd:
 @pytest.fixture(scope="module")
 def sandbox() -> Iterator[tuple[Any, SandboxHandle]]:
     if not _daemon_ready():
-        pytest.skip("no Docker daemon or lab image")
-    from edu_it_infrastructure.sandbox.docker_provider import DockerSandboxProvider
-
-    provider = DockerSandboxProvider()
+        pytest.skip(skip_reason())
+    provider = make_provider()
     handle = provider.provision(build_sandbox_spec(_Img(), "pytest-seed-lab-1"))
     try:
         # Populate /grader exactly as GradeRun does (root copy, grader-owned run dir).

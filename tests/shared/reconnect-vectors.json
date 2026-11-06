@@ -1,0 +1,14 @@
+{
+  "description": "Reconnect schedules (kubernetes-deployment Req 14.5, 20.1). Read by the Python domain tests and the TypeScript web client tests.",
+  "drain": {
+    "delays_seconds": [1, 2, 4, 8, 16, 30, 30, 30, 30, 30],
+    "max_attempts": 10,
+    "max_delay_seconds": 30,
+    "first_within_seconds": 2
+  },
+  "restart": {
+    "delays_seconds": [1, 2, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    "max_delay_seconds": 5,
+    "total_limit_seconds": 60
+  }
+}

@@ -1,6 +1,6 @@
 """Docker isolation and resource-limit tests for the Sandbox (hands-on-labs task 8.1).
 
-Requirements 3.1 to 3.10, evidenced against a real kernel through ``DockerSandboxProvider``.
+Requirements 3.1 to 3.10, evidenced against a real kernel through ``SandboxProvider``.
 Every number is read from ``edu_it_domain.config``. Tests carry the ``docker`` marker and are
 skipped when no daemon or no local ``edu-it/lab-linux-base:dev`` image is available (same
 contract as the provider contract suite). Command forms follow ``lab-images/README.md``.
@@ -15,11 +15,26 @@ from dataclasses import dataclass
 import pytest
 from edu_it_domain import config as cfg
 from edu_it_domain.labs.sandbox_spec import build_sandbox_spec
-from edu_it_domain.ports.sandbox import SandboxHandle
-from edu_it_infrastructure.sandbox.docker_provider import DockerSandboxProvider
+from edu_it_domain.ports.sandbox import SandboxHandle, SandboxProvider
+
+from tests.labs.sandbox_backend import (
+    LEARNER_UID,
+    backend_name,
+    is_kubernetes,
+    make_provider,
+    provider_ready,
+    skip_reason,
+)
 
 IMAGE = "edu-it/lab-linux-base:dev"
 MIB = 1024 * 1024
+#: Kubernetes: PIDs of the pod outside the learner container (pause, grader and owner helpers) plus
+#: slack for processes that race the ceiling.
+POD_OTHER_PIDS = 10
+#: Devices the kernel adds to every network namespace once the matching tunnel module is loaded.
+KERNEL_FALLBACK_TUNNELS = frozenset(
+    {"tunl0", "sit0", "ip6tnl0", "gre0", "gretap0", "erspan0", "ip_vti0", "ip6_vti0", "ip6gre0"}
+)
 
 
 @dataclass(frozen=True)
@@ -28,34 +43,26 @@ class _Lab:
 
 
 def _daemon_ready() -> bool:
-    try:
-        import docker
-
-        client = docker.from_env(timeout=3)
-        client.ping()
-        client.images.get(IMAGE)
-    except Exception:
-        return False
-    return True
+    return provider_ready(IMAGE)
 
 
 pytestmark = [
     pytest.mark.docker,
-    pytest.mark.skipif(not _daemon_ready(), reason="no Docker daemon or lab image"),
+    pytest.mark.skipif(not _daemon_ready(), reason=skip_reason()),
 ]
 
 
 @pytest.fixture(scope="module")
-def provider() -> DockerSandboxProvider:
-    return DockerSandboxProvider()
+def provider() -> SandboxProvider:
+    return make_provider()
 
 
-def _new(provider: DockerSandboxProvider, name: str) -> SandboxHandle:
+def _new(provider: SandboxProvider, name: str) -> SandboxHandle:
     return provider.provision(build_sandbox_spec(_Lab(), name))
 
 
 @pytest.fixture
-def sandbox(provider: DockerSandboxProvider) -> Iterator[SandboxHandle]:
+def sandbox(provider: SandboxProvider) -> Iterator[SandboxHandle]:
     handle = _new(provider, "pytest-iso")
     try:
         yield handle
@@ -64,7 +71,7 @@ def sandbox(provider: DockerSandboxProvider) -> Iterator[SandboxHandle]:
 
 
 def _sh(
-    provider: DockerSandboxProvider,
+    provider: SandboxProvider,
     handle: SandboxHandle,
     script: str,
     *,
@@ -81,7 +88,7 @@ def _sh(
     )
 
 
-def _assert_usable(provider: DockerSandboxProvider, handle: SandboxHandle) -> None:
+def _assert_usable(provider: SandboxProvider, handle: SandboxHandle) -> None:
     assert provider.health(handle).healthy
     assert _sh(provider, handle, "echo ok").stdout.strip() == b"ok"
 
@@ -89,8 +96,10 @@ def _assert_usable(provider: DockerSandboxProvider, handle: SandboxHandle) -> No
 # -- 3.1 non-root -------------------------------------------------------------
 
 
-def test_runs_as_non_root(provider: DockerSandboxProvider, sandbox: SandboxHandle) -> None:
-    assert _sh(provider, sandbox, "id -u").stdout.strip() == b"1000"
+def test_runs_as_non_root(provider: SandboxProvider, sandbox: SandboxHandle) -> None:
+    assert (
+        _sh(provider, sandbox, "id -u").stdout.strip() == str(LEARNER_UID[backend_name()]).encode()
+    )
     # Root filesystem is read-only.
     assert _sh(provider, sandbox, "touch /etc/pwned").exit_code != 0
 
@@ -98,18 +107,40 @@ def test_runs_as_non_root(provider: DockerSandboxProvider, sandbox: SandboxHandl
 # -- 3.2 no network -----------------------------------------------------------
 
 
-def test_outbound_connect_fails(provider: DockerSandboxProvider, sandbox: SandboxHandle) -> None:
+def test_outbound_connect_fails(provider: SandboxProvider, sandbox: SandboxHandle) -> None:
     res = _sh(provider, sandbox, "exec 3<>/dev/tcp/1.1.1.1/53", timeout_s=15)
     assert res.exit_code != 0
     ifaces = _sh(provider, sandbox, "ls /sys/class/net").stdout.split()
-    assert ifaces == [b"lo"]
+    if is_kubernetes():
+        # Docker's ``network none`` has no Kubernetes equivalent: a pod always has its own
+        # interface (and Calico a tunnel device). The equivalent control is the default-deny
+        # NetworkPolicy of the labs namespace, so nothing leaves the pod: not the internet (above)
+        # and not the cluster either (the API server's cluster IP below).
+        assert set(ifaces) <= {b"lo", b"eth0", b"tunl0"}
+        cluster = _sh(provider, sandbox, "exec 3<>/dev/tcp/10.96.0.1/443", timeout_s=15)
+        assert cluster.exit_code != 0
+    else:
+        # ``network none``: only ``lo``. A host kernel with a tunnel module loaded (for example
+        # Calico's ipip module, when a kind cluster shares the Docker VM kernel) adds its
+        # fallback device (``tunl0``...) to every new network namespace; it is down, has no
+        # address and no route, so it is not a network path. Anything else, or any of them up,
+        # fails.
+        assert b"lo" in ifaces
+        flags = _sh(
+            provider, sandbox, "for i in /sys/class/net/*; do echo ${i##*/} $(cat $i/flags); done"
+        ).stdout.decode()
+        for line in flags.splitlines():
+            name, value = line.split()
+            if name != "lo":
+                assert name in KERNEL_FALLBACK_TUNNELS, name
+                assert int(value, 16) & 0x1 == 0, f"{name} is up"
 
 
 # -- 3.3 PID limit ------------------------------------------------------------
 
 
 def test_fork_bomb_is_contained_by_pid_limit(
-    provider: DockerSandboxProvider, sandbox: SandboxHandle
+    provider: SandboxProvider, sandbox: SandboxHandle
 ) -> None:
     limit = cfg.SANDBOX_PID_LIMIT
     # At the ceiling even ``ps``/``wc`` cannot fork, so read the cgroup with shell builtins
@@ -123,6 +154,15 @@ def test_fork_bomb_is_contained_by_pid_limit(
     )
     res = _sh(provider, sandbox, script, timeout_s=30)
     out = dict(line.split("=", 1) for line in res.stdout.decode().split() if "=" in line)
+    if is_kubernetes():
+        # The Kubernetes limit is the kubelet ``podPidsLimit`` on the POD cgroup (the annotation
+        # ``edu-it.io/pid-limit`` records it; ``test_lab_nodes_enforce_the_pod_pid_limit...`` in
+        # tests/k8s proves the node setting). The learner container only sees its own cgroup, whose ``pids.max`` and
+        # ``pids.events`` are not the pod's, so they are not asserted. The pod ceiling shows in the
+        # count: the bomb asked for 3 x limit processes, and the pod stops it at the limit, less
+        # the pod's own other processes (pause, grader and owner helpers).
+        assert limit - POD_OTHER_PIDS <= int(out["cur"]) <= limit
+        return
     assert int(out["max"]) == limit
     assert int(out["cur"]) <= limit
     assert int(out["cur"]) >= limit - 2  # the bomb really ran into the ceiling
@@ -134,7 +174,7 @@ def test_fork_bomb_is_contained_by_pid_limit(
 # -- 3.4 memory limit ---------------------------------------------------------
 
 
-def test_memory_loop_is_contained(provider: DockerSandboxProvider, sandbox: SandboxHandle) -> None:
+def test_memory_loop_is_contained(provider: SandboxProvider, sandbox: SandboxHandle) -> None:
     # tail on an endless line-less stream buffers it all in memory.
     res = _sh(provider, sandbox, "/usr/bin/tail /dev/zero", timeout_s=60)
     assert res.exit_code != 0
@@ -157,7 +197,7 @@ def test_memory_loop_is_contained(provider: DockerSandboxProvider, sandbox: Sand
     ],
 )
 def test_disk_fill_fails_with_enospc_at_tmpfs_size(
-    provider: DockerSandboxProvider, sandbox: SandboxHandle, path: str, quota: int
+    provider: SandboxProvider, sandbox: SandboxHandle, path: str, quota: int
 ) -> None:
     count = quota // MIB + 16
     res = _sh(
@@ -177,9 +217,7 @@ def test_disk_fill_fails_with_enospc_at_tmpfs_size(
 # -- 3.6 CPU limit ------------------------------------------------------------
 
 
-def test_cpu_spin_is_held_to_cpu_limit(
-    provider: DockerSandboxProvider, sandbox: SandboxHandle
-) -> None:
+def test_cpu_spin_is_held_to_cpu_limit(provider: SandboxProvider, sandbox: SandboxHandle) -> None:
     script = (
         "f=/sys/fs/cgroup/cpu.stat; [ -r $f ] || { echo NOCGROUP; exit 0; }; "
         "u() { sed -n 's/^usage_usec //p' $f; }; "
@@ -202,7 +240,7 @@ def test_cpu_spin_is_held_to_cpu_limit(
 
 
 def test_capabilities_dropped_and_no_new_privs(
-    provider: DockerSandboxProvider, sandbox: SandboxHandle
+    provider: SandboxProvider, sandbox: SandboxHandle
 ) -> None:
     status = _sh(provider, sandbox, "cat /proc/self/status").stdout.decode()
     fields = dict(line.split(":\t", 1) for line in status.splitlines() if ":\t" in line)
@@ -220,9 +258,7 @@ def test_capabilities_dropped_and_no_new_privs(
 # -- 3.8 no Docker socket, no host mounts, not privileged --------------------
 
 
-def test_no_docker_socket_or_host_mounts(
-    provider: DockerSandboxProvider, sandbox: SandboxHandle
-) -> None:
+def test_no_docker_socket_or_host_mounts(provider: SandboxProvider, sandbox: SandboxHandle) -> None:
     res = _sh(
         provider,
         sandbox,
@@ -230,7 +266,18 @@ def test_no_docker_socket_or_host_mounts(
         "find / -xdev -name 'docker.sock' 2>/dev/null; echo done",
     )
     assert res.stdout.strip() == b"done"
-    inspect = provider._docker().api.inspect_container(sandbox.sandbox_id)
+    if is_kubernetes():
+        _assert_pod_has_no_host_access_and_limits(provider, sandbox)
+    else:
+        _assert_container_has_no_host_access_and_limits(provider, sandbox)
+
+
+def _assert_container_has_no_host_access_and_limits(
+    provider: SandboxProvider, sandbox: SandboxHandle
+) -> None:
+    """Docker: inspect the container (the daemon is Docker-specific)."""
+    docker_client = provider._docker()  # type: ignore[attr-defined]
+    inspect = docker_client.api.inspect_container(sandbox.sandbox_id)
     assert all(m["Type"] == "tmpfs" for m in inspect["Mounts"] or [{"Type": "tmpfs"}])
     host = inspect["HostConfig"]
     assert host["Privileged"] is False
@@ -243,10 +290,31 @@ def test_no_docker_socket_or_host_mounts(
     assert host["NanoCpus"] == cfg.SANDBOX_CPU_LIMIT * 1_000_000_000
 
 
+def _assert_pod_has_no_host_access_and_limits(
+    provider: SandboxProvider, sandbox: SandboxHandle
+) -> None:
+    """Kubernetes: the manifest the provider submits (admitted by restricted Pod Security)."""
+    from edu_it_infrastructure.fakes.k8s_api import parse_quantity
+    from edu_it_infrastructure.sandbox.k8s_pod_spec import build_lab_pod
+
+    spec = build_sandbox_spec(_Lab(), sandbox.session_stable_id)
+    pod = build_lab_pod(spec, provider._settings)  # type: ignore[attr-defined]
+    pod_spec = pod["spec"]
+    assert not any("hostPath" in v for v in pod_spec["volumes"])
+    for flag in ("hostNetwork", "hostPID", "hostIPC"):
+        assert not pod_spec.get(flag)
+    learner = next(c for c in pod_spec["containers"] if c["name"] == "learner")
+    assert not learner["securityContext"].get("privileged")
+    limits = learner["resources"]["limits"]
+    assert parse_quantity("memory", limits["memory"]) == cfg.SANDBOX_MEMORY_LIMIT
+    assert parse_quantity("cpu", limits["cpu"]) == cfg.SANDBOX_CPU_LIMIT * 1000
+    assert pod["metadata"]["annotations"]["edu-it.io/pid-limit"] == str(cfg.SANDBOX_PID_LIMIT)
+
+
 # -- 3.9 / 3.10 other sandboxes and the host are unaffected -------------------
 
 
-def test_abuse_does_not_affect_other_sandboxes_or_host(provider: DockerSandboxProvider) -> None:
+def test_abuse_does_not_affect_other_sandboxes_or_host(provider: SandboxProvider) -> None:
     victim = _new(provider, "pytest-victim")
     abuser = _new(provider, "pytest-abuser")
     try:
@@ -265,7 +333,8 @@ def test_abuse_does_not_affect_other_sandboxes_or_host(provider: DockerSandboxPr
         _assert_usable(provider, victim)
         _assert_usable(provider, abuser)
         # The host daemon still answers and nothing leaked onto the host network namespace.
-        assert provider._docker().ping()
+        if not is_kubernetes():  # the Docker daemon is the host-side service to check
+            assert provider._docker().ping()  # type: ignore[attr-defined]
         assert victim in provider.list_sandboxes()
         assert abuser in provider.list_sandboxes()
     finally:

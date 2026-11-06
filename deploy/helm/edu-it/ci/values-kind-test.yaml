@@ -1,0 +1,6 @@
+# Values override for the kind test suites ONLY (Req 16.4, 16.11).
+# Never pass this file to a production install and never copy the key into
+# values-dev.yaml, values-eks.yaml, values-aks.yaml or values-onprem.yaml.
+# tools/kind_harness.py adds it to `helm` only when a test needs a short session TTL.
+kindTest:
+  sessionTtlSeconds: 30

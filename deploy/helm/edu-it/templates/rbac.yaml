@@ -1,0 +1,70 @@
+{{- /*
+Namespaced RBAC in the labs namespace only (Req 4.1, 4.2, 4.3, 4.7, OQ-1).
+No ClusterRole, no ClusterRoleBinding, no wildcards.
+*/ -}}
+{{- $labs := include "edu-it.labsNamespace" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "worker") }}
+  namespace: {{ $labs }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "worker") | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "worker") }}
+  namespace: {{ $labs }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "worker") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "worker") }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "edu-it.serviceAccountName" (dict "root" . "component" "worker") }}
+    namespace: {{ include "edu-it.platformNamespace" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "api") }}
+  namespace: {{ $labs }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "api") | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
+  # The terminal exec is a WebSocket upgrade (an HTTP GET), which the API server authorizes as
+  # `get` on pods/exec; `create` covers the POST form. Both only open an exec stream, and the
+  # Api exec admission policy still limits the Api to the learner container (ADR 0009).
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "api") }}
+  namespace: {{ $labs }}
+  labels:
+    {{- include "edu-it.labels" (dict "root" . "component" "api") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "edu-it.componentName" (dict "root" . "component" "api") }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "edu-it.serviceAccountName" (dict "root" . "component" "api") }}
+    namespace: {{ include "edu-it.platformNamespace" . }}
