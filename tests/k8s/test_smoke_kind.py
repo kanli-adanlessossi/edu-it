@@ -106,6 +106,11 @@ def _helm_args(context: str, digests: dict[str, str], cidr: str) -> list[str]:
     ]
     for name, digest in digests.items():
         args += ["--set", f"images.{name}.digest={digest}"]
+    # Optional: suites that `helm ... --wait` on the whole release (the failure-scenario tests)
+    # need a pullable web image; without it web keeps the all-zeros placeholder of values-dev.yaml.
+    web_digest = os.environ.get("EDU_IT_KIND_DIGEST_WEB")
+    if web_digest:
+        args += ["--set", f"images.web.digest={web_digest}"]
     return args
 
 

@@ -554,46 +554,6 @@ def test_migration_job_over_its_deadline_is_a_failed_upgrade(
 # --------------------------------------------------------------------------- Req 23: secrets
 
 
-# Claims: 23.1, 23.3
-@pytest.mark.kind
-def test_install_with_an_unsyncable_externalsecret_fails_at_the_helm_timeout(
-    kind_context: str, chart_args: list[str]
-) -> None:
-    context = kind_context
-    timeout_s = 60
-    _reset_platform(context)
-    _prepare_namespaces(context)
-    try:
-        started = time.monotonic()
-        done = _helm(
-            ["install", RELEASE, *chart_args, *_set_args(UNSYNCABLE_SETS),
-             "--wait", "--timeout", f"{timeout_s}s"],
-            timeout=timeout_s + 240,
-        )
-        elapsed = time.monotonic() - started
-        assert done.returncode != 0, done.stdout  # the release fails (Req 23.3)
-        assert elapsed >= timeout_s * 0.8  # it waited for the Helm timeout, it did not pass early
-        assert elapsed <= timeout_s + 120
-        assert _release_status(context) == "failed"
-
-        # The Secret is absent and nothing started with default or empty credentials (Req 23.1).
-        absent = _kubectl_try(
-            context, "get", "secret", f"{RELEASE}-database", "-n", PLATFORM_NAMESPACE
-        )
-        assert absent.returncode != 0 and "NotFound" in absent.stderr
-        for component in WORKLOADS:
-            assert not any(_is_ready(p) for p in _pods(context, component))
-        migration_pods = _pods(context, "migration")
-        assert not any(_is_ready(p) for p in migration_pods)
-        assert not any(
-            s.get("state", {}).get("running")
-            for p in migration_pods
-            for s in p.get("status", {}).get("containerStatuses", [])
-        )
-    finally:
-        _reset_platform(context)
-
-
 # Claims: 23.1, 23.3, 23.4
 @pytest.mark.kind
 def test_upgrade_with_an_unsyncable_externalsecret_fails_and_old_pods_keep_serving(
@@ -646,6 +606,48 @@ def test_upgrade_with_an_unsyncable_externalsecret_fails_and_old_pods_keep_servi
         assert set(addresses) & old_pods["api"]
     finally:
         _run(["helm", "upgrade", RELEASE, *chart_args, "--wait", "--timeout", "600s"], timeout=700)
+
+
+# Runs after the upgrade test on purpose: it resets the platform namespace, which would remove
+# the module-scoped `baseline` release that the upgrade test still uses.
+# Claims: 23.1, 23.3
+@pytest.mark.kind
+def test_install_with_an_unsyncable_externalsecret_fails_at_the_helm_timeout(
+    kind_context: str, chart_args: list[str]
+) -> None:
+    context = kind_context
+    timeout_s = 60
+    _reset_platform(context)
+    _prepare_namespaces(context)
+    try:
+        started = time.monotonic()
+        done = _helm(
+            ["install", RELEASE, *chart_args, *_set_args(UNSYNCABLE_SETS),
+             "--wait", "--timeout", f"{timeout_s}s"],
+            timeout=timeout_s + 240,
+        )
+        elapsed = time.monotonic() - started
+        assert done.returncode != 0, done.stdout  # the release fails (Req 23.3)
+        assert elapsed >= timeout_s * 0.8  # it waited for the Helm timeout, it did not pass early
+        assert elapsed <= timeout_s + 120
+        assert _release_status(context) == "failed"
+
+        # The Secret is absent and nothing started with default or empty credentials (Req 23.1).
+        absent = _kubectl_try(
+            context, "get", "secret", f"{RELEASE}-database", "-n", PLATFORM_NAMESPACE
+        )
+        assert absent.returncode != 0 and "NotFound" in absent.stderr
+        for component in WORKLOADS:
+            assert not any(_is_ready(p) for p in _pods(context, component))
+        migration_pods = _pods(context, "migration")
+        assert not any(_is_ready(p) for p in migration_pods)
+        assert not any(
+            s.get("state", {}).get("running")
+            for p in migration_pods
+            for s in p.get("status", {}).get("containerStatuses", [])
+        )
+    finally:
+        _reset_platform(context)
 
 
 # --------------------------------------------------------------------------- Req 23.2: no cluster

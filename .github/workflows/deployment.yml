@@ -706,6 +706,7 @@ jobs:
         id: failure
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
+          EDU_IT_KIND_DIGEST_WEB: ${{ steps.images.outputs.web }}
           EDU_IT_KIND_DIGEST_API: ${{ steps.images.outputs.api }}
           EDU_IT_KIND_DIGEST_WORKER: ${{ steps.images.outputs.worker }}
           EDU_IT_KIND_DIGEST_MIGRATIONS: ${{ steps.images.outputs.migrations }}
