@@ -47,6 +47,12 @@ READY_WAIT_SECONDS = 600
 INGRESS_HOST = "edu-it.localtest.me"
 INGRESS_LOCAL_PORT = 18443
 PUBLIC_WEB_URL = f"https://{INGRESS_HOST}:{INGRESS_LOCAL_PORT}"
+#: The lab node pool of deploy/kind/kind-config.yaml, and the RuntimeClass that carries it.
+LAB_RUNTIME_CLASS = "edu-it-kind-runc"
+LAB_NODE_SELECTOR = {"edu-it.io/pool": "labs"}
+LAB_TOLERATIONS = [
+    {"key": "edu-it.io/labs", "operator": "Equal", "value": "true", "effect": "NoSchedule"}
+]
 DIGEST_ENV = {
     "web": "EDU_IT_KIND_DIGEST_WEB",
     "api": "EDU_IT_KIND_DIGEST_API",
@@ -143,6 +149,19 @@ def _helm_args(context: str, digests: Mapping[str, str], cidr: str) -> list[str]
         # The browser reaches the ingress through the port-forward below, so email links and
         # the Api's CORS / terminal Origin allowlist must use that origin, not https://<host>.
         "--set", f"ingress.publicBaseUrl={PUBLIC_WEB_URL}",
+        # Lab_Pods must run on the lab node pool of deploy/kind/kind-config.yaml (label
+        # edu-it.io/pool=labs, taint edu-it.io/labs=true:NoSchedule), as every other kind suite
+        # does. The chart applies labs.nodePool through the Lab_RuntimeClass `scheduling` only,
+        # and values-dev has no RuntimeClass, so without one the Worker's pods carry no
+        # selector or toleration and land on the plain worker next to the platform workloads.
+        # A second Lab_Pod (1.6 CPU) then stays Pending ("Insufficient cpu") and the session
+        # never leaves provisioning. kind has no gVisor or Kata: the RuntimeClass uses the
+        # containerd `runc` handler (dev only, Req 2.12).
+        "--set", "labs.runtimeClass.create=true",
+        "--set", f"labs.runtimeClass.name={LAB_RUNTIME_CLASS}",
+        "--set", "labs.runtimeClass.handler=runc",
+        "--set-json", f"labs.nodePool.nodeSelector={json.dumps(LAB_NODE_SELECTOR)}",
+        "--set-json", f"labs.nodePool.tolerations={json.dumps(LAB_TOLERATIONS)}",
     ]
     for name, digest in digests.items():
         args += ["--set", f"images.{name}.digest={digest}"]
