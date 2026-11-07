@@ -951,12 +951,15 @@ jobs:
           REF: ${{ steps.push.outputs.repo }}@${{ steps.push.outputs.digest }}
         run: |
           set -euo pipefail
+          # oras rejects an absolute file path ("absolute file path detected"), so attach
+          # from inside the download directory with workspace-relative names.
+          cd "$RUNNER_TEMP/out"
           for slug in linux-amd64 linux-arm64; do
             oras attach \
               --artifact-type application/spdx+json \
               --annotation "edu-it.io/sbom-platform=${slug/-//}" \
               "$REF" \
-              "$RUNNER_TEMP/out/sbom-$IMAGE_NAME-$slug.spdx.json:application/spdx+json"
+              "sbom-$IMAGE_NAME-$slug.spdx.json:application/spdx+json"
           done
           oras discover --format json "$REF" > "$RUNNER_TEMP/referrers.json"
           python3 - "$RUNNER_TEMP/referrers.json" <<'PY'
