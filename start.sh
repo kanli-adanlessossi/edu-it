@@ -47,7 +47,7 @@ uv run --frozen python tools/dev_seed.py
 wait_ready() {
     local name="$1" url="$2" waited=0
     printf '==> waiting for %s (%s)' "$name" "$url"
-    until curl -fsS -o /dev/null --max-time 5 "$url"; do
+    until curl -fs -o /dev/null --max-time 5 "$url"; do
         if [ "$waited" -ge "$READY_TIMEOUT_S" ]; then
             echo
             fail "$name did not become ready within ${READY_TIMEOUT_S}s; see the logs under .e2e/ and run ./stop.sh"

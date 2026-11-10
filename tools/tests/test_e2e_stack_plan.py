@@ -76,6 +76,19 @@ def test_api_and_worker_environment() -> None:
         assert _step(plan, name).background
 
 
+def test_api_and_worker_listen_on_distinct_ports() -> None:
+    """Both run on one host and default their metrics to 9090; Linux refuses the second bind."""
+    plan = stack.build_plan({})
+    api, worker = _step(plan, "api").env, _step(plan, "worker").env
+    ports = [
+        api["API_PORT"],
+        api["API_METRICS_PORT"],
+        worker["WORKER_HEALTH_PORT"],
+        worker["WORKER_METRICS_PORT"],
+    ]
+    assert len(set(ports)) == len(ports), ports
+
+
 def test_api_output_goes_to_e2e_mail_log(tmp_path: Path) -> None:
     log = tmp_path / "mail.log"
     assert _step(stack.build_plan({"E2E_MAIL_LOG": str(log)}), "api").log == log

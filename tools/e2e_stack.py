@@ -57,6 +57,12 @@ POSTGRES_PORT = 5432
 REDIS_PORT = 6379
 API_PORT = 8000
 WORKER_HEALTH_PORT = 8001
+# The api and the worker each serve Prometheus metrics, and both default to 9090. In the Chart
+# and in Compose they are separate containers, but here both run on one host: a second bind to
+# the same port succeeds on Windows and fails with "Address already in use" on Linux and macOS,
+# which stops the api. Give each its own port.
+API_METRICS_PORT = 9090
+WORKER_METRICS_PORT = 9091
 WEB_PORT = 3000
 
 DATABASE_URL = f"postgresql://edu_it:change-me@localhost:{POSTGRES_PORT}/edu_it"
@@ -139,11 +145,17 @@ def build_plan(env: Mapping[str, str]) -> list[Step]:
     if env.get("ALPINE_MIRROR"):
         bake_env["ALPINE_MIRROR"] = env["ALPINE_MIRROR"]
 
-    api_env = {**APP_ENV, "API_HOST": "127.0.0.1", "API_PORT": str(API_PORT)}
+    api_env = {
+        **APP_ENV,
+        "API_HOST": "127.0.0.1",
+        "API_PORT": str(API_PORT),
+        "API_METRICS_PORT": str(API_METRICS_PORT),
+    }
     worker_env = {
         **APP_ENV,
         "WORKER_HEALTH_HOST": "127.0.0.1",
         "WORKER_HEALTH_PORT": str(WORKER_HEALTH_PORT),
+        "WORKER_METRICS_PORT": str(WORKER_METRICS_PORT),
     }
     web_env = {
         "NEXT_PUBLIC_API_BASE_URL": f"{API_BASE_URL}/v1",
