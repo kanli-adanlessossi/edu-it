@@ -4,7 +4,7 @@ FROM linux-base
 
 USER root
 ARG ALPINE_MIRROR=https://dl-cdn.alpinelinux.org/alpine
-RUN printf '%s\n' "$ALPINE_MIRROR/v3.21/main" "$ALPINE_MIRROR/v3.21/community" > /tmp/apk-repositories \
+RUN printf '%s\n' "$ALPINE_MIRROR/v3.23/main" "$ALPINE_MIRROR/v3.23/community" > /tmp/apk-repositories \
     && apk add --no-cache --repositories-file /tmp/apk-repositories python3 \
     && rm -f /tmp/apk-repositories \
     && find / -xdev -type f \( -perm -4000 -o -perm -2000 \) -exec chmod a-s {} +

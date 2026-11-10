@@ -144,11 +144,14 @@ The only base image is `alpine@sha256:<digest>` in `lab-images/linux-base/Docker
 image builds on the base. The scan fails on any finding, so a newly published CVE turns the
 scheduled run red until it is fixed.
 
-Alpine 3.21 is end-of-life, so no newer `alpine:3.21` image is published and a digest bump cannot
-pick up a fix. The base Dockerfile therefore runs `apk upgrade` from the v3.21 repositories before
-`apk add`; a finding whose fixed version is in those repositories is fixed by rebuilding (push a
-change under `lab-images/` or re-run the workflow), with no digest change. A finding with no fixed
-package in v3.21 needs a move to a supported Alpine release.
+The base is Alpine 3.23. A published `alpine` image can lag its branch's repositories (3.23.8
+still ships a zlib that v3.23/main already fixes), so a digest bump does not always pick up a fix.
+The base Dockerfile therefore runs `apk upgrade` from the v3.23 repositories before `apk add`; a
+finding whose fixed version is in those repositories is fixed by rebuilding (push a change under
+`lab-images/` or re-run the workflow), with no digest change. A finding with no fixed package in
+the branch, or a branch that reaches end-of-life, needs a move to a newer Alpine release: change
+the branch in both Dockerfiles' repository lines, pin the new tag's digest, update
+`lab-images/README.md`, and re-verify its command forms.
 
 When a newer image of the pinned tag is published, bump the digest:
 

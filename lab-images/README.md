@@ -4,7 +4,7 @@ Sandbox images for hands-on labs. Requirements 4.1 to 4.4 and 21.5.
 
 | Image | Path | Contents |
 |---|---|---|
-| `edu-it/lab-linux-base` | `linux-base/` | Alpine 3.21 plus `bash`, `coreutils`, `findutils`, `tar`, `procps` |
+| `edu-it/lab-linux-base` | `linux-base/` | Alpine 3.23 plus `bash`, `coreutils`, `findutils`, `tar`, `procps` |
 | `edu-it/lab-python` | `python/` | The base image plus `python3` |
 
 ## Rules
@@ -39,30 +39,31 @@ Bumping the digest: see `docs/LABS.md`.
 ### Alpine mirror override (local builds only)
 
 Packages come from `https://dl-cdn.alpinelinux.org/alpine` by default, which is what CI uses. If the CDN is
-unreachable from your machine, override the build-time mirror (main and community of v3.21):
+unreachable from your machine, override the build-time mirror (main and community of v3.23):
 
 ```sh
 ALPINE_MIRROR=https://uk.alpinelinux.org/alpine docker buildx bake --load
 ``` 
 
 PowerShell: `$env:ALPINE_MIRROR='https://uk.alpinelinux.org/alpine'; docker buildx bake --load`. Another mirror that
-works is `https://mirror.leaseweb.com/alpine`. The override is an `ARG` used only by the `apk add` step
-(through a temporary `--repositories-file`), so the final image's `/etc/apk/repositories` still lists the CDN.
+works is `https://mirror.leaseweb.com/alpine`. The override is an `ARG` used only by the `apk upgrade` and
+`apk add` steps (through a temporary `--repositories-file`), so the final image's `/etc/apk/repositories` still lists the CDN.
 The base image digest pin is unchanged. Never commit a different default.
 
 ## Command forms used inside sandboxes
 
 Recorded by the flag-compatibility spike (task 3.4, Requirements 4.15, 4.16). Verified in both built
-images (`edu-it/lab-linux-base:dev` and `edu-it/lab-python:dev`, Alpine 3.21, identical results) in a
+images (`edu-it/lab-linux-base:dev` and `edu-it/lab-python:dev`, identical results) on Alpine 3.21 and
+re-verified on Alpine 3.23.8 (versions below are 3.23's), in a
 container started like a sandbox: `--init --network none --read-only --cap-drop ALL
 --security-opt no-new-privileges --user 1000:1000`, with `docker exec -u learner|grader|root`.
 Code must use only these absolute paths and argv forms.
 
 | Command | Absolute path | Implementation | Version |
 |---|---|---|---|
-| `ps` | `/bin/ps` | procps-ng (not BusyBox) | 4.0.4 |
+| `ps` | `/bin/ps` | procps-ng (not BusyBox) | 4.0.5 |
 | `kill` | `/bin/kill` | BusyBox applet (symlink to `/bin/busybox`); `/usr/bin/kill` does not exist | n/a |
-| `timeout` | `/usr/bin/timeout` | GNU coreutils (multicall `/usr/bin/coreutils`) | 9.5 |
+| `timeout` | `/usr/bin/timeout` | GNU coreutils (symlink to the multicall `/bin/coreutils`) | 9.8 |
 | `tar` | `/bin/tar` | GNU tar | 1.35 |
 
 `kill` is also a shell builtin, so always exec the absolute path `/bin/kill`, never the bare name.
@@ -92,9 +93,9 @@ The seed lab 1 setup script and Check scripts call these absolute paths, with PA
 
 | Path | Implementation | Used for |
 |---|---|---|
-| `/bin/stat` | GNU coreutils 9.5 (symlink to `../usr/bin/coreutils`) | `stat -c '%F'`, `'%G %a'`, `'%s'` without `-L` |
+| `/bin/stat` | GNU coreutils 9.8 (symlink to `coreutils`, the multicall `/bin/coreutils`) | `stat -c '%F'`, `'%G %a'`, `'%s'` without `-L` |
 | `/usr/bin/id` | GNU coreutils | `id -nG` in setup |
-| `/usr/bin/find` | GNU findutils 4.10 | `find -P ... -perm -0002 ! -type l -print -quit` |
+| `/usr/bin/find` | GNU findutils 4.10.0 | `find -P ... -perm -0002 ! -type l -print -quit` |
 | `/usr/bin/sha256sum` | GNU coreutils | planted file content check |
 | `/usr/bin/printf` | GNU coreutils | setup |
 | `/bin/mkdir`, `/bin/chmod` | GNU coreutils | setup |
