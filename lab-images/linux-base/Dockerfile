@@ -5,6 +5,9 @@ FROM alpine@sha256:ee16d92f96db08d9d2d07da48555a27f3a69d8f0759021dbc601195ed0d2b
 # Build-time package mirror only; default is the CDN. The final image's /etc/apk/repositories is untouched.
 ARG ALPINE_MIRROR=https://dl-cdn.alpinelinux.org/alpine
 RUN printf '%s\n' "$ALPINE_MIRROR/v3.21/main" "$ALPINE_MIRROR/v3.21/community" > /tmp/apk-repositories \
+    # Upgrade the packages the pinned base already ships: Alpine 3.21 is end-of-life, so no newer
+    # alpine:3.21 image is published and security fixes reach us only through the v3.21 repositories.
+    && apk upgrade --no-cache --repositories-file /tmp/apk-repositories \
     && apk add --no-cache --repositories-file /tmp/apk-repositories bash coreutils findutils tar procps \
     && rm -f /tmp/apk-repositories \
     # Users: learner (1000) works in the lab, grader (1001) runs Checks.

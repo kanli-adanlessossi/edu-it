@@ -142,7 +142,15 @@ lab's Check timeouts must fit it too (`check-timeouts-fit-budget`).
 
 The only base image is `alpine@sha256:<digest>` in `lab-images/linux-base/Dockerfile`; the Python
 image builds on the base. The scan fails on any finding, so a newly published CVE turns the
-scheduled run red until the digest is bumped. To bump it:
+scheduled run red until it is fixed.
+
+Alpine 3.21 is end-of-life, so no newer `alpine:3.21` image is published and a digest bump cannot
+pick up a fix. The base Dockerfile therefore runs `apk upgrade` from the v3.21 repositories before
+`apk add`; a finding whose fixed version is in those repositories is fixed by rebuilding (push a
+change under `lab-images/` or re-run the workflow), with no digest change. A finding with no fixed
+package in v3.21 needs a move to a supported Alpine release.
+
+When a newer image of the pinned tag is published, bump the digest:
 
 1. Pick the new multi-arch index digest of the Alpine tag.
 2. Rebuild the images: `cd lab-images && docker buildx bake --load`.
