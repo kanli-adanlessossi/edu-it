@@ -28,6 +28,11 @@ if not exist "apps\web\node_modules\" (
     call npm ci --prefix apps/web || exit /b 1
 )
 
+rem "uv run" alone installs only the root project; the stack imports every workspace package
+rem (domain, application, infrastructure, content, api, worker), as CI does.
+echo ==^> Python workspace ^(uv sync --all-packages^)
+uv sync --frozen --all-packages || exit /b 1
+
 uv run --frozen python tools/e2e_stack.py up || exit /b 1
 
 rem Dev admin and content approval (credentials from DEV_ADMIN_* or the git-ignored .env.dev-admin;

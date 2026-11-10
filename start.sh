@@ -32,6 +32,11 @@ if [ ! -d apps/web/node_modules ]; then
     npm ci --prefix apps/web
 fi
 
+# `uv run` alone installs only the root project; the stack imports every workspace package
+# (domain, application, infrastructure, content, api, worker), as CI does.
+echo "==> Python workspace (uv sync --all-packages)"
+uv sync --frozen --all-packages
+
 uv run --frozen python tools/e2e_stack.py up
 
 # Dev admin and content approval (credentials from DEV_ADMIN_* or the git-ignored .env.dev-admin;
