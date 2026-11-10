@@ -6,3 +6,7 @@ tests/labs/fixtures/**/*.sh text eol=lf
 /stop.sh text eol=lf
 /start.bat text eol=crlf
 /stop.bat text eol=crlf
+/kind-up.sh text eol=lf
+/kind-down.sh text eol=lf
+/kind-up.bat text eol=crlf
+/kind-down.bat text eol=crlf
