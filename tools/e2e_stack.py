@@ -261,7 +261,9 @@ def build_plan(env: Mapping[str, str]) -> list[Step]:
 def build_down_plan(containers: Sequence[str] | None = None) -> list[Step]:
     """Remove only the containers ``up`` recorded as started by it (default: both, for display)."""
     names = [POSTGRES_CONTAINER, REDIS_CONTAINER] if containers is None else list(containers)
-    return [Step(f"{n}-rm", ("docker", "rm", "-f", n)) for n in names]
+    # -v also removes the container's anonymous data volume. postgres:17 and redis:7 declare one,
+    # and a new container never reuses it, so without -v every start/stop cycle leaks two volumes.
+    return [Step(f"{n}-rm", ("docker", "rm", "-f", "-v", n)) for n in names]
 
 
 # -- port and container detection ---------------------------------------------------------
@@ -431,7 +433,7 @@ def _remove_stale_own(spec: ServiceSpec) -> None:
             f"a container named {spec.container} exists but was not started by this stack; "
             f"remove it yourself (`docker rm {spec.container}`) and run `up` again"
         )
-    subprocess.run(["docker", "rm", "-f", spec.container], check=False)
+    subprocess.run(["docker", "rm", "-f", "-v", spec.container], check=False)
 
 
 # -- execution ----------------------------------------------------------------------------

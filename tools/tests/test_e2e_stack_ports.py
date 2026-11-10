@@ -132,6 +132,13 @@ def test_down_removes_only_recorded_containers() -> None:
     assert [s.argv[-1] for s in only_redis] == [stack.REDIS_CONTAINER]
 
 
+def test_down_also_removes_the_anonymous_data_volumes() -> None:
+    """Without -v every start/stop cycle leaks the postgres and redis anonymous volumes."""
+    plan = stack.build_down_plan([stack.POSTGRES_CONTAINER, stack.REDIS_CONTAINER])
+    assert plan
+    assert all("-v" in s.argv for s in plan)
+
+
 @pytest.mark.parametrize("bad", ["edu-it-postgres-1", "dme-db-1"])
 def test_down_never_removes_unrecorded_names(bad: str) -> None:
     plan = stack.build_down_plan([stack.POSTGRES_CONTAINER])
