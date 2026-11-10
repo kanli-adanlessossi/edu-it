@@ -42,8 +42,8 @@ Run these from the repository root, inside the workspace environment (`uv run ..
    uv run python -c "import sys; from edu_it_content.cli import main; sys.exit(main(['sync', '--database-url', '$DATABASE_URL']))"
    ```
 
-   (PowerShell: `$env:DATABASE_URL = '...'`.) Until the schema exists the `worker` keeps failing
-   on missing tables; once it is applied, `docker compose ... restart worker` brings it up.
+   (PowerShell: `$env:DATABASE_URL = '...'`.) Until the schema exists the `worker` exits on
+   missing tables; once it is applied, `docker compose ... restart worker` brings it up.
 
 3. Wait for aggregate readiness:
 
