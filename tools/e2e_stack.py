@@ -43,6 +43,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATE_DIR = REPO_ROOT / ".e2e"
@@ -458,9 +459,10 @@ def _run_step(step: Step, base_env: Mapping[str, str], pids: dict[str, int]) -> 
     raise SystemExit(f"step {step.name!r} failed (exit {result.returncode})")
 
 
-def _load_state() -> dict:
+def _load_state() -> dict[str, Any]:
     if STATE_FILE.exists():
-        return json.loads(STATE_FILE.read_text())
+        state: dict[str, Any] = json.loads(STATE_FILE.read_text())
+        return state
     return {}
 
 
@@ -508,13 +510,13 @@ def cmd_up(env: Mapping[str, str], *, dry_run: bool) -> int:
     try:
         for step in plan:
             print(f"==> {step.name}", flush=True)
-            decision = decisions.get(step.name)
-            if decision is not None and decision.action == "start":
+            step_decision = decisions.get(step.name)
+            if step_decision is not None and step_decision.action == "start":
                 spec = next(s for s in SERVICES if s.key == step.name)
                 _remove_stale_own(spec)
             _run_step(step, env, pids)
-            if decision is not None and decision.action == "start":
-                containers.append(decision.container)
+            if step_decision is not None and step_decision.action == "start":
+                containers.append(step_decision.container)
                 _save_state(pids, containers)
             if step.background:
                 _save_state(pids, containers)

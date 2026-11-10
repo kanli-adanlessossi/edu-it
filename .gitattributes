@@ -1,3 +1,8 @@
 # Lab scripts run in Alpine sandboxes: keep LF endings on every platform.
 content/**/lab-bundles/** text eol=lf
 tests/labs/fixtures/**/*.sh text eol=lf
+# Root start/stop scripts: bash needs LF; cmd needs CRLF for reliable labels.
+/start.sh text eol=lf
+/stop.sh text eol=lf
+/start.bat text eol=crlf
+/stop.bat text eol=crlf
