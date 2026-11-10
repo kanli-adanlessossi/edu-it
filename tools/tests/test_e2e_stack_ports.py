@@ -5,9 +5,13 @@ Docker is never contacted: the ``docker`` calls are injected as fake callables.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
+import os
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -130,6 +134,35 @@ def test_down_removes_only_recorded_containers() -> None:
     assert [s.argv[-1] for s in stack.build_down_plan([])] == []
     only_redis = stack.build_down_plan([stack.REDIS_CONTAINER])
     assert [s.argv[-1] for s in only_redis] == [stack.REDIS_CONTAINER]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX process groups; Windows uses taskkill /T")
+def test_kill_reaches_the_children_of_a_background_step() -> None:
+    """``npx next start`` forks the real server; ``down`` must stop it too, not only the wrapper."""
+    parent = subprocess.Popen(
+        ["sh", "-c", "sleep 300 & echo $!; wait"],
+        stdout=subprocess.PIPE,
+        text=True,
+        start_new_session=True,  # what _run_step does for every background step on POSIX
+    )
+    assert parent.stdout is not None
+    child = int(parent.stdout.readline())
+    try:
+        os.kill(child, 0)  # the grandchild is alive before the kill
+        stack._kill(parent.pid)
+        parent.wait(timeout=10)
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            try:
+                os.kill(child, 0)
+            except ProcessLookupError:
+                return
+            time.sleep(0.1)
+        pytest.fail("the child of the background step survived _kill")
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(child, 9)
+        parent.kill()
 
 
 def test_down_also_removes_the_anonymous_data_volumes() -> None:

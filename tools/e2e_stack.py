@@ -36,6 +36,7 @@ import contextlib
 import json
 import os
 import shlex
+import signal
 import socket
 import subprocess
 import sys
@@ -460,6 +461,10 @@ def _run_step(step: Step, base_env: Mapping[str, str], pids: dict[str, int]) -> 
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 shell=shell,
+                # POSIX: a session of its own, so ``down`` can signal the whole process group.
+                # ``npx next start`` forks the real server; signalling only the recorded pid left
+                # next-server running after stop. (Windows uses ``taskkill /T`` for the tree.)
+                start_new_session=os.name != "nt",
             )
         pids[step.name] = proc.pid
         return
@@ -486,7 +491,7 @@ def _save_state(pids: Mapping[str, int], containers: Sequence[str]) -> None:
 
 
 def _kill(pid: int) -> None:
-    if os.name == "nt":
+    if sys.platform == "win32":
         # A recorded process may already be gone; taskkill's "not found" is not an error here.
         subprocess.run(
             ["taskkill", "/PID", str(pid), "/T", "/F"],
@@ -495,8 +500,15 @@ def _kill(pid: int) -> None:
             stderr=subprocess.DEVNULL,
         )
     else:
-        with contextlib.suppress(ProcessLookupError):
-            os.kill(pid, 15)
+        # The process was started as a session leader (``start_new_session``), so its pid is also
+        # its process group id: signal the group to reach children such as next-server.
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            # Not a group we lead (a pid recorded by an older ``up``) or already gone: signal the
+            # pid itself, ignoring a process that has exited.
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGTERM)
 
 
 def cmd_up(env: Mapping[str, str], *, dry_run: bool) -> int:
