@@ -28,11 +28,16 @@ services:
   web:
     build:
       context: ../..
-      dockerfile: apps/web/Dockerfile
+      dockerfile: deploy/images/web/Dockerfile
+      target: final
+      args:
+        # Next.js inlines NEXT_PUBLIC_* at BUILD time, so this must be a build arg: a runtime
+        # variable does nothing. The browser reaches the api on its published port; the
+        # deployed (Helm) image leaves it unset and uses same-origin /v1 behind the ingress.
+        NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000/v1"
     environment:
-      WEB_PORT: "3000"
-      NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
-      NEXT_PUBLIC_DEFAULT_LOCALE: "en"
+      # Server-side rendering calls the api over the Compose network, not through the browser URL.
+      API_INTERNAL_BASE_URL: "http://api:8000/v1"
     ports:
       - "3000:3000"
     depends_on:
@@ -42,7 +47,8 @@ services:
   api:
     build:
       context: ../..
-      dockerfile: apps/api/Dockerfile
+      dockerfile: deploy/images/api/Dockerfile
+      target: api
     environment:
       EDU_IT_ENV: "development"
       LOG_LEVEL: "info"
@@ -69,7 +75,8 @@ services:
   worker:
     build:
       context: ../..
-      dockerfile: apps/worker/Dockerfile
+      dockerfile: deploy/images/worker/Dockerfile
+      target: worker
     environment:
       EDU_IT_ENV: "development"
       LOG_LEVEL: "info"

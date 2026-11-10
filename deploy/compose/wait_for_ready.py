@@ -14,7 +14,7 @@ so the all-or-nothing aggregate semantics are explicit and observable.
 Design split (I/O here, decision in the application layer):
 
 - This script owns only the I/O and the clock: for each of the three services it
-  polls ``GET <base-url>/ready`` until the endpoint answers ``200``/ready or the
+  polls ``GET <base-url>/ready`` (``/api/healthz`` for the web app) until it answers ``200`` or the
   120-second window elapses, and records per service whether it became ready in
   time.
 - The *verdict* — pass iff all three were ready in time, otherwise fail and name
@@ -62,9 +62,15 @@ _DEFAULT_BASE_URLS: dict[str, str] = {
     "worker": "http://localhost:8001",
 }
 
-# The Readiness_Endpoint path every service exposes (see apps/api and
-# apps/worker health routers, task 9).
-_READY_PATH = "/ready"
+# The Readiness_Endpoint path of each service. The api and worker health routers expose
+# ``/ready`` (task 9); the Next.js web app has no ``/ready`` (the locale middleware redirects it
+# to a page that does not exist) and answers its probe on ``/api/healthz``, the path the Helm
+# chart's web probes use.
+_READY_PATHS: dict[str, str] = {
+    "web": "/api/healthz",
+    "api": "/ready",
+    "worker": "/ready",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,20 +88,28 @@ Readiness_Endpoint currently answers ready. Injected so tests and callers can
 substitute the HTTP call; the default is :func:`_http_ready`."""
 
 
-def _http_ready(base_url: str) -> bool:
-    """Return whether ``<base_url>/ready`` currently answers ``200``/ready.
+def _http_ready(url: str) -> bool:
+    """Return whether the readiness ``url`` currently answers ``200``/ready.
 
     Any non-200 status (including the ``503`` a not-ready endpoint returns) or
     any connection error means not-ready; the error is swallowed so a single
     failed poll never aborts the wait — the loop simply retries until the window
     elapses.
     """
-    url = f"{base_url.rstrip('/')}{_READY_PATH}"
     try:
         with urllib.request.urlopen(url, timeout=5) as response:
             return int(response.status) == HTTPStatus.OK
     except (urllib.error.URLError, OSError, ValueError):
         return False
+
+
+def _default_probe(service: str) -> ReadinessProbe:
+    """The real HTTP probe for ``service``: its base URL plus its own readiness path.
+
+    ``_http_ready`` is looked up at call time so callers can substitute it.
+    """
+    path = _READY_PATHS[service]
+    return lambda base_url: _http_ready(f"{base_url.rstrip('/')}{path}")
 
 
 def _wait_for_service(
@@ -141,14 +155,13 @@ def wait_for_compose_ready(
     exercisable without real time or a live stack; ``probe`` defaults to the real
     HTTP readiness probe, resolved at call time so callers can substitute it.
     """
-    probe = _http_ready if probe is None else probe
     deadline = now() + config.timeout_seconds
     ready_in_time = {
         service: _wait_for_service(
             config.base_urls[service],
             deadline,
             config.poll_interval_seconds,
-            probe,
+            _default_probe(service) if probe is None else probe,
             now,
             sleep,
         )

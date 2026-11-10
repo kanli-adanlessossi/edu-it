@@ -12,6 +12,10 @@
 
 ARG BUILDER_IMAGE=node:24-slim
 ARG RUNTIME_IMAGE=gcr.io/distroless/nodejs24-debian13:nonroot
+# Optional absolute API base URL, inlined by Next.js at build time. Empty (the default) keeps the
+# deployed image environment-neutral: the browser uses same-origin /v1 behind the ingress. Only the
+# local Docker Compose stack sets it (deploy/compose/docker-compose.yml).
+ARG NEXT_PUBLIC_API_BASE_URL=
 
 # ---------------------------------------------------------------- deps
 FROM ${BUILDER_IMAGE} AS deps
@@ -21,7 +25,9 @@ RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 
 # ------------------------------------------------------------- builder
 FROM ${BUILDER_IMAGE} AS builder
-ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 WORKDIR /repo
 # The build reads the lab numbers from the single Config source.
 COPY packages/domain/edu_it_domain/config.py packages/domain/edu_it_domain/config.py
