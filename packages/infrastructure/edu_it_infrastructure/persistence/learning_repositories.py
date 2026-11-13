@@ -1427,6 +1427,19 @@ class Postgres_LessonRepository(_Base, LessonRepository):
             lab_ids=lab_ids,
         )
 
+    def list_lessons_for_module(self, module_id: StableId) -> tuple[LessonRecord, ...]:
+        """Return the lessons of ``module_id`` ordered by ``lesson.ordinal`` (then id)."""
+        statement = (
+            select(m.lesson.c.stable_id)
+            .select_from(m.lesson.join(m.module, m.lesson.c.module_id == m.module.c.id))
+            .where(m.module.c.stable_id == module_id)
+            .order_by(m.lesson.c.ordinal, m.lesson.c.id)
+        )
+        with self._engine.connect() as connection:
+            lesson_ids: tuple[StableId, ...] = tuple(connection.execute(statement).scalars())
+        records = (self.get_lesson(lesson_id) for lesson_id in lesson_ids)
+        return tuple(record for record in records if record is not None)
+
 
 # ---------------------------------------------------------------------------
 # Assessments (placement / final assessment; interface only, Req 21.1)

@@ -50,7 +50,7 @@ export default async function TrackPage({ params }: TrackPageProps) {
 
   return (
     <section>
-      <h1>{t('track.title')}</h1>
+      <h1>{progress.track_title || t('track.title')}</h1>
       <p>
         {t('track.summary', {
           percent: unlockedPercent(progress.modules),

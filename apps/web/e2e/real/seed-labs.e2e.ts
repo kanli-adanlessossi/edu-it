@@ -187,6 +187,8 @@ async function checkAndExpectPass(page: Page, locale: Locale, expected: string[]
 
 async function runInTerminal(page: Page, command: string): Promise<void> {
   const terminal = page.getByTestId('terminal-container');
+  // xterm pauses rendering while the terminal is off-screen, so bring it into view first.
+  await terminal.scrollIntoViewIfNeeded();
   await expect(page.locator('[data-testid="terminal-container"] .xterm-rows')).toContainText(/\S/, {
     timeout: 60_000,
   });

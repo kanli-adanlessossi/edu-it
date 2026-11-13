@@ -17,6 +17,7 @@ import {
   splitDueOverdue,
   unlockedPercent,
   type Progress,
+  type Track,
 } from '../../../learning.js';
 import { isLocale } from '../../../locale.js';
 import { createPathRecommendationApi } from '../../../path-recommendation-api.js';
@@ -56,6 +57,16 @@ export default async function DashboardPage({ params, searchParams }: DashboardP
   } catch {
     loadFailed = true;
   }
+  // The enroll picker offers the tracks the learner has not joined yet. If the catalog cannot be
+  // listed, the form falls back to typing a track identifier.
+  let tracks: readonly Track[] | null;
+  try {
+    tracks = await api.listTracks();
+  } catch {
+    tracks = null;
+  }
+  const enrolled = new Set(progressByTrack.map((p) => p.track_id));
+  const available = tracks?.filter((track) => !enrolled.has(track.track_id)) ?? null;
   const { due, overdue } = splitDueOverdue(schedule, new Date());
 
   // The suggestion is optional: any failure just leaves the card out (Req 17.7).
@@ -88,7 +99,9 @@ export default async function DashboardPage({ params, searchParams }: DashboardP
         <ul>
           {progressByTrack.map((p) => (
             <li key={p.track_id}>
-              <Link href={`/${locale}/tracks/${encodeURIComponent(p.track_id)}`}>{p.track_id}</Link>{' '}
+              <Link href={`/${locale}/tracks/${encodeURIComponent(p.track_id)}`}>
+                {p.track_title || p.track_id}
+              </Link>{' '}
               {t('track.summary', {
                 percent: unlockedPercent(p.modules),
                 lessons: completedLessonCount(p.modules),
@@ -121,12 +134,31 @@ export default async function DashboardPage({ params, searchParams }: DashboardP
       )}
 
       <h2>{t('enroll.heading')}</h2>
-      <form action={enrollAction}>
-        <input type="hidden" name="locale" value={locale} />
-        <label htmlFor="trackId">{t('enroll.trackLabel')}</label>{' '}
-        <input id="trackId" name="trackId" type="text" required maxLength={128} />{' '}
-        <button type="submit">{t('enroll.submit')}</button>
-      </form>
+      {available !== null && available.length === 0 ? (
+        <p>{t('enroll.allEnrolled')}</p>
+      ) : (
+        <form action={enrollAction}>
+          <input type="hidden" name="locale" value={locale} />
+          {available === null ? (
+            <>
+              <label htmlFor="trackId">{t('enroll.trackIdLabel')}</label>{' '}
+              <input id="trackId" name="trackId" type="text" required maxLength={128} />
+            </>
+          ) : (
+            <>
+              <label htmlFor="trackId">{t('enroll.trackLabel')}</label>{' '}
+              <select id="trackId" name="trackId" required>
+                {available.map((track) => (
+                  <option key={track.track_id} value={track.track_id}>
+                    {track.title || track.track_id}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}{' '}
+          <button type="submit">{t('enroll.submit')}</button>
+        </form>
+      )}
     </section>
   );
 }

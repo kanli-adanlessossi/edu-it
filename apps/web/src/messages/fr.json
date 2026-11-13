@@ -263,7 +263,10 @@
     "unsupportedContent": "Cette leçon contient un contenu qui ne peut pas être affiché.",
     "fallbackNotice": "Cette leçon n'est pas encore disponible dans votre langue. Affichage de la version anglaise.",
     "labsHeading": "Labos pratiques",
-    "openLab": "Ouvrir le labo {number}"
+    "openLab": "Ouvrir le labo {number}",
+    "takeQuiz": "Passer le quiz",
+    "backToModule": "Retour au module",
+    "labNamed": "Labo : {title}"
   },
   "Labs": {
     "title": "Labo",
@@ -388,10 +391,12 @@
     },
     "enroll": {
       "heading": "S'inscrire à un parcours",
-      "trackLabel": "Identifiant du parcours",
+      "trackLabel": "Parcours",
       "submit": "S'inscrire",
       "invalid": "Saisissez un identifiant de parcours valide.",
-      "failed": "Impossible de vous inscrire à ce parcours."
+      "failed": "Impossible de vous inscrire à ce parcours.",
+      "trackIdLabel": "Identifiant du parcours",
+      "allEnrolled": "Vous êtes inscrit à tous les parcours disponibles."
     },
     "track": {
       "title": "Parcours",
@@ -403,7 +408,12 @@
       "lockedHint": "Atteignez le niveau Pratiqué sur les concepts prérequis pour déverrouiller ce module.",
       "completedLessons": "Leçons terminées",
       "noCompletions": "Aucune leçon terminée pour le moment.",
-      "backToTrack": "Retour au parcours"
+      "lessons": "Leçons",
+      "lessonDone": "Terminée",
+      "takeQuiz": "Passer le quiz",
+      "openLab": "Ouvrir le labo {number}",
+      "backToTrack": "Retour au parcours",
+      "labNamed": "Labo : {title}"
     }
   },
   "Meta": {

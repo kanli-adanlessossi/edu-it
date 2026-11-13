@@ -43,10 +43,12 @@ from edu_it_api.learning_schemas import (
     EnrollmentResponse,
     HintRequest,
     HintResponse,
+    LabLinkResponse,
     LabProgressResponse,
     LessonCompletionResponse,
     LessonResponse,
     MasteryResponse,
+    ModuleLessonResponse,
     ModuleProgressResponse,
     ProgressResponse,
     ProjectSubmissionRequest,
@@ -125,9 +127,13 @@ def build_learning_router(services: LearningServices) -> APIRouter:
     def progress(
         request: Request,
         track_id: Annotated[str, Query(min_length=1, max_length=128)],
+        locale: Annotated[str, Query(min_length=2, max_length=16)] = "en",
     ) -> ProgressResponse:
-        """Module lock states, lesson completions, and mastery for a track."""
-        view = services.progress.execute(user_of(request), track_id)
+        """Module lock states, lessons, lesson completions, and mastery for a track.
+
+        Lesson titles are in `locale`, falling back to English.
+        """
+        view = services.progress.execute(user_of(request), track_id, locale)
         return ProgressResponse(
             enrollment_id=view.enrollment_id,
             track_id=view.track_id,
@@ -141,6 +147,20 @@ def build_learning_router(services: LearningServices) -> APIRouter:
                         LessonCompletionResponse(lesson_id=c.lesson_id, completed_at=c.completed_at)
                         for c in m.completions
                     ],
+                    lessons=[
+                        ModuleLessonResponse(
+                            lesson_id=lesson.lesson_id,
+                            title=lesson.title,
+                            quiz_id=lesson.quiz_id,
+                            lab_ids=list(lesson.lab_ids),
+                            labs=[
+                                LabLinkResponse(lab_id=lab.lab_id, title=lab.title)
+                                for lab in lesson.labs
+                            ],
+                        )
+                        for lesson in m.lessons
+                    ],
+                    title=m.title,
                 )
                 for m in view.modules
             ],
@@ -154,6 +174,7 @@ def build_learning_router(services: LearningServices) -> APIRouter:
                 )
                 for lab in view.labs
             ],
+            track_title=view.track_title,
         )
 
     @router.get("/lessons/{stable_id}", response_model=LessonResponse)
@@ -174,6 +195,7 @@ def build_learning_router(services: LearningServices) -> APIRouter:
             locale=view.locale,
             content_version=view.content_version,
             lab_ids=list(view.lab_ids),
+            labs=[LabLinkResponse(lab_id=lab.lab_id, title=lab.title) for lab in view.labs],
         )
 
     @router.post("/quiz-attempts", response_model=QuizAttemptResponse)

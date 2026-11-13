@@ -35,7 +35,7 @@ from edu_it_domain.ports.assessments import (
 from edu_it_domain.ports.attempts import AttemptRepository
 from edu_it_domain.ports.catalog import CatalogRepository
 from edu_it_domain.ports.enrollment import EnrollmentRecord, EnrollmentRepository
-from edu_it_domain.ports.lessons import LessonRepository
+from edu_it_domain.ports.lessons import LessonRepository, ModuleLessonReader
 from edu_it_domain.ports.mastery import HintRevealRecord, MasteryRepository
 from edu_it_domain.ports.progress import (
     LessonCompletionRecord,
@@ -505,6 +505,17 @@ def test_lesson_structure_from_rows_and_text_from_source(engine: Engine) -> None
     assert dict(lesson.bodies) == {"en": "# body"}
     assert Postgres_LessonRepository(engine).get_lesson("l2").quiz_id is None  # type: ignore[union-attr]
     assert lessons.get_lesson("nope") is None
+
+
+def test_lessons_of_a_module_are_listed_in_ordinal_order(engine: Engine) -> None:
+    lessons = Postgres_LessonRepository(engine, lambda sid: ({"en": f"T {sid}"}, {"en": "# body"}))
+    assert isinstance(lessons, ModuleLessonReader)
+    listed = lessons.list_lessons_for_module("m1")
+    assert [lesson.stable_id for lesson in listed] == ["l1", "l2"]
+    assert listed[0].quiz_id == "q1"
+    assert listed[0].titles == {"en": "T l1"}
+    assert lessons.list_lessons_for_module("m2") == ()
+    assert lessons.list_lessons_for_module("nope") == ()
 
 
 def test_assessments_upsert_per_learner_and_track(engine: Engine) -> None:

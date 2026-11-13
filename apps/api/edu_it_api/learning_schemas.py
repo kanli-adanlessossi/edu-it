@@ -21,10 +21,12 @@ __all__ = [
     "EnrollmentResponse",
     "HintRequest",
     "HintResponse",
+    "LabLinkResponse",
     "LabProgressResponse",
     "LessonCompletionResponse",
     "LessonResponse",
     "MasteryResponse",
+    "ModuleLessonResponse",
     "ModuleProgressResponse",
     "ProgressResponse",
     "ProjectSubmissionRequest",
@@ -81,14 +83,33 @@ class LessonCompletionResponse(_Response):
     completed_at: datetime
 
 
+class LabLinkResponse(_Response):
+    """A lab a learner can open, with its localized title (empty when untitled)."""
+
+    lab_id: str
+    title: str
+
+
+class ModuleLessonResponse(_Response):
+    """A lesson of a module with the quiz and labs reachable from it."""
+
+    lesson_id: str
+    title: str
+    quiz_id: str | None = None
+    lab_ids: list[str] = Field(default_factory=list)
+    labs: list[LabLinkResponse] = Field(default_factory=list)
+
+
 class ModuleProgressResponse(_Response):
-    """A module's lock state and completions."""
+    """A module's lock state, completions, and lessons."""
 
     module_id: str
     ordinal: int
     state: str
     tested_out: bool
     completions: list[LessonCompletionResponse]
+    lessons: list[ModuleLessonResponse] = Field(default_factory=list)
+    title: str = ""
 
 
 class MasteryResponse(_Response):
@@ -116,6 +137,7 @@ class ProgressResponse(_Response):
     modules: list[ModuleProgressResponse]
     mastery: list[MasteryResponse]
     labs: list[LabProgressResponse] = Field(default_factory=list)
+    track_title: str = ""
 
 
 # --- lessons ---------------------------------------------------------------
@@ -132,6 +154,7 @@ class LessonResponse(_Response):
     locale: str
     content_version: str
     lab_ids: list[str] = Field(default_factory=list)
+    labs: list[LabLinkResponse] = Field(default_factory=list)
 
 
 # --- quiz attempts ---------------------------------------------------------

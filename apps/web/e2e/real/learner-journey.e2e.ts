@@ -104,7 +104,8 @@ test('learner journey: sign up to Processes unlocked', async ({ page }) => {
   await page.waitForURL(/\/en\/dashboard/);
 
   // Enroll; "Processes" starts locked.
-  await page.getByLabel('Track identifier').fill(TRACK_ID);
+  // The dashboard offers the not-yet-joined tracks in a picker (option value = track id).
+  await page.getByLabel('Track', { exact: true }).selectOption(TRACK_ID);
   await page.getByRole('button', { name: 'Enroll', exact: true }).click();
   // The enroll action redirects to the track page once enrolled; navigating before that would
   // cancel it and race the enrollment (the track read answers 409 -> 404 page).
@@ -131,6 +132,8 @@ test('learner journey: sign up to Processes unlocked', async ({ page }) => {
   await expect(check).toBeVisible({ timeout: 60_000 });
   // A connected terminal shows the shell prompt; the connection live region is empty unless the
   // socket is down (Req 15.10), so "connected" is a prompt with no reconnect indication.
+  // xterm pauses rendering while the terminal is off-screen, so bring it into view first.
+  await page.getByTestId('terminal-container').scrollIntoViewIfNeeded();
   await expect(page.getByTestId('terminal-container')).toContainText('/workspace$', {
     timeout: 60_000,
   });

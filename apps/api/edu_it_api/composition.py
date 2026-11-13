@@ -67,6 +67,7 @@ from edu_it_application.learning import (
     GetProgressUseCase,
     GetProjectUseCase,
     GetQuizUseCase,
+    ListTracksUseCase,
     RevealHintUseCase,
     StartReviewUseCase,
     SubmitProjectUseCase,
@@ -112,7 +113,7 @@ from edu_it_domain.ports.item_flags import ItemFlagWriter
 from edu_it_domain.ports.item_quality import ObservationRecorder
 from edu_it_domain.ports.lab_catalog import LabCatalog
 from edu_it_domain.ports.lab_sessions import GradingRunRepository, LabSessionRepository
-from edu_it_domain.ports.lessons import LessonRepository
+from edu_it_domain.ports.lessons import LessonRepository, ModuleLessonReader
 from edu_it_domain.ports.link_builder import LinkBuilder
 from edu_it_domain.ports.mailer import Mailer
 from edu_it_domain.ports.mastery import MasteryRepository
@@ -135,7 +136,10 @@ from edu_it_domain.ports.session_store import SessionStore
 from edu_it_domain.ports.task_queue import TaskQueue
 from edu_it_domain.ports.variants import VariantRepository
 from edu_it_domain.ports.verification_link import VerificationLinkRepository
-from edu_it_infrastructure.adapters.content_text import Content_StoreTextSource
+from edu_it_infrastructure.adapters.content_text import (
+    Content_StoreTextSource,
+    Content_StoreTitleReader,
+)
 from edu_it_infrastructure.adapters.idempotency_store import Redis_IdempotencyStore
 from edu_it_infrastructure.adapters.lab_catalog import Content_LabCatalog
 from edu_it_infrastructure.adapters.rate_limiter import Redis_SignInRateLimiter
@@ -618,6 +622,7 @@ def build_api_routers(
     clock, ids = adapters.clock, adapters.ids
     labs: LabCatalog = Content_LabCatalog(store)
     text = Content_StoreTextSource(store)
+    titles = Content_StoreTitleReader(store)
     resolver = SessionUserResolver(adapters.session_store)
 
     def new_token() -> str:
@@ -717,14 +722,16 @@ def build_api_routers(
                 ids=ids,
             ),
             progress=GetProgressUseCase(
+                titles=titles,
                 catalog=adapters.catalog,
                 enrollments=adapters.enrollments,
                 progress=adapters.progress,
                 mastery=adapters.mastery,
                 labs=labs,
                 lab_completions=adapters.grading_runs,  # type: ignore[arg-type]
+                lessons=lessons if isinstance(lessons, ModuleLessonReader) else None,
             ),
-            lessons=GetLessonUseCase(lessons=lessons),
+            lessons=GetLessonUseCase(lessons=lessons, labs=labs),
             attempt_quiz=AttemptQuizUseCase(
                 catalog=servable,
                 attempts=adapters.attempts,
@@ -767,6 +774,7 @@ def build_api_routers(
                 attempts=adapters.attempts,  # type: ignore[arg-type]
                 codec=codec,
             ),
+            list_tracks=ListTracksUseCase(titles=titles, codec=codec),
         )
     )
     content = build_content_router(

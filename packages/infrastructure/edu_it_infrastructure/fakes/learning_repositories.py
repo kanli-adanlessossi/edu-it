@@ -31,6 +31,7 @@ matching the domain's view (Req 1.1).
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
 
 from edu_it_domain.learning.models import (
@@ -63,6 +64,7 @@ from edu_it_domain.ports.review import ReviewRepository
 __all__ = [
     "In_Memory_AttemptRepository",
     "In_Memory_CatalogRepository",
+    "In_Memory_CatalogTitleReader",
     "In_Memory_EnrollmentRepository",
     "In_Memory_LessonRepository",
     "In_Memory_MasteryRepository",
@@ -572,3 +574,26 @@ class In_Memory_LessonRepository(LessonRepository):
     def get_lesson(self, stable_id: StableId) -> LessonRecord | None:
         """Return the lesson with ``stable_id``, or ``None`` when absent."""
         return self._lessons.get(stable_id)
+
+    def list_lessons_for_module(self, module_id: StableId) -> tuple[LessonRecord, ...]:
+        """Return the module's lessons in the order they were added (authored order)."""
+        return tuple(lesson for lesson in self._lessons.values() if lesson.module_id == module_id)
+
+
+class In_Memory_CatalogTitleReader:
+    """A ``CatalogTitleReader`` over a dictionary of ``(kind, stable_id) -> titles``."""
+
+    def __init__(self) -> None:
+        self._titles: dict[tuple[str, StableId], dict[str, str]] = {}
+
+    def add(self, kind: str, stable_id: StableId, titles: Mapping[str, str]) -> None:
+        """Store the localized ``titles`` of one catalog item."""
+        self._titles[(kind, stable_id)] = dict(titles)
+
+    def titles(self, kind: str, stable_id: StableId) -> Mapping[str, str]:
+        """Return locale -> title, or an empty mapping when unknown."""
+        return dict(self._titles.get((kind, stable_id), {}))
+
+    def list_ids(self, kind: str) -> tuple[StableId, ...]:
+        """Return the sorted ``stable_id`` of every item of ``kind``."""
+        return tuple(sorted(sid for k, sid in self._titles if k == kind))

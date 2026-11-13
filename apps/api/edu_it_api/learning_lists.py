@@ -21,6 +21,7 @@ from edu_it_api.learning_schemas import EnrollmentResponse, QuizAttemptSummary
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from edu_it_application.learning import ListTracksUseCase
     from edu_it_application.learning.pagination import (
         ListEnrollmentsUseCase,
         ListQuizAttemptsUseCase,
@@ -30,6 +31,8 @@ __all__ = [
     "EnrollmentPageResponse",
     "ListServices",
     "QuizAttemptPageResponse",
+    "TrackPageResponse",
+    "TrackResponse",
     "build_list_router",
 ]
 
@@ -52,6 +55,20 @@ class QuizAttemptPageResponse(_Response):
     next_cursor: str | None
 
 
+class TrackResponse(_Response):
+    """A track a learner can enroll in, with its localized title (empty when untitled)."""
+
+    track_id: str
+    title: str
+
+
+class TrackPageResponse(_Response):
+    """A page of tracks."""
+
+    items: list[TrackResponse]
+    next_cursor: str | None
+
+
 @dataclass(frozen=True, slots=True)
 class ListServices:
     """The list use cases and identity resolver the list router needs."""
@@ -59,6 +76,8 @@ class ListServices:
     current_user: Callable[[Request], str]
     list_enrollments: ListEnrollmentsUseCase
     list_quiz_attempts: ListQuizAttemptsUseCase
+    list_tracks: ListTracksUseCase | None = None
+    """The track listing; `GET /tracks` is mounted only when it is provided."""
 
 
 _Cursor = Annotated[str | None, Query(max_length=1024)]
@@ -114,5 +133,23 @@ def build_list_router(services: ListServices) -> APIRouter:
             ],
             next_cursor=page.next_cursor,
         )
+
+    list_tracks = services.list_tracks
+    if list_tracks is not None:
+
+        @router.get("/tracks", response_model=TrackPageResponse)
+        def tracks(
+            request: Request,
+            locale: Annotated[str, Query(min_length=2, max_length=16)] = "en",
+            cursor: _Cursor = None,
+            limit: _Limit = DEFAULT_PAGE_SIZE,
+        ) -> TrackPageResponse:
+            """The catalog's tracks in ``stable_id`` order, titled in ``locale`` (or English)."""
+            services.current_user(request)  # authenticated like every learning route
+            page = list_tracks.execute(locale, cursor=cursor, limit=limit)
+            return TrackPageResponse(
+                items=[TrackResponse(track_id=v.track_id, title=v.title) for v in page.items],
+                next_cursor=page.next_cursor,
+            )
 
     return router

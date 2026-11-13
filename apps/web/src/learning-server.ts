@@ -11,15 +11,22 @@ import { type Locale } from './locale.js';
 import { resolveSessionState } from './session.js';
 import { SESSION_COOKIE } from './session-shared.js';
 
+/**
+ * Redirect visitors without an active Session; otherwise return the opaque session reference
+ * to forward to the API on server-side calls.
+ */
+export async function requireSessionReference(locale: Locale): Promise<string> {
+  const access = resolveDashboardAccess(await resolveSessionState(), locale);
+  if (access.kind === 'redirect') {
+    redirect(access.to);
+  }
+  return (await cookies()).get(SESSION_COOKIE)?.value ?? '';
+}
+
 /** Redirect visitors without an active Session; otherwise return the API port. */
 export async function requireLearningApi(
   locale: Locale,
   client?: GeneratedClient,
 ): Promise<LearningApi> {
-  const access = resolveDashboardAccess(await resolveSessionState(), locale);
-  if (access.kind === 'redirect') {
-    redirect(access.to);
-  }
-  const reference = (await cookies()).get(SESSION_COOKIE)?.value ?? '';
-  return createLearningApi(locale, reference, client);
+  return createLearningApi(locale, await requireSessionReference(locale), client);
 }

@@ -30,7 +30,12 @@ from edu_it_domain.ports.content_text import ProjectText, QuestionText, QuizText
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-__all__ = ["Content_StoreTextSource", "TextContentItem", "TextContentStore"]
+__all__ = [
+    "Content_StoreTextSource",
+    "Content_StoreTitleReader",
+    "TextContentItem",
+    "TextContentStore",
+]
 
 _ARCHIVED: Final = "archived"
 _FALLBACK_LOCALE: Final = "en"
@@ -146,3 +151,27 @@ class Content_StoreTextSource:
             if item_id == stable_id:
                 return payload
         return None
+
+
+class Content_StoreTitleReader:
+    """A ``CatalogTitleReader`` over the content store's ``title`` payload field.
+
+    Reads the synced items of a content type once per call and skips archived ones,
+    the same way :class:`Content_StoreTextSource` does.
+    """
+
+    def __init__(self, store: TextContentStore) -> None:
+        self._store = store
+
+    def titles(self, kind: str, stable_id: str) -> Mapping[str, str]:
+        for item in self._store.list_items(kind):
+            if item.stable_id == stable_id and not _is_archived(item):
+                return _localized(json.loads(item.payload).get("title"))
+        return {}
+
+    def list_ids(self, kind: str) -> tuple[str, ...]:
+        return tuple(
+            sorted(
+                item.stable_id for item in self._store.list_items(kind) if not _is_archived(item)
+            )
+        )

@@ -43,6 +43,7 @@ from edu_it_infrastructure.fakes.lab_repositories import (
 from edu_it_infrastructure.fakes.learning_repositories import (
     In_Memory_AttemptRepository,
     In_Memory_CatalogRepository,
+    In_Memory_CatalogTitleReader,
     In_Memory_EnrollmentRepository,
     In_Memory_LessonRepository,
     In_Memory_MasteryRepository,
@@ -87,6 +88,7 @@ __all__ = [
     "Fake_SandboxProvider",
     "In_Memory_AttemptRepository",
     "In_Memory_CatalogRepository",
+    "In_Memory_CatalogTitleReader",
     "In_Memory_CredentialStore",
     "In_Memory_EnrollmentRepository",
     "In_Memory_GenerationLedger",

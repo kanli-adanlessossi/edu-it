@@ -16,12 +16,30 @@ export const lessonCompletionSchema = z.object({
   completed_at: z.string(),
 });
 
+export const labLinkSchema = z.object({
+  lab_id: stableId,
+  /** Localized title; empty when the lab is untitled. */
+  title: z.string(),
+});
+
+export const moduleLessonSchema = z.object({
+  lesson_id: stableId,
+  title: z.string(),
+  quiz_id: stableId.nullable().optional(),
+  lab_ids: z.array(stableId).optional(),
+  labs: z.array(labLinkSchema).optional(),
+});
+
 export const moduleProgressSchema = z.object({
   module_id: stableId,
   ordinal: z.number().int(),
   state: z.string(),
   tested_out: z.boolean(),
   completions: z.array(lessonCompletionSchema),
+  /** The module's lessons in authored order; absent from an API that predates the field. */
+  lessons: z.array(moduleLessonSchema).optional(),
+  /** Localized module title; empty or absent when untitled. */
+  title: z.string().optional(),
 });
 
 export const masterySchema = z.object({
@@ -35,6 +53,18 @@ export const progressSchema = z.object({
   track_id: stableId,
   modules: z.array(moduleProgressSchema),
   mastery: z.array(masterySchema),
+  /** Localized track title; empty or absent when untitled. */
+  track_title: z.string().optional(),
+});
+
+export const trackSchema = z.object({
+  track_id: stableId,
+  title: z.string(),
+});
+
+export const trackPageSchema = z.object({
+  items: z.array(trackSchema),
+  next_cursor: z.string().nullable(),
 });
 
 export const enrollmentSchema = z.object({
@@ -61,6 +91,9 @@ export const reviewScheduleSchema = z.object({
 
 export type Progress = z.infer<typeof progressSchema>;
 export type ModuleProgress = z.infer<typeof moduleProgressSchema>;
+export type ModuleLesson = z.infer<typeof moduleLessonSchema>;
+export type LabLink = z.infer<typeof labLinkSchema>;
+export type Track = z.infer<typeof trackSchema>;
 export type Mastery = z.infer<typeof masterySchema>;
 export type Enrollment = z.infer<typeof enrollmentSchema>;
 export type ReviewScheduleEntry = z.infer<typeof reviewScheduleEntrySchema>;
@@ -72,6 +105,8 @@ export interface LearningApi {
   /** Review schedule entries (concept + due instant) for the learner. */
   getReviewSchedule(): Promise<readonly ReviewScheduleEntry[]>;
   enroll(trackId: string): Promise<Enrollment>;
+  /** The catalog's tracks, titled in the active locale. */
+  listTracks(): Promise<readonly Track[]>;
 }
 
 // --- lock state ---------------------------------------------------------------

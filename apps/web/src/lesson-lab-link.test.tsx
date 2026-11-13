@@ -15,7 +15,13 @@ import type { Lesson } from './lesson-api.js';
 const BODY = 'lesson body';
 const fetchLesson = vi.hoisted(() => vi.fn());
 
-vi.mock('./lesson-api.js', () => ({ fetchLesson }));
+vi.mock('./lesson-api.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./lesson-api.js')>()),
+  fetchLesson,
+}));
+vi.mock('./learning-server.js', () => ({
+  requireSessionReference: async () => 'session-ref',
+}));
 vi.mock('./components/lesson-mdx.js', () => ({
   renderLessonMdx: async () => <p>{BODY}</p>,
 }));
@@ -41,17 +47,22 @@ vi.mock('next-intl/server', () => ({
 
 import LessonPage from './app/[locale]/tracks/[trackId]/modules/[moduleId]/lessons/[lessonId]/page.js';
 
-function lesson(labIds: string[]): Lesson {
+function lesson(labIds: string[], quizId: string | null = null): Lesson {
   return {
     title: 'Shell basics',
     locale: 'en',
     body: 'x',
+    quiz_id: quizId,
     lab_ids: labIds,
   } as unknown as Lesson;
 }
 
-async function render(locale: 'en' | 'fr', labIds: string[]): Promise<string> {
-  fetchLesson.mockResolvedValue(lesson(labIds));
+async function render(
+  locale: 'en' | 'fr',
+  labIds: string[],
+  quizId: string | null = null,
+): Promise<string> {
+  fetchLesson.mockResolvedValue(lesson(labIds, quizId));
   const element = await LessonPage({
     params: Promise.resolve({ locale, trackId: 't', moduleId: 'm', lessonId: 'l' }),
   });
@@ -80,5 +91,40 @@ describe('lesson page lab links', () => {
     const html = await render('en', []);
     expect(html).not.toContain('lesson-labs-heading');
     expect(html).not.toContain('/labs/');
+  });
+
+  it('fetches the lesson with the visitor session reference', async () => {
+    await render('en', []);
+    expect(fetchLesson).toHaveBeenCalledWith('l', 'en', undefined, 'session-ref');
+  });
+
+  it('links to the lesson quiz when it has one, and to nothing otherwise', async () => {
+    const withQuiz = await render('en', [], 'quiz 1');
+    expect(withQuiz).toContain('href="/en/quizzes/quiz%201"');
+    expect(withQuiz).toContain('Take the quiz');
+    expect(await render('en', [])).not.toContain('/quizzes/');
+    expect(await render('fr', [], 'quiz-1')).toContain('Passer le quiz');
+  });
+
+  it('links back to the module in the active locale', async () => {
+    const html = await render('fr', []);
+    expect(html).toContain('href="/fr/tracks/t/modules/m"');
+    expect(html).toContain('Retour au module');
+  });
+
+  it('names a lab by its title when the API provides one', async () => {
+    fetchLesson.mockResolvedValue({
+      ...lesson(['lab-1', 'lab-2']),
+      labs: [
+        { lab_id: 'lab-1', title: 'Fix the shared folder' },
+        { lab_id: 'lab-2', title: '' },
+      ],
+    });
+    const element = await LessonPage({
+      params: Promise.resolve({ locale: 'fr', trackId: 't', moduleId: 'm', lessonId: 'l' }),
+    });
+    const html = renderToStaticMarkup(element);
+    expect(html).toContain('Labo : Fix the shared folder');
+    expect(html).toContain('Ouvrir le labo 2'); // untitled lab keeps the numbered label
   });
 });
