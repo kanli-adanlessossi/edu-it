@@ -10,6 +10,7 @@ import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 
+import '../globals.css';
 import { isLocale, LOCALES } from '../../locale.js';
 import { LanguageSwitcher } from '../../components/language-switcher.js';
 import { AppShell } from '../../components/app-shell.js';

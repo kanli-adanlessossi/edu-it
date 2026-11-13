@@ -175,7 +175,12 @@ export function LabView({ locale, lab }: LabViewProps) {
       {error !== null ? <p role="alert">{error}</p> : null}
       {conflict ? (
         <p>
-          <button type="button" onClick={() => void endOtherAndStart()} disabled={busy}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => void endOtherAndStart()}
+            disabled={busy}
+          >
             {t('session.endAndStart')}
           </button>
         </p>
@@ -222,7 +227,7 @@ function SessionOutcome({ session, gone, busy, onStart }: SessionOutcomeProps) {
   if (session === null && !gone) {
     return (
       <p>
-        <button type="button" onClick={onStart} disabled={busy}>
+        <button type="button" className="btn-primary" onClick={onStart} disabled={busy}>
           {t('startLab')}
         </button>
       </p>
@@ -233,7 +238,7 @@ function SessionOutcome({ session, gone, busy, onStart }: SessionOutcomeProps) {
       <section aria-labelledby="lab-failed-title">
         <h2 id="lab-failed-title">{t('provisioning.failedTitle')}</h2>
         <p role="alert">{session.error?.detail || t('provisioning.failedBody')}</p>
-        <button type="button" onClick={onStart} disabled={busy}>
+        <button type="button" className="btn-primary" onClick={onStart} disabled={busy}>
           {t('provisioning.retry')}
         </button>
       </section>
@@ -250,7 +255,7 @@ function SessionOutcome({ session, gone, busy, onStart }: SessionOutcomeProps) {
     <section aria-labelledby="lab-ended-title">
       <h2 id="lab-ended-title">{t('session.endedTitle')}</h2>
       <p role="status">{body}</p>
-      <button type="button" onClick={onStart} disabled={busy}>
+      <button type="button" className="btn-primary" onClick={onStart} disabled={busy}>
         {t('session.startNew')}
       </button>
     </section>
@@ -664,6 +669,7 @@ function ActiveLab({ lab, locale, session, onPollNow, onReplaced, describe }: Ac
         <button
           ref={checkWorkRef}
           type="button"
+          className="btn-primary"
           aria-disabled={!checkable}
           aria-describedby={disabledReason === null ? undefined : reasonId}
           onClick={() => void onCheck()}
@@ -734,7 +740,12 @@ function ActiveLab({ lab, locale, session, onPollNow, onReplaced, describe }: Ac
           >
             <h3 id="lab-reset-title">{t('resetConfirmTitle')}</h3>
             <p id="lab-reset-body">{t('resetConfirmBody')}</p>
-            <button type="button" onClick={() => void onConfirmReset()} disabled={resetting}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => void onConfirmReset()}
+              disabled={resetting}
+            >
               {t('resetConfirm')}
             </button>
             <button ref={cancelResetRef} type="button" onClick={cancelReset}>
