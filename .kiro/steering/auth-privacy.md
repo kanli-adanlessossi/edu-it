@@ -28,6 +28,30 @@ The identity entity group includes:
 - `user`, `session`, `oauth_link`, `role_assignment` (learner, reviewer with per-track
   expertise, author, admin).
 
+## Session Cookie, CSRF and Cross-Origin Contract
+- Session_Cookie attributes: `HttpOnly`, `SameSite=Lax`, `Path=/`, lifetime equal to
+  `SESSION_DURATION`. On sign-out the Session_Cookie is expired. It is never set from a response
+  that fails with a Problem_Details document.
+- Where `EDU_IT_ENV` is `production`, the `Secure` attribute is set on the Session_Cookie and
+  on the `csrf_token` cookie. Where `COOKIE_DOMAIN` is configured, it sets `Domain` on both.
+- `GET /v1/auth/csrf` sets a `csrf_token` cookie (at least 32 URL-safe characters, not
+  `HttpOnly` so scripts can read it, `SameSite=Lax`, `Path=/`, lifetime `SESSION_DURATION`)
+  and returns the same token in the body; a well-formed existing cookie value is returned unchanged.
+- Every unsafe request requires the CSRF pair (cookie plus `X-CSRF-Token`), including sign-up and
+  sign-in. Safe, idempotent methods need no CSRF token. A missing, malformed or invalid token is
+  rejected with Problem_Details and no state change (#[[file:.kiro/steering/api-conventions.md]]).
+- Cross-origin: origins in `LAB_ALLOWED_WEB_ORIGINS` are answered with credentials allowed, the
+  methods of the route table plus `OPTIONS` (including `PUT`), and the headers `Content-Type`,
+  `X-CSRF-Token`, `Idempotency-Key` and `Accept-Language`. Other origins get no cross-origin
+  allow header.
+  Reason: `SameSite=Lax` cookies and the script read of `csrf_token` require Web_App and
+  API_Service to be deployed same-site (one registrable domain or `localhost`).
+## Sign-in Rate Limiting
+- While failed sign-in attempts for an identifier exceed the configured threshold within the
+  configured window, further attempts are rejected with a translated Problem_Details response
+  without evaluating credentials, and no Session is established even for valid credentials.
+- The window elapses by the injected `Clock`; threshold and window are business constants in
+  `domain/config.py` (#[[file:.kiro/steering/structure.md]]).
 ## WebSocket Ownership and Terminal I/O
 
 - If a terminal WebSocket connection drops, the system re-verifies session ownership on
