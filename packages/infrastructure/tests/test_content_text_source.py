@@ -8,8 +8,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
+from edu_it_domain.ports.catalog_titles import CatalogTitleReader
 from edu_it_domain.ports.content_text import ContentTextSource
-from edu_it_infrastructure.adapters.content_text import Content_StoreTextSource
+from edu_it_infrastructure.adapters.content_text import (
+    Content_StoreTextSource,
+    Content_StoreTitleReader,
+)
 
 
 @dataclass(frozen=True)
@@ -107,3 +111,34 @@ def test_unknown_and_archived_items_yield_none() -> None:
     assert source.quiz_text("missing", "en") is None
     assert source.quiz_text("qz_old", "en") is None
     assert source.project_text("missing", "en") is None
+
+
+def _titles_store() -> _Store:
+    return _Store(
+        {
+            "track": [
+                _item("trk_b", {"title": {"en": "B track", "fr": "Parcours B"}}),
+                _item("trk_a", {"title": {"en": "A track"}}),
+                _item("trk_old", {"title": {"en": "Old"}}, "archived"),
+            ],
+            "module": [_item("mod_1", {"title": {"en": "Module one"}})],
+        }
+    )
+
+
+def test_title_reader_satisfies_the_port() -> None:
+    assert isinstance(Content_StoreTitleReader(_titles_store()), CatalogTitleReader)
+
+
+def test_title_reader_returns_localized_titles_of_active_items() -> None:
+    reader = Content_StoreTitleReader(_titles_store())
+    assert dict(reader.titles("track", "trk_b")) == {"en": "B track", "fr": "Parcours B"}
+    assert dict(reader.titles("module", "mod_1")) == {"en": "Module one"}
+    assert dict(reader.titles("track", "trk_old")) == {}  # archived
+    assert dict(reader.titles("track", "nope")) == {}
+
+
+def test_title_reader_lists_active_ids_sorted() -> None:
+    reader = Content_StoreTitleReader(_titles_store())
+    assert reader.list_ids("track") == ("trk_a", "trk_b")
+    assert reader.list_ids("lab") == ()

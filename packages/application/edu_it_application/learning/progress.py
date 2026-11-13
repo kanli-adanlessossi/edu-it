@@ -18,11 +18,13 @@ from dataclasses import dataclass
 from edu_it_domain.learning.models import Mastery, StableId
 from edu_it_domain.learning.unlocking import module_lock_state
 from edu_it_domain.ports.catalog import CatalogRepository, ModuleRecord
+from edu_it_domain.ports.catalog_titles import CatalogTitleReader
 from edu_it_domain.ports.clock import Clock
 from edu_it_domain.ports.enrollment import EnrollmentRecord, EnrollmentRepository
 from edu_it_domain.ports.id_generator import IdGenerator
 from edu_it_domain.ports.lab_catalog import LabCatalog
 from edu_it_domain.ports.lab_sessions import LabCompletionReader
+from edu_it_domain.ports.lessons import ModuleLessonReader
 from edu_it_domain.ports.mastery import MasteryRepository
 from edu_it_domain.ports.progress import (
     MODULE_STATE_COMPLETED,
@@ -35,12 +37,14 @@ from edu_it_domain.ports.progress import (
 )
 
 from edu_it_application.learning.errors import NotEnrolledError, NotFoundError
+from edu_it_application.learning.get_lesson import FALLBACK_LOCALE, LabLinkView, lab_links
 
 __all__ = [
     "EnrollResult",
     "EnrollUseCase",
     "GetProgressUseCase",
     "LabProgressView",
+    "ModuleLessonView",
     "ModuleProgressView",
     "ProgressView",
 ]
@@ -138,6 +142,19 @@ class EnrollUseCase:
 
 
 @dataclass(frozen=True, slots=True)
+class ModuleLessonView:
+    """One lesson of a module, with the quiz and labs a learner reaches from it."""
+
+    lesson_id: StableId
+    title: str
+    """The title in the requested locale, falling back to English (Req 17.3)."""
+    quiz_id: StableId | None
+    lab_ids: tuple[StableId, ...]
+    labs: tuple[LabLinkView, ...] = ()
+    """The lesson's labs with their titles; empty without a lab catalog."""
+
+
+@dataclass(frozen=True, slots=True)
 class ModuleProgressView:
     """One module's lock state and completions in a progress read (Req 17.2)."""
 
@@ -148,6 +165,10 @@ class ModuleProgressView:
 
     tested_out: bool
     completions: tuple[LessonCompletionRecord, ...]
+    lessons: tuple[ModuleLessonView, ...] = ()
+    """The module's lessons in authored order; empty without a lesson reader."""
+    title: str = ""
+    """The module title in the requested locale (English fallback); empty without titles."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,6 +200,8 @@ class ProgressView:
 
     labs: tuple[LabProgressView, ...] = ()
     """Lab completion and lab-derived mastery (labs Req 19.7); empty without a lab catalog."""
+    track_title: str = ""
+    """The track title in the requested locale (English fallback); empty without titles."""
 
 
 class GetProgressUseCase:
@@ -193,8 +216,12 @@ class GetProgressUseCase:
         mastery: MasteryRepository,
         labs: LabCatalog | None = None,
         lab_completions: LabCompletionReader | None = None,
+        lessons: ModuleLessonReader | None = None,
+        titles: CatalogTitleReader | None = None,
     ) -> None:
-        """Wire the ports the use case reads; the lab ports are optional (additive)."""
+        """Wire the ports the use case reads; the lab, lesson and title ports are optional."""
+        self._titles = titles
+        self._lessons = lessons
         self._labs = labs
         self._lab_completions = lab_completions
         self._catalog = catalog
@@ -202,8 +229,12 @@ class GetProgressUseCase:
         self._progress = progress
         self._mastery = mastery
 
-    def execute(self, user_id: StableId, track_id: StableId) -> ProgressView:
+    def execute(
+        self, user_id: StableId, track_id: StableId, locale: str = FALLBACK_LOCALE
+    ) -> ProgressView:
         """Return the progress view, with lock states derived from current mastery.
+
+        ``locale`` picks the lesson titles; a lesson without that translation shows English.
 
         Raises:
             NotEnrolledError: the learner is not enrolled in the track.
@@ -231,6 +262,8 @@ class GetProgressUseCase:
                     state=state,
                     tested_out=tested_out,
                     completions=progress.list_lesson_completions(module.stable_id),
+                    lessons=self._lesson_views(module.stable_id, locale),
+                    title=self._title("module", module.stable_id, locale),
                 )
             )
         return ProgressView(
@@ -239,7 +272,28 @@ class GetProgressUseCase:
             modules=tuple(views),
             mastery=mastery,
             labs=self._lab_views(user_id, by_concept),
+            track_title=self._title("track", track_id, locale),
         )
+
+    def _lesson_views(self, module_id: StableId, locale: str) -> tuple[ModuleLessonView, ...]:
+        if self._lessons is None:
+            return ()
+        return tuple(
+            ModuleLessonView(
+                lesson_id=lesson.stable_id,
+                title=lesson.titles.get(locale) or lesson.titles.get(FALLBACK_LOCALE, ""),
+                quiz_id=lesson.quiz_id,
+                lab_ids=tuple(lesson.lab_ids),
+                labs=lab_links(self._labs, lesson.lab_ids, locale),
+            )
+            for lesson in self._lessons.list_lessons_for_module(module_id)
+        )
+
+    def _title(self, kind: str, stable_id: StableId, locale: str) -> str:
+        if self._titles is None:
+            return ""
+        titles = self._titles.titles(kind, stable_id)
+        return titles.get(locale) or titles.get(FALLBACK_LOCALE, "")
 
     def _lab_views(
         self, user_id: StableId, by_concept: dict[StableId, Mastery]

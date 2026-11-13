@@ -21,7 +21,7 @@ export function ModuleList({ locale, trackId, modules }: ModuleListProps) {
         const href = `/${locale}/tracks/${encodeURIComponent(trackId)}/modules/${encodeURIComponent(module.module_id)}`;
         return (
           <li key={module.module_id} data-lock-state={lock}>
-            <Link href={href}>{module.module_id}</Link>{' '}
+            <Link href={href}>{module.title || module.module_id}</Link>{' '}
             <span>{t(lock === 'locked' ? 'lock.locked' : 'lock.unlocked')}</span>
           </li>
         );

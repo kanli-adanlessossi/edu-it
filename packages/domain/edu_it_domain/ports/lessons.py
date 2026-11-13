@@ -17,6 +17,7 @@ from edu_it_domain.learning.models import StableId
 __all__ = [
     "LessonRecord",
     "LessonRepository",
+    "ModuleLessonReader",
 ]
 
 
@@ -52,4 +53,17 @@ class LessonRepository(Protocol):
 
     def get_lesson(self, stable_id: StableId) -> LessonRecord | None:
         """Return the lesson with ``stable_id``, or ``None`` when absent."""
+        ...
+
+
+@runtime_checkable
+class ModuleLessonReader(Protocol):
+    """Port for listing the lessons of a module in their authored order.
+
+    Kept apart from :class:`LessonRepository` so readers of a single lesson need not
+    implement a listing they never use.
+    """
+
+    def list_lessons_for_module(self, module_id: StableId) -> tuple[LessonRecord, ...]:
+        """Return every lesson of the module ``module_id`` ordered by ``lesson.ordinal``."""
         ...

@@ -263,7 +263,10 @@
     "unsupportedContent": "This lesson contains content that cannot be displayed.",
     "fallbackNotice": "This lesson is not yet available in your language. Showing the English version.",
     "labsHeading": "Hands-on labs",
-    "openLab": "Open lab {number}"
+    "openLab": "Open lab {number}",
+    "takeQuiz": "Take the quiz",
+    "backToModule": "Back to the module",
+    "labNamed": "Lab: {title}"
   },
   "Labs": {
     "title": "Lab",
@@ -388,10 +391,12 @@
     },
     "enroll": {
       "heading": "Enroll in a track",
-      "trackLabel": "Track identifier",
+      "trackLabel": "Track",
       "submit": "Enroll",
       "invalid": "Enter a valid track identifier.",
-      "failed": "We could not enroll you in that track."
+      "failed": "We could not enroll you in that track.",
+      "trackIdLabel": "Track identifier",
+      "allEnrolled": "You are enrolled in every available track."
     },
     "track": {
       "title": "Track",
@@ -403,7 +408,12 @@
       "lockedHint": "Reach Practiced on the prerequisite concepts to unlock this module.",
       "completedLessons": "Completed lessons",
       "noCompletions": "No lessons completed yet.",
-      "backToTrack": "Back to the track"
+      "lessons": "Lessons",
+      "lessonDone": "Completed",
+      "takeQuiz": "Take the quiz",
+      "openLab": "Open lab {number}",
+      "backToTrack": "Back to the track",
+      "labNamed": "Lab: {title}"
     }
   },
   "Meta": {

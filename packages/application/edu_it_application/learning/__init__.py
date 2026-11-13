@@ -34,11 +34,12 @@ from edu_it_application.learning.get_content import (
     QuizView,
     RubricCriterionView,
 )
-from edu_it_application.learning.get_lesson import GetLessonUseCase, LessonView
+from edu_it_application.learning.get_lesson import GetLessonUseCase, LabLinkView, LessonView
 from edu_it_application.learning.progress import (
     EnrollResult,
     EnrollUseCase,
     GetProgressUseCase,
+    ModuleLessonView,
     ModuleProgressView,
     ProgressView,
 )
@@ -55,6 +56,7 @@ from edu_it_application.learning.submit_project import (
     SubmitProjectResult,
     SubmitProjectUseCase,
 )
+from edu_it_application.learning.tracks import ListTracksUseCase, TrackView
 
 __all__ = [
     "AttemptQuizRequest",
@@ -69,8 +71,11 @@ __all__ = [
     "IdempotencyConflictError",
     "InsufficientReviewPoolError",
     "InvalidProjectSubmissionError",
+    "LabLinkView",
     "LearningError",
     "LessonView",
+    "ListTracksUseCase",
+    "ModuleLessonView",
     "ModuleProgressView",
     "NotEnrolledError",
     "NotFoundError",
@@ -94,4 +99,5 @@ __all__ = [
     "SubmitReviewRequest",
     "SubmitReviewResult",
     "SubmitReviewUseCase",
+    "TrackView",
 ]

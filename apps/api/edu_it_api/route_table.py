@@ -67,6 +67,7 @@ ROUTE_TABLE: Final[list[RouteEntry]] = [
     _e("POST", "/enrollments", "cookie", "EnrollUseCase"),
     _e("GET", "/enrollments", "cookie", "ListEnrollmentsUseCase"),
     _e("GET", "/progress", "cookie", "GetProgressUseCase"),
+    _e("GET", "/tracks", "cookie", "ListTracksUseCase"),
     _e("GET", "/lessons/{stable_id}", "cookie", "GetLessonUseCase"),
     _e("POST", "/quiz-attempts", "cookie", "AttemptQuizUseCase"),
     _e("GET", "/quiz-attempts", "cookie", "ListQuizAttemptsUseCase"),

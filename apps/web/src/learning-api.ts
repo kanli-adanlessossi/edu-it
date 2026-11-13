@@ -13,10 +13,12 @@ import {
   enrollmentPageSchema,
   enrollmentSchema,
   progressSchema,
+  trackPageSchema,
   type Enrollment,
   type LearningApi,
   type Progress,
   type ReviewScheduleEntry,
+  type Track,
 } from './learning.js';
 
 /** Raised when the API answers with a non-2xx status or an unexpected payload. */
@@ -66,7 +68,11 @@ export function createLearningApi(
       return (await send('GET', '/enrollments?limit=50', enrollmentPageSchema)).items;
     },
     getProgress(trackId: string): Promise<Progress> {
-      return send('GET', `/progress?track_id=${encodeURIComponent(trackId)}`, progressSchema);
+      return send(
+        'GET',
+        `/progress?track_id=${encodeURIComponent(trackId)}&locale=${lang}`,
+        progressSchema,
+      );
     },
     getReviewSchedule(): Promise<readonly ReviewScheduleEntry[]> {
       // The API publishes no schedule listing (GET /v1/reviews/schedule is out of scope for
@@ -76,6 +82,10 @@ export function createLearningApi(
     },
     enroll(trackId: string): Promise<Enrollment> {
       return send('POST', '/enrollments', enrollmentSchema, { track_id: trackId });
+    },
+    async listTracks(): Promise<readonly Track[]> {
+      // One page is enough for the seed catalog; MAX_PAGE_SIZE bounds it server-side.
+      return (await send('GET', `/tracks?locale=${lang}&limit=50`, trackPageSchema)).items;
     },
   };
 }

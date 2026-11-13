@@ -80,6 +80,7 @@ def _requests(served: Any) -> dict[tuple[str, str], dict[str, Any]]:
         ("POST", "/enrollments"): {"body": {"track_id": TRACK}},
         ("GET", "/enrollments"): {},
         ("GET", "/progress"): {"query": f"track_id={TRACK}"},
+        ("GET", "/tracks"): {},
         ("GET", "/lessons/{stable_id}"): {},
         ("POST", "/quiz-attempts"): {
             "body": {"quiz_id": QUIZ, "selections": {}},

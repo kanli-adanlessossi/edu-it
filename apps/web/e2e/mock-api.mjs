@@ -34,18 +34,47 @@ const fixtures = {
     items: [{ stable_id: 'enr-1', track_id: 'track-1', enrolled_at: '2025-01-01T00:00:00Z' }],
     next_cursor: null,
   },
+  tracks: {
+    items: [
+      { track_id: 'track-1', title: 'Track one' },
+      { track_id: 'track-2', title: 'Track two' },
+    ],
+    next_cursor: null,
+  },
   progress: {
     enrollment_id: 'enr-1',
     track_id: 'track-1',
+    track_title: 'Track one',
     modules: [
       {
         module_id: 'module-1',
+        title: 'Module one',
         ordinal: 1,
         state: 'unlocked',
         tested_out: false,
         completions: [{ lesson_id: 'lesson-1', completed_at: '2025-01-02T00:00:00Z' }],
+        lessons: [
+          {
+            lesson_id: 'lesson-1',
+            title: 'Lesson one',
+            quiz_id: 'quiz-1',
+            lab_ids: ['lab-1'],
+            labs: [{ lab_id: 'lab-1', title: 'Lab one' }],
+          },
+          { lesson_id: 'lesson-2', title: 'Lesson two', quiz_id: null, lab_ids: [], labs: [] },
+        ],
       },
-      { module_id: 'module-2', ordinal: 2, state: 'locked', tested_out: false, completions: [] },
+      {
+        module_id: 'module-2',
+        title: 'Module two',
+        ordinal: 2,
+        state: 'locked',
+        tested_out: false,
+        completions: [],
+        lessons: [
+          { lesson_id: 'lesson-3', title: 'Lesson three', quiz_id: null, lab_ids: [], labs: [] },
+        ],
+      },
     ],
     mastery: [{ concept_id: 'concept-1', score: 60, state: 'learning' }],
   },
@@ -362,6 +391,7 @@ function route(method, url) {
   if (path === '/auth/session') return { user_id: 'u-1' };
   if (path === '/enrollments') return fixtures.enrollments;
   if (path === '/progress') return fixtures.progress;
+  if (path === '/tracks') return fixtures.tracks;
   if (path === '/reviews/schedule') return fixtures.schedule;
   if (path.startsWith('/lessons/')) {
     const locale = url.searchParams.get('locale') ?? 'en';

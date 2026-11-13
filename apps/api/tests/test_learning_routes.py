@@ -30,11 +30,14 @@ from edu_it_application.learning import (
 )
 from edu_it_domain.learning.models import QuestionOption, Rubric, RubricCriterion
 from edu_it_domain.ports.catalog import ModuleRecord, QuestionRecord, QuizRecord
+from edu_it_domain.ports.lab_catalog import LabDefinition
 from edu_it_domain.ports.lessons import LessonRecord, LessonRepository
 from edu_it_infrastructure.fakes import (
+    Fake_LabCatalog,
     Fake_ProjectReviewer,
     In_Memory_AttemptRepository,
     In_Memory_CatalogRepository,
+    In_Memory_CatalogTitleReader,
     In_Memory_EnrollmentRepository,
     In_Memory_IdempotencyStore,
     In_Memory_MasteryRepository,
@@ -62,6 +65,7 @@ class _Lessons(LessonRepository):
                 bodies={"en": "english", "fr": "francais"},
                 quiz_id=_QUIZ,
                 content_version="v1",
+                lab_ids=("lab-1", "lab-untitled"),
             ),
             "les-en": LessonRecord(
                 stable_id="les-en", module_id="mod-1", titles={"en": "T"}, bodies={"en": "only"}
@@ -70,6 +74,9 @@ class _Lessons(LessonRepository):
 
     def get_lesson(self, stable_id: str) -> LessonRecord | None:
         return self.items.get(stable_id)
+
+    def list_lessons_for_module(self, module_id: str) -> tuple[LessonRecord, ...]:
+        return tuple(lesson for lesson in self.items.values() if lesson.module_id == module_id)
 
 
 def _app(reviews: In_Memory_ReviewRepository | None = None) -> FastAPI:
@@ -106,6 +113,24 @@ def _app(reviews: In_Memory_ReviewRepository | None = None) -> FastAPI:
             criteria=(RubricCriterion(stable_id="crit-1", max_points=10),),
         )
     )
+    lessons = _Lessons()
+    titles = In_Memory_CatalogTitleReader()
+    titles.add("track", _TRACK, {"en": "Linux", "fr": "Linux FR"})
+    titles.add("module", "mod-1", {"en": "Permissions"})
+    labs = Fake_LabCatalog(
+        [
+            LabDefinition(
+                lab_id=lab_id,
+                kind="terminal",
+                image="img",
+                concept_ids=(),
+                tasks=(),
+                checks=(),
+                text=text,
+            )
+            for lab_id, text in (("lab-1", {"en": "Fix it", "fr": "Réparer"}), ("lab-untitled", {}))
+        ]
+    )
     services = LearningServices(
         current_user=lambda _r: _USER,
         enroll=EnrollUseCase(
@@ -117,9 +142,15 @@ def _app(reviews: In_Memory_ReviewRepository | None = None) -> FastAPI:
             ids=ids,
         ),
         progress=GetProgressUseCase(
-            catalog=catalog, enrollments=enrollments, progress=progress, mastery=mastery
+            catalog=catalog,
+            enrollments=enrollments,
+            progress=progress,
+            mastery=mastery,
+            lessons=lessons,
+            titles=titles,
+            labs=labs,
         ),
-        lessons=GetLessonUseCase(lessons=_Lessons()),
+        lessons=GetLessonUseCase(lessons=lessons, labs=labs),
         attempt_quiz=AttemptQuizUseCase(
             catalog=catalog,
             attempts=attempts,
@@ -217,6 +248,45 @@ def test_enroll_then_progress() -> None:
     assert status == 200
     assert progress["modules"][0]["module_id"] == "mod-1"
     assert progress["modules"][0]["state"] == "unlocked"
+
+
+def test_progress_lists_module_lessons_in_order_with_quiz_and_labs() -> None:
+    app = _app()
+    _call(app, "POST", "/enrollments", body={"track_id": _TRACK})
+    status, progress = _call(app, "GET", "/progress", query=f"track_id={_TRACK}")
+    assert status == 200
+    labs = [{"lab_id": "lab-1", "title": "Fix it"}, {"lab_id": "lab-untitled", "title": ""}]
+    assert progress["modules"][0]["lessons"] == [
+        {
+            "lesson_id": "les-1",
+            "title": "Perms",
+            "quiz_id": _QUIZ,
+            "lab_ids": ["lab-1", "lab-untitled"],
+            "labs": labs,
+        },
+        {"lesson_id": "les-en", "title": "T", "quiz_id": None, "lab_ids": [], "labs": []},
+    ]
+
+
+def test_progress_lesson_titles_follow_locale_and_fall_back_to_english() -> None:
+    app = _app()
+    _call(app, "POST", "/enrollments", body={"track_id": _TRACK})
+    status, progress = _call(app, "GET", "/progress", query=f"track_id={_TRACK}&locale=fr")
+    assert status == 200
+    module = progress["modules"][0]
+    titles = [lesson["title"] for lesson in module["lessons"]]
+    assert titles == ["Droits", "T"]  # les-en has no French title
+    assert module["lessons"][0]["labs"][0]["title"] == "Réparer"
+    assert (progress["track_title"], module["title"]) == ("Linux FR", "Permissions")
+
+
+def test_lesson_names_its_labs_in_the_served_locale() -> None:
+    status, body = _call(_app(), "GET", "/lessons/les-1", query="locale=fr")
+    assert status == 200
+    assert body["labs"] == [
+        {"lab_id": "lab-1", "title": "Réparer"},
+        {"lab_id": "lab-untitled", "title": ""},
+    ]
 
 
 def test_lesson_by_stable_id_with_english_fallback() -> None:
