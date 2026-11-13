@@ -1,6 +1,6 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: "apps/api/**|**/api/**|**/*.py|**/openapi*.{json,yaml,yml}|**/routers/**|**/schemas/**"
+fileMatchPattern: "apps/api/**|**/api/**|packages/application/**|**/openapi*.{json,yaml,yml}|**/routers/**|**/schemas/**"
 ---
 
 # API Conventions

@@ -14,7 +14,8 @@
 
 The design foundation for EDU-IT is complete. The phase produced:
 
-- **12 steering files** (S1–S12) under `.kiro/steering/`, each with valid YAML front matter;
+- **12 steering files** (S1–S12) under `.kiro/steering/` (four more, S13–S16, were added after
+  this phase; see Section 9), each with valid YAML front matter;
   the six conditional files plus `api-conventions.md` carry a `fileMatchPattern`, and the five
   always-on files declare `inclusion: always`.
 - **8 design documents** (D1–D8) under `docs/`.
@@ -433,3 +434,47 @@ failure-scenario coverage check. The rule-to-steering mapping is total (0 unmapp
 consistent (0 multiply-mapped); every Mermaid diagram renders; every steering reference resolves;
 every ADR is complete; and no application code was produced. The foundation is ready for the
 final checkpoint and the user's approval of the design before any implementation phase begins.
+
+## 9. Addendum: steering changes after Phase 0
+
+Sections 1 to 8 are the Phase-0 record as verified at commit `4a151bc` and are left unchanged. This
+addendum records later steering changes that bring rules from the later specs back into steering
+(`.kiro/steering/working-agreements.md`: decisions flow back into steering). These rules do not come
+from the 85 Phase-0 Rule_Lines (R1 to R85), so they are not added to the Section 3 table and R1 to
+R85 stay mapped to exactly one steering file each.
+
+### 9.1 New steering files (S13 to S16)
+
+| ID | File | Inclusion | Role | Source specs |
+|----|------|-----------|------|--------------|
+| S13 | `observability.md` | fileMatch | Health, readiness, JSON logs, request IDs, traces, metrics | foundations R18, kubernetes-deployment R13 |
+| S14 | `dev-workflow.md` | fileMatch | Monorepo tooling, pre-commit, `.env.example`, Compose stack, CI gates | foundations R1 to R3, R21 |
+| S15 | `web-app.md` | fileMatch | Generated API client, bilingual routing and key parity, accessibility | foundations R15 to R17, api-route-wiring R14, hands-on-labs R16 |
+| S16 | `testing.md` | fileMatch | Rule-first domain tests, test tiers, performance targets | learning-core R11, R29, R30; hands-on-labs R31; kubernetes-deployment R24; api-route-wiring R17 |
+
+### 9.2 Extended steering files
+
+| File | Added |
+|------|-------|
+| `auth-privacy.md` | Session cookie, CSRF and cross-origin contract (api-route-wiring R2, foundations R11); sign-in rate limiting (foundations R12) |
+| `domain-rules.md` | Quiz cooldown and rejected-submission behavior (learning-core R4, R24); final assessment as schema and interface only (learning-core R21) |
+
+### 9.3 fileMatchPattern changes
+
+| File | Change | Reason |
+|------|--------|--------|
+| `api-conventions.md` | `**/*.py` replaced by `packages/application/**` | The old pattern matched every Python file (849 tracked) |
+| `deployment.md` | `**/*.{yaml,yml}` removed | It only matched `.pre-commit-config.yaml` outside `deploy/` and `.github/`; Dockerfile, compose, Helm and CI patterns remain |
+
+`tools/tests/test_steering_filematch_coverage_properties.py` passes after these changes.
+
+### 9.4 Current counts
+
+| Measure | Phase 0 (Section 7) | Now |
+|---------|---------------------|-----|
+| Steering files | 12 | 16 |
+| With `fileMatchPattern` | 7 | 11 |
+| `inclusion: always` | 5 | 5 |
+
+ADR 0008 stays reserved: it keeps the Phase-0 cardinality of eight ADRs (Section 7, check 5). ADRs
+0009 to 0011 were added later and are reflected in `deployment.md` and `labs.md`.

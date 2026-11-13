@@ -1,6 +1,6 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: "deploy/**|**/Dockerfile|**/Dockerfile.*|**/*.Dockerfile|**/*.dockerfile|**/.dockerignore|**/docker-compose*.y*ml|**/{helm,charts,chart}/**|**/*.{yaml,yml}|**/.github/workflows/**|**/.gitlab-ci.yml|**/Jenkinsfile|**/*ci*.y*ml|**/*cd*.y*ml"
+fileMatchPattern: "deploy/**|**/Dockerfile|**/Dockerfile.*|**/*.Dockerfile|**/*.dockerfile|**/.dockerignore|**/docker-compose*.y*ml|**/{helm,charts,chart}/**|**/.github/workflows/**|**/.gitlab-ci.yml|**/Jenkinsfile|**/*ci*.y*ml|**/*cd*.y*ml"
 ---
 
 # Deployment and Kubernetes Topology

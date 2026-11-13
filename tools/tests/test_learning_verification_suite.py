@@ -117,6 +117,16 @@ RULE_MAP: list[tuple[str, list[str] | str, list[tuple[str, str]]]] = [
         ["1.4"],
         [(_MASTERY, "test_mastered_requires_passed_lab_check_when_a_lab_covers_the_concept")],
     ),
+    (
+        "Quiz attempts have a cooldown",
+        ["4.1", "4.2", "4.3"],
+        [(_INFRA + "/test_cooldown_properties.py", "Property 6:")],
+    ),
+    (
+        "A submission during cooldown",
+        ["24.1", "24.2"],
+        [(f"{_API}/test_quiz_cooldown_property.py", "Property 23:")],
+    ),
     ("Grading is bounded", OUT_OF_SCOPE, []),
     (
         "A lab check contributes",
@@ -131,6 +141,11 @@ RULE_MAP: list[tuple[str, list[str] | str, list[tuple[str, str]]]] = [
     ),
     (
         "Placement is supported",
+        ["21.1", "21.2"],
+        [(f"{_API}/test_assessment_schemas.py", "def test_")],
+    ),
+    (
+        "The final assessment is supported",
         ["21.1", "21.2"],
         [(f"{_API}/test_assessment_schemas.py", "def test_")],
     ),

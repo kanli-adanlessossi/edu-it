@@ -49,6 +49,11 @@ marked `Reason:`.
   within 24 hours of the first answer yields no additional mastery gain; the best attempt still
   counts for completion.
 
+- Quiz attempts have a cooldown. While the cooldown interval since the learner's last attempt on a
+  quiz has not elapsed (measured by the injected `Clock`), the quiz is in cooldown; afterwards it
+  is attemptable again. The interval lives in `domain/config.py`.
+- A submission during cooldown is rejected with an RFC 9457 problem-details response and records
+  no new attempt; the translated `detail` states when the quiz becomes attemptable again.
 ## Labs
 
 - Labs are hands-on: real terminals, graded code.
@@ -68,3 +73,5 @@ marked `Reason:`.
 - `module_progress` records `tested_out`.
   Reason: a learner who proves mastery at placement can test out of a module rather than
   working through it step by step.
+- The final assessment is supported at schema and interface level only (`final_assessment`); its
+  grading behavior is a TODO and no grading is implemented yet.
